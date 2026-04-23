@@ -68,7 +68,7 @@ export default function Publier() {
         await upsertProfilFirestore(user.uid, {
           nom: user.email?.split('@')[0] || '',
           email: user.email || '',
-          type: 'locataire',
+          type: 'particulier',
           telephone: '',
           quartier: '',
           badge: 'bronze',

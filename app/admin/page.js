@@ -31,7 +31,8 @@ const STATUT_OPTIONS = [
 ]
 
 const TYPE_LABEL = {
-  locataire: '🔑 Locataire',
+  particulier: '🔍 Particulier',
+  locataire: '🔍 Particulier',
   proprietaire: '🏠 Propriétaire',
   agence: '🏢 Agence',
   artisan: '🔧 Artisan',

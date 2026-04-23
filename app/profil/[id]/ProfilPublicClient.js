@@ -39,8 +39,12 @@ export default function ProfilPublicClient() {
     chargerProfil()
   }, [params.id, router])
 
+  const nomAffiche =
+    [profil?.prenom, profil?.nomFamille].filter(Boolean).join(' ').trim() || profil?.nom || ''
+
   const typeLabel = {
-    locataire: '🔑 Locataire',
+    particulier: '🔍 Particulier',
+    locataire: '🔍 Particulier',
     proprietaire: '🏠 Propriétaire',
     agence: '🏢 Agence immobilière',
     artisan: '🔧 Artisan / Prestataire',
@@ -65,18 +69,18 @@ export default function ProfilPublicClient() {
             {profil?.photo_url ? (
               <img
                 src={profil.photo_url}
-                alt={profil.nom || ''}
+                alt={nomAffiche || ''}
                 className="w-full h-full object-cover"
               />
             ) : (
               <span className="text-[#1B5E20] font-bold text-4xl">
-                {profil.nom?.[0] || '?'}
+                {(profil?.prenom?.[0] || profil?.nom?.[0] || '?').toUpperCase()}
               </span>
             )}
           </div>
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-2xl font-bold text-gray-800 mb-1">
-              {profil.nom || 'Utilisateur'}
+              {nomAffiche || 'Utilisateur'}
             </h1>
             <p className="text-gray-500 mb-2">
               {typeLabel[profil.type] || '—'}
@@ -99,7 +103,7 @@ export default function ProfilPublicClient() {
         </div>
 
         <h2 className="text-xl font-bold text-[#1B5E20] mb-4">
-          Annonces de {profil.nom?.split(' ')[0] || 'ce membre'}
+          Annonces de {profil?.prenom || profil?.nom?.split(' ')[0] || 'ce membre'}
         </h2>
 
         {annonces.length === 0 ? (

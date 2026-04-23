@@ -78,7 +78,8 @@ function ProfilContenu() {
   }
 
   const typeLabel = {
-    locataire: '🔑 Locataire',
+    particulier: '🔍 Particulier',
+    locataire: '🔍 Particulier',
     proprietaire: '🏠 Propriétaire',
     agence: '🏢 Agence immobilière',
     artisan: '🔧 Artisan / Prestataire',
@@ -133,7 +134,7 @@ function ProfilContenu() {
                 />
               ) : (
                 <span className="text-[#1B5E20] font-bold text-3xl">
-                  {nom?.[0] || '?'}
+                  {(profil?.prenom?.[0] || nom?.[0] || '?').toUpperCase()}
                 </span>
               )}
             </div>

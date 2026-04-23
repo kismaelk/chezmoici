@@ -35,13 +35,17 @@ export default function TableauDeBord() {
     )
   }
 
+  const menuParticulier = [
+    { emoji: "🔍", titre: "Chercher un logement", desc: "Annonces location & vente", lien: "/annonces" },
+    { emoji: "🛠️", titre: "Services & artisans", desc: "Prestataires et artisans à Abidjan", lien: "/services" },
+    { emoji: "💬", titre: "Mes messages", desc: "Conversations avec les propriétaires", lien: "/messages" },
+    { emoji: "❤️", titre: "Mes favoris", desc: "Annonces sauvegardées", lien: "/favoris" },
+    { emoji: "📋", titre: "Mes demandes", desc: "Suivi de vos demandes", lien: "/demandes" },
+  ]
+
   const menuParType = {
-    locataire: [
-      { emoji: "🔍", titre: "Chercher un logement", desc: "Parcourir les annonces disponibles", lien: "/annonces" },
-      { emoji: "💬", titre: "Mes messages", desc: "Conversations avec les propriétaires", lien: "/messages" },
-      { emoji: "❤️", titre: "Mes favoris", desc: "Annonces sauvegardées", lien: "/favoris" },
-      { emoji: "📋", titre: "Mes demandes", desc: "Suivi de mes demandes de visite", lien: "/demandes" },
-    ],
+    particulier: menuParticulier,
+    locataire: menuParticulier,
     proprietaire: [
       { emoji: "➕", titre: "Publier une annonce", desc: "Mettre un bien en location ou en vente", lien: "/publier" },
       { emoji: "🏠", titre: "Mes annonces", desc: "Gérer mes biens publiés", lien: "/mes-annonces" },
@@ -64,13 +68,14 @@ export default function TableauDeBord() {
   }
 
   const typeLabel = {
-    locataire: "Locataire",
+    particulier: "Particulier",
+    locataire: "Particulier",
     proprietaire: "Propriétaire",
     agence: "Agence immobilière",
     artisan: "Artisan / Prestataire",
   }
 
-  const menu = menuParType[profil?.type] || menuParType.locataire
+  const menu = menuParType[profil?.type] || menuParType.particulier
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
@@ -82,7 +87,7 @@ export default function TableauDeBord() {
         <div className="bg-white rounded-xl p-5 shadow-sm mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-[#1B5E20] mb-1">
-              Bonjour, {profil?.nom?.split(' ')[0] || 'bienvenue'} 👋
+              Bonjour, {profil?.prenom || profil?.nom?.split(' ')[0] || 'bienvenue'} 👋
             </h1>
             <p className="text-gray-500">
               Compte {typeLabel[profil?.type] || 'utilisateur'}
