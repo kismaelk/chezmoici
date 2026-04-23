@@ -1,0 +1,142 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { observerConnexion } from '@/lib/auth'
+import { getProfilFirestore } from '@/lib/firestoreApp'
+import { useRouter } from 'next/navigation'
+import SiteHeader from '@/app/components/SiteHeader'
+import SiteFooter from '@/app/components/SiteFooter'
+
+export default function TableauDeBord() {
+  const [utilisateur, setUtilisateur] = useState(null)
+  const [profil, setProfil] = useState(null)
+  const [chargement, setChargement] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    const unsub = observerConnexion(async (user) => {
+      if (!user) {
+        router.push('/connexion')
+        setChargement(false)
+        return
+      }
+      setUtilisateur(user)
+      const p = await getProfilFirestore(user.uid)
+      setProfil(p)
+      setChargement(false)
+    })
+    return () => unsub()
+  }, [router])
+
+  if (chargement) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
+        <div className="text-[#1B5E20] font-bold text-lg">Chargement...</div>
+      </div>
+    )
+  }
+
+  const menuParType = {
+    locataire: [
+      { emoji: "🔍", titre: "Chercher un logement", desc: "Parcourir les annonces disponibles", lien: "/annonces" },
+      { emoji: "💬", titre: "Mes messages", desc: "Conversations avec les propriétaires", lien: "/messages" },
+      { emoji: "❤️", titre: "Mes favoris", desc: "Annonces sauvegardées", lien: "/favoris" },
+      { emoji: "📋", titre: "Mes demandes", desc: "Suivi de mes demandes de visite", lien: "/demandes" },
+    ],
+    proprietaire: [
+      { emoji: "➕", titre: "Publier une annonce", desc: "Mettre un bien en location ou en vente", lien: "/publier" },
+      { emoji: "🏠", titre: "Mes annonces", desc: "Gérer mes biens publiés", lien: "/mes-annonces" },
+      { emoji: "💬", titre: "Mes messages", desc: "Conversations avec les locataires", lien: "/messages" },
+      { emoji: "📊", titre: "Statistiques", desc: "Vues, contacts, performance", lien: "/stats" },
+      { emoji: "✅", titre: "Badge Vérifié", desc: "Faire vérifier mon bien", lien: "/badge" },
+    ],
+    agence: [
+      { emoji: "➕", titre: "Publier une annonce", desc: "Ajouter un bien au catalogue", lien: "/publier" },
+      { emoji: "🏢", titre: "Mes annonces", desc: "Gérer le catalogue de l'agence", lien: "/mes-annonces" },
+      { emoji: "💬", titre: "Mes messages", desc: "Conversations avec les clients", lien: "/messages" },
+      { emoji: "📊", titre: "Statistiques", desc: "Vues, contacts, performance", lien: "/stats" },
+    ],
+    artisan: [
+      { emoji: "👤", titre: "Mon profil", desc: "Compléter mon profil prestataire", lien: "/profil" },
+      { emoji: "💬", titre: "Mes messages", desc: "Demandes de clients", lien: "/messages" },
+      { emoji: "⭐", titre: "Mes avis", desc: "Notes et commentaires clients", lien: "/avis" },
+      { emoji: "✅", titre: "Certification", desc: "Obtenir le badge certifié", lien: "/badge" },
+    ],
+  }
+
+  const typeLabel = {
+    locataire: "Locataire",
+    proprietaire: "Propriétaire",
+    agence: "Agence immobilière",
+    artisan: "Artisan / Prestataire",
+  }
+
+  const menu = menuParType[profil?.type] || menuParType.locataire
+
+  return (
+    <div className="min-h-screen bg-[#F5F5F5]">
+      <SiteHeader />
+
+      <div className="max-w-4xl mx-auto py-10 px-6">
+
+        {/* BIENVENUE */}
+        <div className="bg-white rounded-xl p-5 shadow-sm mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1B5E20] mb-1">
+              Bonjour, {profil?.nom?.split(' ')[0] || 'bienvenue'} 👋
+            </h1>
+            <p className="text-gray-500">
+              Compte {typeLabel[profil?.type] || 'utilisateur'}
+            </p>
+          </div>
+          <div className="bg-[#E8F5E9] px-4 py-2 rounded-full">
+            <span className="text-[#1B5E20] font-bold text-sm">
+              Badge {profil?.badge || 'Bronze'} 🔓
+            </span>
+          </div>
+        </div>
+
+        {/* MENU ACTIONS */}
+        <h2 className="text-lg font-bold text-gray-700 mb-4">Que voulez-vous faire ?</h2>
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          {menu.map((item) => (
+            <a
+              key={item.titre}
+              href={item.lien}
+              className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md border border-gray-100 flex items-start gap-4 group"
+            >
+              <div className="text-3xl">{item.emoji}</div>
+              <div>
+                <h3 className="font-bold text-gray-800 group-hover:text-[#1B5E20]">
+                  {item.titre}
+                </h3>
+                <p className="text-gray-500 text-sm mt-1">{item.desc}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        {/* PROFIL INCOMPLET */}
+        {(!profil?.telephone || !profil?.quartier) && (
+          <div className="bg-[#FFF8E1] border border-[#F9A825] rounded-xl p-5 flex items-center gap-4">
+            <div className="text-2xl">⚠️</div>
+            <div className="flex-1">
+              <h3 className="font-bold text-gray-800">Profil incomplet</h3>
+              <p className="text-gray-600 text-sm">
+                Ajoutez votre téléphone et quartier pour que les autres puissent vous contacter.
+              </p>
+            </div>
+            <a
+              href="/profil"
+              className="bg-[#F9A825] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-yellow-600 whitespace-nowrap"
+            >
+              Compléter →
+            </a>
+          </div>
+        )}
+
+      </div>
+
+      <SiteFooter />
+    </div>
+  )
+}
