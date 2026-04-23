@@ -278,17 +278,19 @@ export default function Accueil() {
           </div>
 
           {/* TRUST METRICS */}
-          <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto mt-10 text-white">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-3xl mx-auto mt-10 text-white px-1">
             {[
               { v: '300+', l: 'Annonces vérifiées' },
               { v: '80+', l: 'Artisans certifiés' },
               { v: '100%', l: 'Dépôt escrow sécurisé' },
             ].map((s) => (
-              <div key={s.l} className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-[#F9A825]">
+              <div key={s.l} className="text-center min-w-0 px-0.5">
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#F9A825]">
                   {s.v}
                 </div>
-                <div className="text-xs md:text-sm text-green-100">{s.l}</div>
+                <div className="text-[10px] sm:text-xs md:text-sm text-green-100 leading-tight break-words">
+                  {s.l}
+                </div>
               </div>
             ))}
           </div>
@@ -305,7 +307,7 @@ export default function Accueil() {
             4 services intégrés pour gérer votre logement et votre quotidien
           </p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {[
             {
               emoji: '🏠',
@@ -339,7 +341,7 @@ export default function Accueil() {
             <a
               key={pilier.titre}
               href={`/annonces?type=${pilier.filtre}`}
-              className={`bg-gradient-to-br ${pilier.couleur} rounded-2xl p-6 text-center shadow-sm hover:shadow-lg border border-gray-100 block hover:border-[#1B5E20] transition-all group`}
+              className={`bg-gradient-to-br ${pilier.couleur} rounded-2xl p-4 sm:p-6 text-center shadow-sm hover:shadow-lg border border-gray-100 block hover:border-[#1B5E20] transition-all group min-w-0`}
             >
               <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
                 {pilier.emoji}
@@ -580,7 +582,7 @@ export default function Accueil() {
               </a>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-white">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-white">
             {[
               { i: '🎥', t: 'Visites vidéo HD', d: 'Toutes les pièces filmées' },
               { i: '📝', t: 'Procuration numérique', d: 'Pas besoin de venir' },
@@ -589,11 +591,11 @@ export default function Accueil() {
             ].map((x) => (
               <div
                 key={x.t}
-                className="bg-white/10 backdrop-blur border border-white/20 rounded-xl p-4"
+                className="bg-white/10 backdrop-blur border border-white/20 rounded-xl p-4 min-w-0"
               >
                 <div className="text-2xl mb-1">{x.i}</div>
-                <div className="font-bold text-sm">{x.t}</div>
-                <div className="text-xs text-green-100">{x.d}</div>
+                <div className="font-bold text-sm break-words">{x.t}</div>
+                <div className="text-xs text-green-100 break-words">{x.d}</div>
               </div>
             ))}
           </div>

@@ -46,7 +46,7 @@ export default function SiteHeader({ variant = 'default' }) {
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 md:px-6 h-16">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-4 md:px-6 h-16 min-w-0">
         <a href="/" className="flex items-center gap-2 flex-shrink-0">
           <div className="w-9 h-9 rounded-lg bg-[#1B5E20] text-white flex items-center justify-center font-bold text-lg">
             CI

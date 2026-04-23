@@ -3,8 +3,8 @@ export default function SiteFooter() {
   return (
     <footer className="bg-[#0F3F12] text-white mt-12">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8">
+          <div className="sm:col-span-2">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-9 h-9 rounded-lg bg-white text-[#1B5E20] flex items-center justify-center font-bold">
                 CI
@@ -16,7 +16,7 @@ export default function SiteFooter() {
               à domicile en Côte d&apos;Ivoire. Annonces vérifiées physiquement,
               dépôt de garantie sécurisé, bail numérique légal.
             </p>
-            <div className="mt-4 flex items-center gap-2 text-xs text-green-300">
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-green-300">
               <span className="bg-green-800 px-2 py-1 rounded-full">
                 ✅ Badge Vérifié
               </span>
@@ -129,13 +129,13 @@ export default function SiteFooter() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-green-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 text-xs text-green-300">
-          <div>
+          <div className="max-w-full break-words">
             © {annee} Chez Moi CI SARL — Abidjan, Côte d&apos;Ivoire · Tous
             droits réservés
           </div>
-          <div className="flex items-center gap-4">
-            <span>Conforme loi N°2019-577 (données personnelles)</span>
-            <span>·</span>
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-1 sm:gap-x-4 sm:gap-y-1 max-w-full text-green-300/90">
+            <span className="break-words">Conforme loi N°2019-577 (données personnelles)</span>
+            <span className="hidden sm:inline">·</span>
             <span>Déclaré ARTCI</span>
           </div>
         </div>

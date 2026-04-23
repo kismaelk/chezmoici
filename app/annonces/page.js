@@ -480,9 +480,9 @@ function AnnoncesContenu() {
       {/* ── EN-TÊTE SECTION ── */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">
+          <div className="flex items-center justify-between gap-3 flex-wrap min-w-0">
+            <div className="min-w-0 flex-1 basis-full sm:basis-auto sm:flex-initial">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-800 break-words">
                 {titre}
                 {filtres.quartier && <span className="text-gray-400 font-normal"> · {filtres.quartier}</span>}
               </h1>
@@ -491,15 +491,15 @@ function AnnoncesContenu() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap w-full min-w-0 sm:w-auto sm:flex-nowrap sm:justify-end">
               {/* Recherche texte */}
-              <div className="relative">
+              <div className="relative flex-1 min-w-0 sm:flex-initial sm:w-48 max-w-full">
                 <input
                   type="text"
                   placeholder="Rechercher…"
                   value={filtres.recherche || ''}
                   onChange={e => maj('recherche', e.target.value)}
-                  className="border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm w-48 focus:outline-none focus:border-[#1B5E20]"
+                  className="border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm w-full min-w-0 focus:outline-none focus:border-[#1B5E20]"
                 />
                 {filtres.recherche && (
                   <button

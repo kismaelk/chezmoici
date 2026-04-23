@@ -231,7 +231,7 @@ function ProfilContenu() {
 
         <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
           <h2 className="font-bold text-gray-800 mb-4">Statut du compte</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-[#F5F5F5] rounded-lg p-4">
               <p className="text-xs text-gray-500 mb-1">Type de compte</p>
               <p className="font-bold text-gray-800">

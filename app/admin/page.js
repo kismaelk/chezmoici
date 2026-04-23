@@ -248,9 +248,11 @@ export default function Admin() {
       <SiteHeader />
 
       {/* Bandeau admin */}
-      <div className="bg-[#1B1B1B] text-white px-4 py-2 flex items-center gap-3">
-        <span className="text-red-400 font-bold text-sm">⚙️ MODE ADMIN</span>
-        <span className="text-gray-500 text-xs">Accès restreint — toutes les actions sont irréversibles</span>
+      <div className="bg-[#1B1B1B] text-white px-4 py-2 flex flex-wrap items-center gap-2 sm:gap-3">
+        <span className="text-red-400 font-bold text-sm shrink-0">⚙️ MODE ADMIN</span>
+        <span className="text-gray-500 text-xs min-w-0 break-words">
+          Accès restreint — toutes les actions sont irréversibles
+        </span>
       </div>
 
       <div className="max-w-6xl mx-auto py-8 px-4 md:px-6">
@@ -259,21 +261,21 @@ export default function Admin() {
         <p className="text-gray-400 text-sm mb-6">Chez Moi CI — Annonces, utilisateurs, signalements et demandes badge</p>
 
         {/* STATS */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-8">
           {stats.map(s => (
-            <div key={s.label} className="bg-white rounded-xl p-4 shadow-sm text-center">
+            <div key={s.label} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm text-center min-w-0">
               <div className="text-2xl mb-1">{s.emoji}</div>
               <div className="text-2xl font-bold text-[#1B5E20]">
                 {s.needUsers && !utilisateurs.length ? '—' : s.valeur}
               </div>
-              <div className="text-gray-500 text-xs">{s.label}</div>
+              <div className="text-gray-500 text-[10px] sm:text-xs leading-tight break-words px-0.5">{s.label}</div>
             </div>
           ))}
         </div>
 
         {/* ONGLETS + RECHERCHE */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 max-w-full min-w-0">
             {[
               { id: 'annonces', label: '🏠 Annonces' },
               { id: 'utilisateurs', label: '👤 Utilisateurs' },
@@ -284,7 +286,7 @@ export default function Admin() {
                 key={o.id}
                 type="button"
                 onClick={() => { setOnglet(o.id); setRecherche('') }}
-                className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
+                className={`shrink-0 px-3 sm:px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
                   onglet === o.id
                     ? 'bg-[#1B5E20] text-white'
                     : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
