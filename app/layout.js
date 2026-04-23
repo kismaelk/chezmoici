@@ -43,7 +43,7 @@ export const metadata = {
     canonical: 'https://chezmoici.com',
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
     apple: '/icon-192.png',
   },
 }
