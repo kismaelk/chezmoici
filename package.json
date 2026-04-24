@@ -15,6 +15,7 @@
     "deploy": "firebase deploy --only firestore,storage,hosting"
   },
   "dependencies": {
+    "@vercel/speed-insights": "^2.0.0",
     "firebase": "^12.12.1",
     "mapbox-gl": "^3.22.0",
     "next": "16.2.4",
