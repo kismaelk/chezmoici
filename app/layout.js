@@ -16,13 +16,13 @@ export const metadata = {
     title: 'Chez Moi CI — Immobilier de confiance à Abidjan',
     description:
       'Annonces vérifiées physiquement, dépôt de garantie sécurisé, bail numérique légal.',
-    url: 'https://chezmoici.com',
+    url: 'https://www.chezmoici.com',
     siteName: 'Chez Moi CI',
     locale: 'fr_CI',
     type: 'website',
     images: [
       {
-        url: 'https://chezmoici.com/og-image.png',
+        url: 'https://www.chezmoici.com/og-image.svg',
         width: 1200,
         height: 630,
         alt: 'Chez Moi CI — Immobilier Abidjan',
@@ -40,7 +40,7 @@ export const metadata = {
     follow: true,
   },
   alternates: {
-    canonical: 'https://chezmoici.com',
+    canonical: 'https://www.chezmoici.com',
   },
   icons: {
     icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],

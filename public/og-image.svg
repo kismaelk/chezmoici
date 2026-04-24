@@ -1,0 +1,44 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Chez Moi CI - Immobilier de confiance a Abidjan</title>
+  <desc id="desc">Banniere Open Graph de Chez Moi CI</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F3F12" />
+      <stop offset="100%" stop-color="#1B5E20" />
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.08" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <circle cx="1040" cy="120" r="180" fill="#FFFFFF" fill-opacity="0.06" />
+  <circle cx="140" cy="560" r="220" fill="#FFFFFF" fill-opacity="0.05" />
+
+  <rect x="70" y="80" width="1060" height="470" rx="28" fill="url(#card)" stroke="#FFFFFF" stroke-opacity="0.18" />
+
+  <g transform="translate(120,170)">
+    <rect x="22" y="110" width="160" height="130" rx="12" fill="#F5F5F5" />
+    <polygon points="102,22 8,104 26,122 102,54 178,122 196,104" fill="#F9A825" />
+    <rect x="86" y="152" width="34" height="88" fill="#1B5E20" />
+    <circle cx="210" cy="74" r="30" fill="#F9A825" />
+    <path d="M210 34c-20 0-36 16-36 36 0 23 36 61 36 61s36-38 36-61c0-20-16-36-36-36zm0 50a14 14 0 1 1 0-28 14 14 0 0 1 0 28z" fill="#FFFFFF" fill-opacity="0.95" />
+  </g>
+
+  <text x="370" y="255" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="76" font-weight="700">Chez Moi CI</text>
+  <text x="370" y="320" fill="#E8F5E9" font-family="Arial, sans-serif" font-size="38" font-weight="500">
+    Immobilier de confiance a Abidjan
+  </text>
+
+  <g transform="translate(370,390)">
+    <rect x="0" y="0" width="210" height="54" rx="27" fill="#2E7D32" />
+    <text x="26" y="35" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="24">✓ Verifie</text>
+
+    <rect x="230" y="0" width="260" height="54" rx="27" fill="#33691E" />
+    <text x="256" y="35" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="24">🔒 Paiement securise</text>
+
+    <rect x="510" y="0" width="260" height="54" rx="27" fill="#558B2F" />
+    <text x="538" y="35" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="24">🏠 Location &amp; Vente</text>
+  </g>
+</svg>

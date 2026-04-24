@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
+import { observerConnexion } from '@/lib/auth'
 import {
   getProfilFirestore,
   fetchAllAnnoncesAdmin,
@@ -65,7 +64,7 @@ export default function Admin() {
   const router = useRouter()
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    const unsub = observerConnexion( async (user) => {
       if (!user) {
         router.push('/connexion')
         return
@@ -219,7 +218,7 @@ export default function Admin() {
     return (
       (d.nom && d.nom.toLowerCase().includes(q)) ||
       (d.telephone && d.telephone.includes(recherche)) ||
-      (d.niveau && d.niveau.toLowerCase().includes(q)) ||
+      (d.badge_demande && d.badge_demande.toLowerCase().includes(q)) ||
       (d.annonce_titre && d.annonce_titre.toLowerCase().includes(q)) ||
       (d.profiles?.nom && d.profiles.nom.toLowerCase().includes(q))
     )
@@ -469,7 +468,7 @@ export default function Admin() {
                       {d.nom} — {d.telephone}
                     </p>
                     <p className="text-gray-500 text-xs mt-1">
-                      Niveau : <span className="font-bold">{d.niveau}</span>
+                      Niveau : <span className="font-bold">{d.badge_demande}</span>
                       {d.annonce_id && (
                         <>
                           {' · '}
@@ -484,9 +483,9 @@ export default function Admin() {
                         </>
                       )}
                     </p>
-                    {d.commentaire && (
+                    {d.notes && (
                       <p className="text-gray-600 text-sm mt-2 whitespace-pre-wrap">
-                        {d.commentaire}
+                        {d.notes}
                       </p>
                     )}
                     <p className="text-gray-400 text-xs mt-2">

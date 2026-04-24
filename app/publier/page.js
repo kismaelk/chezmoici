@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
+import { observerConnexion } from '@/lib/auth'
 import {
   getProfilFirestore,
   upsertProfilFirestore,
@@ -58,7 +57,7 @@ export default function Publier() {
   const router = useRouter()
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    const unsub = observerConnexion( async (user) => {
       if (!user) {
         router.push('/connexion')
         return

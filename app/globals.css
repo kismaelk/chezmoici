@@ -37,6 +37,12 @@ body {
   color: #111827;
 }
 
+/* Leaflet : marqueurs HTML sans cadre blanc par défaut (.leaflet-div-icon) */
+.chezmoici-leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
 input,
 select,
 textarea,

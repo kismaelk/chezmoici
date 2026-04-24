@@ -168,7 +168,7 @@ export default function Accueil() {
     if (quartier) params.set('quartier', quartier)
     if (prixMax) params.set('prixMax', prixMax)
     if (nbPieces) params.set('nbPieces', nbPieces)
-    router.push('/annonces?' + params.toString())
+    router.push('/carte?' + params.toString())
   }
 
   return (

@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
+import { observerConnexion } from '@/lib/auth'
 import {
   getAnnonceById,
   incrementAnnonceVues,
@@ -16,7 +15,6 @@ import {
   addSignalement,
 } from '@/lib/firestoreApp'
 import { useParams, useRouter } from 'next/navigation'
-import { STATIC_EXPORT_PLACEHOLDER_ID } from '@/lib/staticExportPlaceholder'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
 
@@ -34,6 +32,7 @@ export default function DetailAnnonceClient() {
   const [commentaireAvis, setCommentaireAvis] = useState('')
   const [avisSoumis, setAvisSoumis] = useState(false)
   const [chargement, setChargement] = useState(true)
+  const [erreur, setErreur] = useState(null)
   const [modalSignalement, setModalSignalement] = useState(false)
   const [motifSignalement, setMotifSignalement] = useState('Annonce frauduleuse')
   const [detailsSignalement, setDetailsSignalement] = useState('')
@@ -46,40 +45,53 @@ export default function DetailAnnonceClient() {
 
   useEffect(() => {
     if (!annonceId) return
-    if (annonceId === STATIC_EXPORT_PLACEHOLDER_ID) {
-      router.replace('/annonces')
-      return
-    }
     let cancelled = false
 
     async function chargerAnnonce() {
-      const data = await getAnnonceById(annonceId)
-      if (!data) {
-        router.push('/annonces')
-        return
-      }
-      await incrementAnnonceVues(annonceId)
-      const refreshed = await getAnnonceById(annonceId)
-      const row = refreshed || data
-      if (cancelled) return
+      try {
+        const data = await getAnnonceById(annonceId)
+        if (cancelled) return
+        if (!data) {
+          router.push('/annonces')
+          return
+        }
 
-      setAnnonce(row)
-      const ownerId = row.utilisateur_id
-      if (ownerId) {
-        const prof = await getProfilFirestore(ownerId)
-        setProprietaire(prof ? { id: ownerId, ...prof } : { id: ownerId })
-      } else {
-        setProprietaire(null)
-      }
+        try { await incrementAnnonceVues(annonceId) } catch { /* visiteur non autorisé */ }
 
-      const avisData = await fetchAvisForAnnonce(annonceId)
-      if (!cancelled) setAvis(avisData)
-      if (!cancelled) setChargement(false)
+        const refreshed = await getAnnonceById(annonceId)
+        const row = refreshed || data
+        if (cancelled) return
+
+        setAnnonce(row)
+
+        const ownerId = row.utilisateur_id
+        if (ownerId) {
+          try {
+            const prof = await getProfilFirestore(ownerId)
+            if (!cancelled) setProprietaire(prof ? { id: ownerId, ...prof } : { id: ownerId })
+          } catch {
+            if (!cancelled) setProprietaire({ id: ownerId })
+          }
+        }
+
+        try {
+          const avisData = await fetchAvisForAnnonce(annonceId)
+          if (!cancelled) setAvis(avisData)
+        } catch {
+          if (!cancelled) setAvis([])
+        }
+
+        if (!cancelled) setChargement(false)
+      } catch (err) {
+        console.error('[DetailAnnonce] erreur chargement:', err)
+        if (!cancelled) setErreur(err?.message || 'Erreur lors du chargement')
+        if (!cancelled) setChargement(false)
+      }
     }
 
     chargerAnnonce()
 
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    const unsub = observerConnexion(async (user) => {
       setUtilisateur(user)
       if (user && annonceId) {
         const favori = await findFavori(user.uid, annonceId)
@@ -206,6 +218,28 @@ export default function DetailAnnonceClient() {
     return (
       <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
         <div className="text-[#1B5E20] font-bold">Chargement...</div>
+      </div>
+    )
+  }
+
+  if (erreur || !annonce) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5]">
+        <SiteHeader />
+        <div className="max-w-xl mx-auto py-20 px-4 text-center">
+          <div className="text-5xl mb-4">😕</div>
+          <h1 className="text-xl font-bold text-gray-800 mb-2">Annonce introuvable</h1>
+          <p className="text-gray-500 mb-6">
+            {erreur || "Cette annonce n'existe pas ou a été supprimée."}
+          </p>
+          <a
+            href="/annonces"
+            className="bg-[#1B5E20] text-white px-6 py-3 rounded-xl font-bold hover:bg-green-800"
+          >
+            Voir toutes les annonces
+          </a>
+        </div>
+        <SiteFooter />
       </div>
     )
   }

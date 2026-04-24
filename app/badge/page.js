@@ -1,8 +1,7 @@
 'use client'
 
+import { observerConnexion } from '@/lib/auth'
 import { useEffect, useState } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
 import {
   addDemandeBadge,
   fetchMesAnnonces,
@@ -86,7 +85,7 @@ export default function Badge() {
   const router = useRouter()
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
+    const unsub = observerConnexion( async (u) => {
       setUser(u)
       if (!u) {
         setMesDemandes([])
@@ -123,10 +122,10 @@ export default function Badge() {
       await addDemandeBadge({
         utilisateur_id: user.uid,
         annonce_id: annonceId || null,
-        niveau: niveauChoisi,
+        badge_demande: niveauChoisi,
         nom,
         telephone,
-        commentaire,
+        notes: commentaire,
       })
       setEnvoye(true)
       setMesDemandes(await fetchMesDemandesBadge(user.uid))
@@ -250,7 +249,7 @@ export default function Badge() {
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-bold text-gray-800 text-sm">
-                        {libelleNiveau(d.niveau)}
+                        {libelleNiveau(d.badge_demande)}
                       </span>
                       <span className="text-xs font-bold text-[#1B5E20] bg-[#E8F5E9] px-2 py-1 rounded-full">
                         {STATUT_DEMANDE_LABEL[d.statut] ||

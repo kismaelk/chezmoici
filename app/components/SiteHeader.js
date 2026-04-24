@@ -43,6 +43,19 @@ export default function SiteHeader({ variant = 'default' }) {
   }
 
   const initiale = (profil?.nom || user?.email || '?')[0].toUpperCase()
+  const accountLinks = [
+    { href: '/tableau-de-bord', label: 'Tableau de bord', icon: '🏠' },
+    { href: '/publier', label: 'Publier une annonce', icon: '➕' },
+    { href: '/mes-annonces', label: 'Mes annonces', icon: '📋' },
+    { href: '/favoris', label: 'Mes favoris', icon: '❤️' },
+    { href: '/messages', label: 'Mes messages', icon: '💬' },
+    { href: '/demandes', label: 'Mes demandes', icon: '📬' },
+    { href: '/profil', label: 'Mon profil', icon: '👤' },
+    { href: '/badge', label: 'Badge Vérifié', icon: '✅' },
+  ]
+  if (profil?.is_admin === true) {
+    accountLinks.splice(1, 0, { href: '/admin', label: 'Administration', icon: '🛡️' })
+  }
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
@@ -111,16 +124,7 @@ export default function SiteHeader({ variant = 'default' }) {
                         {user.email}
                       </div>
                     </div>
-                    {[
-                      { href: '/tableau-de-bord', label: 'Tableau de bord', icon: '🏠' },
-                      { href: '/publier', label: 'Publier une annonce', icon: '➕' },
-                      { href: '/mes-annonces', label: 'Mes annonces', icon: '📋' },
-                      { href: '/favoris', label: 'Mes favoris', icon: '❤️' },
-                      { href: '/messages', label: 'Mes messages', icon: '💬' },
-                      { href: '/demandes', label: 'Mes demandes', icon: '📬' },
-                      { href: '/profil', label: 'Mon profil', icon: '👤' },
-                      { href: '/badge', label: 'Badge Vérifié', icon: '✅' },
-                    ].map((m) => (
+                    {accountLinks.map((m) => (
                       <a
                         key={m.href}
                         href={m.href}

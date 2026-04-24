@@ -1,11 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
+import { observerConnexion } from '@/lib/auth'
 import { getAnnonceById, updateAnnonce } from '@/lib/firestoreApp'
 import { useRouter, useParams } from 'next/navigation'
-import { STATIC_EXPORT_PLACEHOLDER_ID } from '@/lib/staticExportPlaceholder'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
 
@@ -25,12 +23,11 @@ export default function ModifierAnnonceClient() {
   const id = params?.id
 
   useEffect(() => {
-    if (!id) return
-    if (id === STATIC_EXPORT_PLACEHOLDER_ID) {
+    if (!id) {
       router.replace('/mes-annonces')
       return
     }
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    const unsub = observerConnexion(async (user) => {
       if (!user) {
         router.push('/connexion')
         return

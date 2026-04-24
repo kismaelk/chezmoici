@@ -1,9 +1,8 @@
 'use client'
 
+import { observerConnexion } from '@/lib/auth'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
 import {
   fetchMessagesForPair,
   sendMessageFirestore,
@@ -35,7 +34,7 @@ export default function MessagesPage() {
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = observerConnexion( (u) => {
       if (!u) router.push('/connexion')
       else setUser(u)
       setLoading(false)

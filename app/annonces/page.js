@@ -514,7 +514,11 @@ function AnnoncesContenu() {
 
               {/* Voir sur la carte */}
               <a
-                href={`/carte${searchParams.toString() ? '?' + searchParams.toString() : ''}`}
+                href={(() => {
+                  const p = new URLSearchParams()
+                  Object.entries(filtres).forEach(([k, v]) => { if (v) p.set(k, v) })
+                  return '/carte' + (p.toString() ? '?' + p.toString() : '')
+                })()}
                 className="hidden sm:inline-flex items-center gap-1 border border-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm hover:bg-[#E8F5E9] hover:border-[#1B5E20]"
               >
                 🗺️ Carte

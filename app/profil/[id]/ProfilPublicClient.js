@@ -6,7 +6,6 @@ import {
   fetchAnnoncesActivesForUser,
 } from '@/lib/firestoreApp'
 import { useParams, useRouter } from 'next/navigation'
-import { STATIC_EXPORT_PLACEHOLDER_ID } from '@/lib/staticExportPlaceholder'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
 
@@ -19,11 +18,17 @@ export default function ProfilPublicClient() {
 
   useEffect(() => {
     async function chargerProfil() {
-      if (params.id === STATIC_EXPORT_PLACEHOLDER_ID) {
+      if (!params.id) {
         router.replace('/artisans')
         return
       }
-      const row = await getProfilFirestore(params.id)
+      let row = null
+      try {
+        row = await getProfilFirestore(params.id)
+      } catch {
+        router.push('/annonces')
+        return
+      }
 
       if (!row) {
         router.push('/annonces')
@@ -31,8 +36,12 @@ export default function ProfilPublicClient() {
       }
       setProfil(row)
 
-      const liste = await fetchAnnoncesActivesForUser(params.id)
-      setAnnonces(liste)
+      try {
+        const liste = await fetchAnnoncesActivesForUser(params.id)
+        setAnnonces(liste)
+      } catch {
+        setAnnonces([])
+      }
       setChargement(false)
     }
 
@@ -40,7 +49,7 @@ export default function ProfilPublicClient() {
   }, [params.id, router])
 
   const nomAffiche =
-    [profil?.prenom, profil?.nomFamille].filter(Boolean).join(' ').trim() || profil?.nom || ''
+    [profil?.prenom, profil?.nom_famille].filter(Boolean).join(' ').trim() || profil?.nom || ''
 
   const typeLabel = {
     particulier: '🔍 Particulier',

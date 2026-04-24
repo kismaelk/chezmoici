@@ -62,7 +62,12 @@ function ProfilContenu() {
       }
     }
 
-    const payload = { nom, telephone, quartier, photo_url: photoUrl }
+    const payload = { nom, telephone, quartier }
+    // Firestore refuse explicitement les valeurs `undefined`.
+    // On n'envoie photo_url que si une image existe deja ou vient d'etre uploadee.
+    if (typeof photoUrl === 'string' && photoUrl.trim()) {
+      payload.photo_url = photoUrl
+    }
 
     try {
       await upsertProfilFirestore(utilisateur.uid, { ...payload, email: utilisateur.email })

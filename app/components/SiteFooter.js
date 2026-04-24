@@ -1,5 +1,7 @@
 export default function SiteFooter() {
   const annee = new Date().getFullYear()
+  const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '2250700000000'
+  const whatsappUrl = `https://wa.me/${whatsappNumber}`
   return (
     <footer className="bg-[#0F3F12] text-white mt-12">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-12">
@@ -116,7 +118,7 @@ export default function SiteFooter() {
               </li>
               <li>
                 <a
-                  href="https://wa.me/"
+                  href={whatsappUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="hover:text-white"
