@@ -1,4 +1,5 @@
 import './globals.css'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export const metadata = {
   title: 'Chez Moi CI — Immobilier de confiance à Abidjan',
@@ -60,6 +61,7 @@ export default function RootLayout({ children }) {
     <html lang="fr">
       <body className="font-sans antialiased" style={{ fontFamily: 'Arial, sans-serif' }}>
         {children}
+        <SpeedInsights />
       </body>
     </html>
   )
