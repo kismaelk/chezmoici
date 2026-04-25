@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { fetchAnnoncesList } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 function formaterPrix(p) {
   if (!p) return '—'
@@ -98,7 +99,6 @@ function CarteMapbox() {
     async function initMap() {
       try {
         const mapboxgl = (await import('mapbox-gl')).default
-        await import('mapbox-gl/dist/mapbox-gl.css')
         if (cancelled || !mapContainer.current) return
 
         mapboxgl.accessToken = TOKEN
