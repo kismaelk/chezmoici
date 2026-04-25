@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { observerConnexion } from '@/lib/auth'
 import {
   getAnnonceById,
@@ -17,6 +17,104 @@ import {
 import { useParams, useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
+import 'mapbox-gl/dist/mapbox-gl.css'
+
+const COORDS_QUARTIER = {
+  Cocody:        [-3.98,  5.36],
+  Plateau:       [-4.0167, 5.3167],
+  Marcory:       [-4.0,   5.2833],
+  Yopougon:      [-4.0833, 5.3333],
+  Bingerville:   [-3.8833, 5.35],
+  Adjamé:        [-4.0333, 5.3667],
+  Abobo:         [-4.0167, 5.4167],
+  Koumassi:      [-3.9667, 5.2667],
+  Treichville:   [-4.0167, 5.2833],
+  'Port-Bouët':  [-3.9333, 5.25],
+  Riviera:       [-3.95,   5.37],
+  Angré:         [-3.97,   5.38],
+}
+
+function MiniCarte({ annonce }) {
+  const containerRef = useRef(null)
+  const mapRef = useRef(null)
+  const [erreur, setErreur] = useState(false)
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return
+
+    const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+    if (!TOKEN) { setErreur(true); return }
+
+    let coords = null
+    if (annonce.longitude != null && annonce.latitude != null &&
+        !isNaN(Number(annonce.longitude)) && !isNaN(Number(annonce.latitude))) {
+      coords = [Number(annonce.longitude), Number(annonce.latitude)]
+    } else {
+      coords = COORDS_QUARTIER[annonce.quartier] || [-4.0167, 5.3167]
+    }
+
+    let cancelled = false
+
+    async function init() {
+      try {
+        const mapboxgl = (await import('mapbox-gl')).default
+        if (cancelled || !containerRef.current) return
+
+        mapboxgl.accessToken = TOKEN
+
+        const map = new mapboxgl.Map({
+          container: containerRef.current,
+          style: 'mapbox://styles/mapbox/streets-v12',
+          center: coords,
+          zoom: 14,
+          interactive: false,
+        })
+
+        mapRef.current = map
+
+        map.on('load', () => {
+          if (cancelled) return
+          const el = document.createElement('div')
+          el.textContent = annonce.type === 'vente' ? '🏠' : annonce.type === 'location' ? '🔑' : '🔧'
+          el.style.cssText = 'font-size:28px;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4));cursor:default'
+          new mapboxgl.Marker({ element: el }).setLngLat(coords).addTo(map)
+        })
+      } catch {
+        if (!cancelled) setErreur(true)
+      }
+    }
+
+    init()
+
+    return () => {
+      cancelled = true
+      if (mapRef.current) { try { mapRef.current.remove() } catch { /* ignore */ } mapRef.current = null }
+    }
+  }, [annonce])
+
+  if (erreur) return null
+
+  const lienCarte = `/carte?quartier=${encodeURIComponent(annonce.quartier || '')}&type=${encodeURIComponent(annonce.type || '')}`
+
+  return (
+    <div className="bg-white rounded-xl overflow-hidden shadow-sm">
+      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+        <h2 className="font-bold text-gray-800 text-lg">📍 Localisation</h2>
+        <a
+          href={lienCarte}
+          className="text-xs text-[#1B5E20] font-bold hover:underline flex items-center gap-1"
+        >
+          Voir sur la carte complète →
+        </a>
+      </div>
+      <div ref={containerRef} className="w-full h-52" />
+      <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-400 flex items-center gap-1">
+        <span>⚠️</span>
+        <span>Localisation approximative — {annonce.quartier}, Abidjan</span>
+      </div>
+    </div>
+  )
+}
 
 export default function DetailAnnonceClient() {
   const [annonce, setAnnonce] = useState(null)
@@ -355,6 +453,9 @@ export default function DetailAnnonceClient() {
                 {annonce.description}
               </p>
             </div>
+
+            {/* MINI CARTE */}
+            <MiniCarte annonce={annonce} />
 
             {/* AVIS */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
