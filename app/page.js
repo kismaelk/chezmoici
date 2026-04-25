@@ -29,57 +29,64 @@ function formaterPrix(p) {
   return p.toLocaleString() + ' FCFA'
 }
 
+const TYPE_COLOR_HOME = {
+  location: 'bg-emerald-500',
+  vente:    'bg-blue-500',
+  service:  'bg-orange-500',
+  artisan:  'bg-purple-500',
+}
+
 function CarteAnnonce({ annonce }) {
   const badgeLabel = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
+  const typeColor = TYPE_COLOR_HOME[annonce.type] || 'bg-gray-500'
+
   return (
     <a
       href={`/annonces/${annonce.id}`}
-      className="group bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg hover:border-[#1B5E20]/30 transition-all block"
+      className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 block"
     >
-      <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+      <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
         {annonce.photos?.[0] ? (
           <img
             src={annonce.photos[0]}
             alt={annonce.titre}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl">
+          <div className="w-full h-full flex items-center justify-center text-gray-200 text-6xl">
             🏠
           </div>
         )}
-        <div className="absolute top-3 left-3">
-          <span className="bg-white/95 backdrop-blur text-[#1B5E20] text-xs font-bold px-2.5 py-1 rounded-full capitalize shadow-sm">
-            {annonce.type}
-          </span>
-        </div>
-        <div className="absolute top-3 right-3">
-          <span className="bg-white/95 backdrop-blur text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
-            {badgeLabel[annonce.badge] || badgeLabel.bronze}
-          </span>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
-          <p className="text-white font-bold text-lg drop-shadow">
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+        <span className={`absolute top-3 left-3 ${typeColor} text-white text-xs font-bold px-2.5 py-1 rounded-full capitalize shadow-md`}>
+          {annonce.type}
+        </span>
+        <span className="absolute top-3 right-3 bg-white/90 backdrop-blur text-xs font-bold px-2.5 py-1 rounded-full shadow-md">
+          {badgeLabel[annonce.badge] || badgeLabel.bronze}
+        </span>
+
+        {/* Prix sur l'image */}
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <p className="text-white font-extrabold text-xl drop-shadow leading-tight">
             {formaterPrix(annonce.prix)}
             {annonce.type === 'location' && (
-              <span className="text-white/80 text-sm font-normal"> /mois</span>
+              <span className="text-white/70 text-sm font-normal"> /mois</span>
             )}
           </p>
+          <p className="text-white/80 text-xs mt-0.5">📍 {annonce.quartier}, Abidjan</p>
         </div>
       </div>
+
       <div className="p-4">
-        <h4 className="font-bold text-gray-800 line-clamp-1 group-hover:text-[#1B5E20]">
-          {annonce.titre}
-        </h4>
-        <p className="text-gray-500 text-sm mt-0.5">📍 {annonce.quartier}, Abidjan</p>
-        <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
-          {annonce.nb_pieces && (
-            <span className="flex items-center gap-1">
-              🛏️ {annonce.nb_pieces} pièces
-            </span>
+        <h4 className="font-bold text-gray-900 line-clamp-1 text-sm mb-2">{annonce.titre}</h4>
+        <div className="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
+          {annonce.nb_pieces > 0 && (
+            <span className="bg-gray-50 px-2 py-0.5 rounded-full">🛏️ {annonce.nb_pieces} pièces</span>
           )}
           {annonce.surface && (
-            <span className="flex items-center gap-1">📐 {annonce.surface} m²</span>
+            <span className="bg-gray-50 px-2 py-0.5 rounded-full">📐 {annonce.surface} m²</span>
           )}
         </div>
       </div>
@@ -141,7 +148,7 @@ function GrilleAnnonces({ type, titre, sousTitre, href, limit = 6 }) {
         </div>
         <a
           href={href}
-          className="hidden sm:inline-flex items-center text-[#1B5E20] font-bold text-sm hover:underline"
+          className="hidden sm:inline-flex items-center gap-1 text-[#1B5E20] font-bold text-sm bg-[#E8F5E9] hover:bg-[#1B5E20] hover:text-white px-4 py-2 rounded-full transition-all"
         >
           Voir tout →
         </a>
@@ -172,36 +179,50 @@ export default function Accueil() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F5F5F5]">
+    <main className="min-h-screen bg-[#F8F9FA]">
       <SiteHeader />
 
-      {/* HERO */}
-      <section className="relative bg-gradient-to-br from-[#0F3F12] via-[#1B5E20] to-[#2E7D32] overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage:
-              'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\'><path d=\'M0 20h40M20 0v40\' stroke=\'white\' stroke-width=\'0.5\'/></svg>")',
-          }}
-        />
-        <div className="relative max-w-6xl mx-auto px-4 py-16 md:py-24 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 text-white text-xs font-bold px-4 py-2 rounded-full border border-white/20 mb-6">
-            <span>✅</span>
-            <span>Annonces vérifiées physiquement — 0 fraude tolérée</span>
+      {/* HERO — style moderne, dynamique */}
+      <section className="relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0a2e0d 0%, #1B5E20 45%, #2E7D32 75%, #1a4a0a 100%)' }}>
+        {/* Cercles décoratifs animés */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#F9A825]/10 rounded-full translate-y-1/2 -translate-x-1/4" />
+        <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-white/5 rounded-full" />
+
+        <div className="relative max-w-6xl mx-auto px-4 py-14 md:py-20 text-center">
+          {/* Pill badge */}
+          <div className="inline-flex items-center gap-2 bg-white/15 text-white text-xs font-bold px-4 py-2 rounded-full border border-white/20 mb-6 backdrop-blur-sm">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            <span>🇨🇮 N°1 immobilier Côte d&apos;Ivoire — 0 fraude tolérée</span>
           </div>
-          <h1 className="text-white text-3xl md:text-5xl font-bold mb-4 leading-tight">
-            Trouvez votre chez-vous.
-            <br />
-            <span className="text-[#F9A825]">En toute confiance.</span>
+
+          <h1 className="text-white font-black mb-4 leading-none tracking-tight">
+            <span className="block text-4xl md:text-6xl">Trouve ton</span>
+            <span className="block text-4xl md:text-6xl text-[#F9A825]">chez-toi. 🏠</span>
           </h1>
-          <p className="text-green-100 text-base md:text-lg mb-10 max-w-2xl mx-auto">
-            La 1ʳᵉ plateforme immobilière de Côte d&apos;Ivoire avec vérification
-            terrain, dépôt sécurisé et bail numérique légal.
+          <p className="text-green-100/80 text-base md:text-lg mb-8 max-w-xl mx-auto leading-relaxed">
+            Louer, acheter, trouver un artisan — tout en un. Annonces vérifiées sur le terrain.
           </p>
 
-          {/* BARRE DE RECHERCHE */}
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl mx-auto p-2 md:p-3">
-            <div className="flex gap-1 p-1 mb-2 bg-gray-100 rounded-xl w-fit mx-auto">
+          {/* Stats rapides */}
+          <div className="flex flex-wrap items-center justify-center gap-6 mb-10 text-white/70 text-xs font-medium">
+            {[
+              { icon: '🏠', label: 'Biens vérifiés' },
+              { icon: '🔒', label: 'Zéro fraude' },
+              { icon: '⚡', label: 'Réponse rapide' },
+              { icon: '🗺️', label: 'Carte interactive' },
+            ].map(s => (
+              <div key={s.label} className="flex items-center gap-1.5">
+                <span>{s.icon}</span>
+                <span>{s.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* BARRE DE RECHERCHE — glassmorphism */}
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl max-w-4xl mx-auto p-3">
+            {/* Onglets type */}
+            <div className="flex gap-1 p-1 mb-3 bg-gray-100 rounded-xl w-fit mx-auto">
               {[
                 { id: 'location', label: '🔑 Louer' },
                 { id: 'vente', label: '🏠 Acheter' },
@@ -212,10 +233,10 @@ export default function Accueil() {
                   key={m.id}
                   type="button"
                   onClick={() => setMode(m.id)}
-                  className={`px-4 py-1.5 rounded-lg text-xs md:text-sm font-bold transition-all ${
+                  className={`px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-all ${
                     mode === m.id
-                      ? 'bg-white text-[#1B5E20] shadow'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'bg-[#1B5E20] text-white shadow-md scale-[1.02]'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-white'
                   }`}
                 >
                   {m.label}
@@ -227,7 +248,7 @@ export default function Accueil() {
               <select
                 value={quartier}
                 onChange={(e) => setQuartier(e.target.value)}
-                className="border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20]"
+                className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
               >
                 <option value="">📍 Quartier (tous)</option>
                 {QUARTIERS.map((q) => (
@@ -237,7 +258,7 @@ export default function Accueil() {
               <select
                 value={nbPieces}
                 onChange={(e) => setNbPieces(e.target.value)}
-                className="border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20]"
+                className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
               >
                 <option value="">🛏️ Pièces</option>
                 <option value="1">Studio / 1 pièce</option>
@@ -251,108 +272,60 @@ export default function Accueil() {
                 placeholder="💰 Budget max (FCFA)"
                 value={prixMax}
                 onChange={(e) => setPrixMax(e.target.value)}
-                className="border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20]"
+                className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
               />
               <button
                 type="button"
                 onClick={rechercher}
-                className="bg-[#F9A825] text-white px-6 py-3 rounded-lg font-bold text-sm hover:bg-yellow-600 flex items-center justify-center gap-2"
+                className="bg-gradient-to-r from-[#F9A825] to-[#f59f00] text-white px-6 py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
-                <span>🔍</span> Rechercher
+                🔍 Rechercher
               </button>
             </div>
-            <div className="flex flex-wrap gap-2 mt-3 px-2 text-xs text-gray-500">
-              <span className="font-medium">Tendances :</span>
-              {['Cocody 3 pièces', 'Plateau bureaux', 'Marcory villa', 'Yopougon studio'].map(
-                (t) => (
-                  <a
-                    key={t}
-                    href={`/annonces?quartier=${t.split(' ')[0]}`}
-                    className="text-[#1B5E20] hover:underline"
-                  >
-                    {t}
-                  </a>
-                )
-              )}
-            </div>
-          </div>
 
-          {/* TRUST METRICS */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-3xl mx-auto mt-10 text-white px-1">
-            {[
-              { v: '300+', l: 'Annonces vérifiées' },
-              { v: '80+', l: 'Artisans certifiés' },
-              { v: '100%', l: 'Dépôt escrow sécurisé' },
-            ].map((s) => (
-              <div key={s.l} className="text-center min-w-0 px-0.5">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#F9A825]">
-                  {s.v}
-                </div>
-                <div className="text-[10px] sm:text-xs md:text-sm text-green-100 leading-tight break-words">
-                  {s.l}
-                </div>
-              </div>
-            ))}
+            {/* Tags tendances */}
+            <div className="flex flex-wrap gap-2 mt-3 px-1 items-center">
+              <span className="text-xs text-gray-400 font-medium">Tendances :</span>
+              {['Cocody 3 pièces', 'Plateau bureaux', 'Marcory villa', 'Yopougon studio'].map((t) => (
+                <a
+                  key={t}
+                  href={`/annonces?quartier=${t.split(' ')[0]}`}
+                  className="text-xs text-[#1B5E20] font-semibold bg-[#E8F5E9] hover:bg-[#1B5E20] hover:text-white px-3 py-1 rounded-full transition-all"
+                >
+                  {t}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </section>
-
       {/* 4 PILIERS */}
-      <section className="px-4 py-12 max-w-7xl mx-auto">
+      <section className="px-4 py-14 max-w-7xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">
-            Tout sous un même toit
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3">
+            Tout sous un même toit 🏡
           </h2>
-          <p className="text-gray-500">
-            4 services intégrés pour gérer votre logement et votre quotidien
+          <p className="text-gray-400 max-w-md mx-auto">
+            Louer, acheter, trouver un artisan — une seule plateforme vérifiée
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            {
-              emoji: '🏠',
-              titre: 'Acheter',
-              desc: 'Biens vérifiés, titre foncier contrôlé au Cadastre',
-              filtre: 'vente',
-              couleur: 'from-green-50 to-white',
-            },
-            {
-              emoji: '🔑',
-              titre: 'Louer',
-              desc: 'Dépôt escrow sécurisé, bail numérique conforme',
-              filtre: 'location',
-              couleur: 'from-blue-50 to-white',
-            },
-            {
-              emoji: '🔧',
-              titre: 'Services',
-              desc: 'Nettoyage, sécurité, jardinage — prestataires certifiés',
-              filtre: 'service',
-              couleur: 'from-yellow-50 to-white',
-            },
-            {
-              emoji: '👷',
-              titre: 'Artisans',
-              desc: 'Électriciens, plombiers, peintres — diplômés vérifiés',
-              filtre: 'artisan',
-              couleur: 'from-orange-50 to-white',
-            },
-          ].map((pilier) => (
+            { emoji: '🏠', titre: 'Acheter',  desc: 'Titre foncier vérifié',       filtre: 'vente',    bg: 'bg-blue-50',    border: 'hover:border-blue-300',   text: 'text-blue-700' },
+            { emoji: '🔑', titre: 'Louer',    desc: 'Bail numérique sécurisé',     filtre: 'location', bg: 'bg-emerald-50', border: 'hover:border-emerald-300', text: 'text-emerald-700' },
+            { emoji: '🔧', titre: 'Services', desc: 'Prestataires certifiés',      filtre: 'service',  bg: 'bg-orange-50',  border: 'hover:border-orange-300',  text: 'text-orange-700' },
+            { emoji: '👷', titre: 'Artisans', desc: 'Diplômes vérifiés',           filtre: 'artisan',  bg: 'bg-purple-50',  border: 'hover:border-purple-300',  text: 'text-purple-700' },
+          ].map((p) => (
             <a
-              key={pilier.titre}
-              href={`/annonces?type=${pilier.filtre}`}
-              className={`bg-gradient-to-br ${pilier.couleur} rounded-2xl p-4 sm:p-6 text-center shadow-sm hover:shadow-lg border border-gray-100 block hover:border-[#1B5E20] transition-all group min-w-0`}
+              key={p.titre}
+              href={`/annonces?type=${p.filtre}`}
+              className={`${p.bg} rounded-2xl p-5 md:p-7 text-center border-2 border-transparent ${p.border} hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group block`}
             >
-              <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
-                {pilier.emoji}
+              <div className="text-4xl md:text-5xl mb-3 group-hover:scale-110 transition-transform duration-300 inline-block">
+                {p.emoji}
               </div>
-              <h3 className="text-lg font-bold text-[#1B5E20] mb-1">
-                {pilier.titre}
-              </h3>
-              <p className="text-gray-600 text-xs leading-snug">{pilier.desc}</p>
-              <span className="inline-flex items-center gap-1 mt-4 text-[#1B5E20] text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                Explorer →
-              </span>
+              <h3 className={`text-base md:text-lg font-black ${p.text} mb-1`}>{p.titre}</h3>
+              <p className="text-gray-500 text-xs leading-snug hidden md:block">{p.desc}</p>
             </a>
           ))}
         </div>

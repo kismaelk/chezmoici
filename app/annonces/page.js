@@ -230,6 +230,12 @@ function formaterPrix(p) {
   return p.toLocaleString() + ' FCFA'
 }
 
+const TYPE_COLOR = {
+  location: 'bg-emerald-500',
+  vente:    'bg-blue-500',
+  service:  'bg-orange-500',
+  artisan:  'bg-purple-500',
+}
 const TYPE_EMOJI = { location: '🔑', vente: '🏠', service: '🔧', artisan: '👷' }
 const BADGE_STYLE = {
   bronze: { label: '🔓 Bronze', cls: 'bg-amber-50 text-amber-700' },
@@ -239,103 +245,125 @@ const BADGE_STYLE = {
 
 function CarteAnnonce({ annonce, vue }) {
   const badge = BADGE_STYLE[annonce.badge] || BADGE_STYLE.bronze
+  const typeColor = TYPE_COLOR[annonce.type] || 'bg-gray-500'
 
   if (vue === 'liste') {
     return (
       <a
         href={`/annonces/${annonce.id}`}
-        className="flex flex-col sm:flex-row bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md hover:border-[#1B5E20]/30 transition-all"
+        className="group flex flex-col sm:flex-row bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
       >
-        <div className="relative w-full sm:w-56 h-44 sm:h-auto bg-gray-100 flex-shrink-0">
+        <div className="relative w-full sm:w-52 h-48 sm:h-auto bg-gray-100 flex-shrink-0 overflow-hidden">
           {annonce.photos?.[0] ? (
-            <Image src={annonce.photos[0]} alt={annonce.titre} fill className="object-cover" sizes="224px" />
+            <Image
+              src={annonce.photos[0]}
+              alt={annonce.titre}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="208px"
+            />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl">
+            <div className="w-full h-full flex items-center justify-center text-gray-200 text-5xl bg-gradient-to-br from-gray-100 to-gray-200">
               {TYPE_EMOJI[annonce.type] || '🏠'}
             </div>
           )}
-          <span className="absolute top-2 left-2 bg-[#1B5E20] text-white text-xs px-2 py-0.5 rounded-full font-bold capitalize">
+          <span className={`absolute top-3 left-3 ${typeColor} text-white text-xs px-2.5 py-1 rounded-full font-bold capitalize shadow-sm`}>
             {annonce.type}
           </span>
         </div>
-        <div className="p-4 flex-1 flex flex-col">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className="font-bold text-gray-800 line-clamp-1">{annonce.titre}</h3>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap ${badge.cls}`}>
+        <div className="p-5 flex-1 flex flex-col">
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <h3 className="font-bold text-gray-900 line-clamp-1 text-base">{annonce.titre}</h3>
+            <span className={`text-xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap flex-shrink-0 ${badge.cls}`}>
               {badge.label}
             </span>
           </div>
-          <p className="text-gray-400 text-sm">📍 {annonce.quartier}, Abidjan</p>
-          <p className="text-gray-500 text-sm line-clamp-2 mt-1">{annonce.description}</p>
-          <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
-            {annonce.nb_chambres != null && annonce.nb_chambres > 0 && <span>🛏 {annonce.nb_chambres} ch.</span>}
-            {annonce.nb_pieces && <span>🚪 {annonce.nb_pieces}p</span>}
-            {annonce.surface && <span>📐 {annonce.surface} m²</span>}
-            {annonce.meuble && <span>🛋️ Meublé</span>}
-            {annonce.type_service && <span>🔧 {annonce.type_service}</span>}
-            {annonce.disponibilite && <span>🕐 {annonce.disponibilite}</span>}
+          <p className="text-gray-400 text-sm mb-2">📍 {annonce.quartier}, Abidjan</p>
+          <p className="text-gray-500 text-sm line-clamp-2">{annonce.description}</p>
+          <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 flex-wrap">
+            {annonce.nb_chambres > 0 && <span className="flex items-center gap-1">🛏 {annonce.nb_chambres} ch.</span>}
+            {annonce.nb_pieces    > 0 && <span className="flex items-center gap-1">🚪 {annonce.nb_pieces}p</span>}
+            {annonce.surface           && <span className="flex items-center gap-1">📐 {annonce.surface} m²</span>}
+            {annonce.meuble            && <span className="flex items-center gap-1">🛋️ Meublé</span>}
+            {annonce.type_service      && <span className="flex items-center gap-1">🔧 {annonce.type_service}</span>}
+            {annonce.disponibilite     && <span className="flex items-center gap-1">🕐 {annonce.disponibilite}</span>}
           </div>
-          <div className="flex items-end justify-between mt-auto pt-3">
-            <p className="text-[#F9A825] font-bold text-xl">
+          <div className="flex items-end justify-between mt-auto pt-4">
+            <p className="text-[#1B5E20] font-extrabold text-xl">
               {formaterPrix(annonce.prix)}
               {annonce.type === 'location' && <span className="text-gray-400 text-sm font-normal"> /mois</span>}
-              {annonce.type === 'artisan' && <span className="text-gray-400 text-sm font-normal"> /h</span>}
+              {annonce.type === 'artisan'  && <span className="text-gray-400 text-sm font-normal"> /h</span>}
             </p>
-            <span className="text-[#1B5E20] font-bold text-sm">Voir →</span>
+            <span className="text-xs font-bold text-white bg-[#1B5E20] px-3 py-1.5 rounded-full group-hover:bg-[#2E7D32] transition-colors">
+              Voir →
+            </span>
           </div>
         </div>
       </a>
     )
   }
 
+  // Vue grille — style marketplace/TikTok
   return (
     <a
       href={`/annonces/${annonce.id}`}
-      className="group bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg hover:border-[#1B5E20]/30 transition-all block"
+      className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 block"
     >
-      <div className="relative h-44 bg-gray-100 overflow-hidden">
+      {/* IMAGE PRINCIPALE */}
+      <div className="relative h-56 bg-gray-100 overflow-hidden">
         {annonce.photos?.[0] ? (
           <Image
             src={annonce.photos[0]}
             alt={annonce.titre}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className="object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-200 text-5xl">
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-6xl">
             {TYPE_EMOJI[annonce.type] || '🏠'}
           </div>
         )}
-        <span className="absolute top-2 left-2 bg-white/90 text-[#1B5E20] text-xs px-2 py-0.5 rounded-full font-bold capitalize shadow-sm">
+
+        {/* Gradient overlay du bas */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+        {/* Type badge en haut à gauche */}
+        <span className={`absolute top-3 left-3 ${typeColor} text-white text-xs px-2.5 py-1 rounded-full font-bold capitalize shadow-md`}>
           {annonce.type}
         </span>
-        <span className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full font-bold shadow-sm ${badge.cls}`}>
+
+        {/* Badge vérifié en haut à droite */}
+        <span className={`absolute top-3 right-3 text-xs px-2.5 py-1 rounded-full font-bold shadow-md backdrop-blur-sm ${badge.cls}`}>
           {badge.label}
         </span>
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-          <p className="text-white font-bold text-base">
+
+        {/* Prix + localisation sur l'image */}
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <p className="text-white font-extrabold text-xl leading-tight drop-shadow">
             {formaterPrix(annonce.prix)}
-            {annonce.type === 'location' && <span className="text-white/70 text-xs font-normal"> /mois</span>}
-            {annonce.type === 'artisan' && <span className="text-white/70 text-xs font-normal"> /h</span>}
+            {annonce.type === 'location' && <span className="text-white/70 text-sm font-normal"> /mois</span>}
+            {annonce.type === 'artisan'  && <span className="text-white/70 text-sm font-normal"> /h</span>}
           </p>
+          <p className="text-white/80 text-xs mt-0.5 drop-shadow">📍 {annonce.quartier}, Abidjan</p>
         </div>
       </div>
-      <div className="p-3">
-        <h3 className="font-bold text-gray-800 text-sm line-clamp-1 group-hover:text-[#1B5E20] transition-colors">
-          {annonce.titre}
-        </h3>
-        <p className="text-gray-400 text-xs mt-0.5">📍 {annonce.quartier}</p>
-        <div className="flex flex-wrap gap-2 mt-1.5 text-xs text-gray-400">
-          {annonce.nb_chambres != null && annonce.nb_chambres > 0 && <span>🛏 {annonce.nb_chambres}ch</span>}
-          {annonce.surface && <span>📐 {annonce.surface}m²</span>}
-          {annonce.type_service && <span>{annonce.type_service}</span>}
+
+      {/* INFOS BAS DE CARTE */}
+      <div className="p-4">
+        <h3 className="font-bold text-gray-900 line-clamp-1 text-sm mb-2">{annonce.titre}</h3>
+        <div className="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
+          {annonce.nb_chambres > 0 && <span className="bg-gray-50 px-2 py-0.5 rounded-full">🛏 {annonce.nb_chambres} ch.</span>}
+          {annonce.nb_pieces    > 0 && <span className="bg-gray-50 px-2 py-0.5 rounded-full">🚪 {annonce.nb_pieces}p</span>}
+          {annonce.surface           && <span className="bg-gray-50 px-2 py-0.5 rounded-full">📐 {annonce.surface} m²</span>}
+          {annonce.meuble            && <span className="bg-gray-50 px-2 py-0.5 rounded-full">🛋️ Meublé</span>}
+          {annonce.type_service      && <span className="bg-gray-50 px-2 py-0.5 rounded-full">{annonce.type_service}</span>}
+          {annonce.disponibilite     && <span className="bg-gray-50 px-2 py-0.5 rounded-full">🕐 {annonce.disponibilite}</span>}
         </div>
       </div>
     </a>
   )
 }
-
 // ─── Page principale ──────────────────────────────────────────────────────────
 
 function AnnoncesContenu() {
