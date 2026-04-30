@@ -235,6 +235,12 @@ create policy "signalements: lecture admin"
 alter table demandes_badge add column if not exists nom text;
 alter table demandes_badge add column if not exists telephone text;
 
+-- Localisation précise des annonces
+alter table annonces add column if not exists rue              text;
+alter table annonces add column if not exists secteur          text;
+alter table annonces add column if not exists arrondissement   text;
+alter table annonces add column if not exists adresse_complete text;
+
 -- ─── Storage : buckets et politiques ───────────────────────
 
 insert into storage.buckets (id, name, public)

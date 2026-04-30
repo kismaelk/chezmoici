@@ -16,6 +16,13 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Mapbox GL JS utilise window/document → exclure du bundle serveur
+      config.externals = [...(config.externals || []), 'mapbox-gl']
+    }
+    return config
+  },
 }
 
 export default withPWAConfig(nextConfig)

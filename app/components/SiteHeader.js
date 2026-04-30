@@ -88,6 +88,13 @@ export default function SiteHeader({ variant = 'default' }) {
 
         <div className="flex items-center gap-2">
           <a
+            href="/carte"
+            className="inline-flex items-center gap-1.5 border border-[#1B5E20]/20 text-[#1B5E20] px-3 py-2 rounded-lg text-sm font-bold hover:bg-[#E8F5E9] transition-colors"
+          >
+            <span>🗺️</span>
+            <span className="hidden sm:inline">Carte</span>
+          </a>
+          <a
             href="/publier"
             className="hidden md:inline-flex items-center gap-1 bg-[#F9A825] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-yellow-600"
           >
@@ -104,9 +111,18 @@ export default function SiteHeader({ variant = 'default' }) {
                   className="flex items-center gap-2 border border-gray-200 rounded-full pl-2 pr-3 py-1.5 hover:border-[#1B5E20] hover:bg-[#E8F5E9] transition-colors"
                   aria-label="Menu du compte"
                 >
-                  <div className="w-7 h-7 rounded-full bg-[#1B5E20] text-white flex items-center justify-center font-bold text-sm">
-                    {initiale}
-                  </div>
+                  {profil?.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profil.photo_url}
+                      alt="photo profil"
+                      className="w-7 h-7 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-[#1B5E20] text-white flex items-center justify-center font-bold text-sm">
+                      {initiale}
+                    </div>
+                  )}
                   <span className="hidden sm:inline text-sm font-medium text-gray-700">
                     {profil?.nom?.split(' ')[0] || 'Compte'}
                   </span>

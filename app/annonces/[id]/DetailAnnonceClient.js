@@ -17,7 +17,6 @@ import {
 import { useParams, useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
-import 'mapbox-gl/dist/mapbox-gl.css'
 
 const COORDS_QUARTIER = {
   Cocody:        [-3.98,  5.36],
@@ -109,8 +108,20 @@ function MiniCarte({ annonce }) {
       </div>
       <div ref={containerRef} className="w-full h-52" />
       <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-400 flex items-center gap-1">
-        <span>⚠️</span>
-        <span>Localisation approximative — {annonce.quartier}, Abidjan</span>
+        {annonce.latitude && annonce.longitude ? (
+          <>
+            <span>📍</span>
+            <span>
+              {[annonce.adresse_complete, annonce.secteur, annonce.rue, annonce.quartier]
+                .filter(Boolean).join(', ') || `${annonce.quartier}, Abidjan`}
+            </span>
+          </>
+        ) : (
+          <>
+            <span>⚠️</span>
+            <span>Localisation approximative — {annonce.quartier}, Abidjan</span>
+          </>
+        )}
       </div>
     </div>
   )
@@ -433,7 +444,15 @@ export default function DetailAnnonceClient() {
               </div>
 
               <p className="text-[#F9A825] font-bold text-3xl mb-2">
-                {annonce.prix?.toLocaleString()} FCFA
+                {annonce.prix ? (
+                  annonce.prix >= 1_000_000
+                    ? (() => {
+                        const m = annonce.prix / 1_000_000
+                        const s = Number.isInteger(m) ? String(m) : m.toFixed(1).replace('.', ',')
+                        return s + (m >= 2 ? ' millions' : ' million') + ' FCFA'
+                      })()
+                    : annonce.prix.toLocaleString('fr-FR') + ' FCFA'
+                ) : '—'}
                 {annonce.type === 'location' && (
                   <span className="text-gray-400 text-lg font-normal"> / mois</span>
                 )}
@@ -547,9 +566,18 @@ export default function DetailAnnonceClient() {
             <div className="bg-white rounded-xl p-5 shadow-sm">
               <h2 className="font-bold text-gray-800 mb-4">Proposé par</h2>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-[#E8F5E9] rounded-full flex items-center justify-center text-[#1B5E20] font-bold text-lg">
-                  {proprietaire?.nom?.[0] || '?'}
-                </div>
+                {proprietaire?.photo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={proprietaire.photo_url}
+                    alt={proprietaire?.nom || 'Propriétaire'}
+                    className="w-12 h-12 rounded-full object-cover border border-gray-200"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-[#E8F5E9] rounded-full flex items-center justify-center text-[#1B5E20] font-bold text-lg">
+                    {proprietaire?.nom?.[0] || '?'}
+                  </div>
+                )}
                 <div>
                   <a
                     href={`/profil/${proprietaire?.id}`}

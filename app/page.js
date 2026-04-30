@@ -24,9 +24,12 @@ const QUARTIERS = [
 
 function formaterPrix(p) {
   if (!p) return '—'
-  if (p >= 1_000_000) return (p / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M FCFA'
-  if (p >= 1000) return (p / 1000).toFixed(0) + 'K FCFA'
-  return p.toLocaleString() + ' FCFA'
+  if (p >= 1_000_000) {
+    const m = p / 1_000_000
+    const s = Number.isInteger(m) ? String(m) : m.toFixed(1).replace('.', ',')
+    return s + (m >= 2 ? ' millions' : ' million') + ' FCFA'
+  }
+  return p.toLocaleString('fr-FR') + ' FCFA'
 }
 
 const TYPE_COLOR_HOME = {
@@ -34,6 +37,22 @@ const TYPE_COLOR_HOME = {
   vente:    'bg-blue-500',
   service:  'bg-orange-500',
   artisan:  'bg-purple-500',
+}
+
+const SERVICE_ICON_HOME = {
+  'Électricien': '⚡', 'Plombier': '🚿', 'Menuisier': '🪚',
+  'Carreleur': '🪣', 'Peintre': '🖌️', 'Maçon': '🧱',
+  'Climatiseur': '❄️', 'Soudeur': '🔥', 'Ferrailleur': '⚙️',
+  'Nettoyage': '🧹', 'Déménagement': '🚛', 'Jardinage': '🌿',
+  'Sécurité / Gardiennage': '🛡️', 'Livraison': '📦',
+  'Décoration intérieure': '🎨', 'Photographie immobilière': '📸',
+}
+
+function placeholderHome(annonce) {
+  if (annonce.type === 'service' || annonce.type === 'artisan') {
+    return SERVICE_ICON_HOME[annonce.type_service] || (annonce.type === 'service' ? '🔧' : '👷')
+  }
+  return '🏠'
 }
 
 function CarteAnnonce({ annonce }) {
@@ -53,8 +72,8 @@ function CarteAnnonce({ annonce }) {
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-200 text-6xl">
-            🏠
+          <div className="w-full h-full flex items-center justify-center text-6xl">
+            {placeholderHome(annonce)}
           </div>
         )}
         {/* Gradient overlay */}
