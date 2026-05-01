@@ -563,55 +563,9 @@ export default function Publier() {
               </div>
             )}
 
-            {/* 4 — PHOTOS */}
+            {/* 4 — LOCALISATION PRÉCISE */}
             <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="font-bold text-gray-800">4 — Photos ({photosFichiers.length}/10)</h2>
-                {photosFichiers.length > 0 && photosFichiers.length < 10 && (
-                  <label className="cursor-pointer bg-[#1B5E20] text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-green-800 transition-colors">
-                    + Ajouter
-                    <input type="file" multiple accept="image/*" onChange={ajouterPhotos} className="hidden" />
-                  </label>
-                )}
-              </div>
-              <p className="text-gray-400 text-xs mb-4">
-                La première photo sera la principale. Cliquez ✕ pour enlever une photo.
-              </p>
-
-              {photosFichiers.length === 0 ? (
-                <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-[#1B5E20] transition-colors">
-                  <div className="text-3xl mb-2">📷</div>
-                  <div className="font-bold text-gray-700 text-sm">Cliquer pour ajouter des photos</div>
-                  <div className="text-gray-400 text-xs mt-1">JPG, PNG — Max 10 photos</div>
-                  <input type="file" multiple accept="image/*" onChange={ajouterPhotos} className="hidden" />
-                </label>
-              ) : (
-                <div className="grid grid-cols-4 gap-2">
-                  {photosAperçus.map((url, i) => (
-                    <div key={i} className="relative group">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt="" className="w-full h-20 object-cover rounded-lg" />
-                      {i === 0 && (
-                        <span className="absolute top-1 left-1 bg-[#1B5E20] text-white text-[10px] px-1 py-0.5 rounded">
-                          Principale
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => supprimerPhoto(i)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 5 — LOCALISATION PRÉCISE */}
-            <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
-              <h2 className="font-bold text-gray-800 mb-1">5 — Localisation précise</h2>
+              <h2 className="font-bold text-gray-800 mb-1">4 — Localisation précise</h2>
               <p className="text-gray-400 text-xs mb-4">
                 Ces détails aident les visiteurs à vous trouver facilement.
               </p>
@@ -663,6 +617,52 @@ export default function Publier() {
                   />
                 </div>
               </div>
+            </div>
+
+            {/* 5 — PHOTOS */}
+            <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-bold text-gray-800">5 — Photos ({photosFichiers.length}/10)</h2>
+                {photosFichiers.length > 0 && photosFichiers.length < 10 && (
+                  <label className="cursor-pointer bg-[#1B5E20] text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-green-800 transition-colors">
+                    + Ajouter
+                    <input type="file" multiple accept="image/*" onChange={ajouterPhotos} className="hidden" />
+                  </label>
+                )}
+              </div>
+              <p className="text-gray-400 text-xs mb-4">
+                La première photo sera la principale. Cliquez ✕ pour enlever une photo.
+              </p>
+
+              {photosFichiers.length === 0 ? (
+                <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-[#1B5E20] transition-colors">
+                  <div className="text-3xl mb-2">📷</div>
+                  <div className="font-bold text-gray-700 text-sm">Cliquer pour ajouter des photos</div>
+                  <div className="text-gray-400 text-xs mt-1">JPG, PNG — Max 10 photos</div>
+                  <input type="file" multiple accept="image/*" onChange={ajouterPhotos} className="hidden" />
+                </label>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {photosAperçus.map((url, i) => (
+                    <div key={i} className="relative group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" className="w-full h-20 object-cover rounded-lg" />
+                      {i === 0 && (
+                        <span className="absolute top-1 left-1 bg-[#1B5E20] text-white text-[10px] px-1 py-0.5 rounded">
+                          Principale
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => supprimerPhoto(i)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}

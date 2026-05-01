@@ -44,14 +44,12 @@ export default function SiteHeader({ variant = 'default' }) {
 
   const initiale = (profil?.nom || user?.email || '?')[0].toUpperCase()
   const accountLinks = [
-    { href: '/tableau-de-bord', label: 'Tableau de bord', icon: '🏠' },
-    { href: '/publier', label: 'Publier une annonce', icon: '➕' },
-    { href: '/mes-annonces', label: 'Mes annonces', icon: '📋' },
-    { href: '/favoris', label: 'Mes favoris', icon: '❤️' },
-    { href: '/messages', label: 'Mes messages', icon: '💬' },
-    { href: '/demandes', label: 'Mes demandes', icon: '📬' },
-    { href: '/profil', label: 'Mon profil', icon: '👤' },
-    { href: '/badge', label: 'Badge Vérifié', icon: '✅' },
+    { href: '/tableau-de-bord', label: 'Tableau', icon: '🏠' },
+    { href: '/publier', label: 'Publier', icon: '➕' },
+    { href: '/mes-annonces', label: 'Annonces', icon: '📋' },
+    { href: '/favoris', label: 'Favoris', icon: '❤️' },
+    { href: '/messages', label: 'Messages', icon: '💬' },
+    { href: '/profil', label: 'Profil', icon: '👤' },
   ]
   if (profil?.is_admin === true) {
     accountLinks.splice(1, 0, { href: '/admin', label: 'Administration', icon: '🛡️' })
@@ -129,11 +127,11 @@ export default function SiteHeader({ variant = 'default' }) {
                 </button>
                 {ouvert && (
                   <div
-                    className="absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-100 shadow-lg py-2 text-sm"
+                    className="absolute right-0 mt-2 w-56 bg-white rounded-xl border border-gray-100 shadow-lg py-1.5 text-xs"
                     onMouseLeave={() => setOuvert(false)}
                   >
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <div className="font-bold text-gray-800 truncate">
+                    <div className="px-3 py-2 border-b border-gray-100">
+                      <div className="font-bold text-gray-800 truncate text-sm">
                         {profil?.nom || user.email}
                       </div>
                       <div className="text-xs text-gray-400 truncate">
@@ -144,19 +142,19 @@ export default function SiteHeader({ variant = 'default' }) {
                       <a
                         key={m.href}
                         href={m.href}
-                        className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20]"
+                        className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20]"
                       >
-                        <span>{m.icon}</span>
-                        <span>{m.label}</span>
+                        <span className="text-[13px] leading-none">{m.icon}</span>
+                        <span className="font-semibold">{m.label}</span>
                       </a>
                     ))}
                     <div className="border-t border-gray-100 mt-1 pt-1">
                       <button
                         type="button"
                         onClick={deconnexion}
-                        className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-50 flex items-center gap-3"
+                        className="w-full text-left px-3 py-1.5 text-red-500 hover:bg-red-50 flex items-center gap-2 font-semibold"
                       >
-                        <span>↩︎</span> Se déconnecter
+                        <span className="text-[13px] leading-none">↩︎</span> Déconnexion
                       </button>
                     </div>
                   </div>

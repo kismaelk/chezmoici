@@ -2,11 +2,20 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { connecterAvecEmail, connecterAvecGoogle } from '@/lib/auth'
+import {
+  connecterAvecEmail,
+  connecterAvecGoogle,
+  connecterAvecFacebook,
+  envoyerCodeConnexionSMS,
+  verifierCodeConnexionSMS,
+} from '@/lib/auth'
 
 export default function Connexion() {
   const [email, setEmail] = useState('')
   const [motDePasse, setMotDePasse] = useState('')
+  const [telephone, setTelephone] = useState('')
+  const [codeSMS, setCodeSMS] = useState('')
+  const [codeEnvoye, setCodeEnvoye] = useState(false)
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState('')
   const router = useRouter()
@@ -36,6 +45,45 @@ export default function Connexion() {
     }
   }
 
+  const connecterFacebook = async () => {
+    setChargement(true)
+    setErreur('')
+    try {
+      await connecterAvecFacebook()
+      router.push('/tableau-de-bord')
+    } catch (err) {
+      setErreur('Erreur Facebook : ' + err.message)
+      setChargement(false)
+    }
+  }
+
+  const envoyerCodeSMS = async () => {
+    if (!telephone.trim()) return setErreur('Entrez votre numéro de téléphone au format +225XXXXXXXX')
+    setChargement(true)
+    setErreur('')
+    try {
+      await envoyerCodeConnexionSMS(telephone.trim())
+      setCodeEnvoye(true)
+    } catch (err) {
+      setErreur('Erreur SMS : ' + err.message)
+    } finally {
+      setChargement(false)
+    }
+  }
+
+  const verifierCodeSMS = async () => {
+    if (!telephone.trim() || !codeSMS.trim()) return setErreur('Entrez le numéro et le code SMS')
+    setChargement(true)
+    setErreur('')
+    try {
+      await verifierCodeConnexionSMS(telephone.trim(), codeSMS.trim())
+      router.push('/tableau-de-bord')
+    } catch (err) {
+      setErreur('Code SMS invalide : ' + err.message)
+      setChargement(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
       <nav className="bg-[#1B5E20] px-4 py-4">
@@ -59,10 +107,58 @@ export default function Connexion() {
             Continuer avec Google
           </button>
 
+          <button
+            type="button"
+            onClick={connecterFacebook}
+            disabled={chargement}
+            className="w-full border-2 border-blue-200 bg-blue-50 text-blue-700 py-3 rounded-xl font-bold mb-5 hover:bg-blue-100 flex items-center justify-center gap-3"
+          >
+            <span className="text-lg font-black">f</span>
+            Continuer avec Facebook
+          </button>
+
           <div className="flex items-center gap-4 mb-5">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-gray-400 text-sm">ou</span>
             <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
+          <div className="space-y-3 mb-5 p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <p className="text-sm font-semibold text-gray-700">Connexion par SMS</p>
+            <input
+              type="tel"
+              placeholder="+2250700000000"
+              value={telephone}
+              onChange={(e) => setTelephone(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] text-sm bg-white"
+            />
+            {codeEnvoye && (
+              <input
+                type="text"
+                placeholder="Code reçu par SMS"
+                value={codeSMS}
+                onChange={(e) => setCodeSMS(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] text-sm bg-white"
+              />
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={envoyerCodeSMS}
+                disabled={chargement}
+                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100"
+              >
+                Envoyer code
+              </button>
+              <button
+                type="button"
+                onClick={verifierCodeSMS}
+                disabled={chargement || !codeEnvoye}
+                className="flex-1 bg-[#1B5E20] text-white py-2 rounded-lg text-sm font-semibold hover:bg-green-800 disabled:opacity-50"
+              >
+                Vérifier code
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">

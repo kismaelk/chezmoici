@@ -40,6 +40,10 @@ function getMarkerEmoji(annonce) {
   return { location: '🔑', vente: '🏠', service: '🔧', artisan: '🛠️' }[annonce.type] || '📍'
 }
 
+/** Centre d’Abidjan au chargement — [longitude, latitude] (Mapbox) */
+const ABIDJAN_CENTER = [-4.021, 5.325]
+const ABIDJAN_DEFAULT_ZOOM = 11.5
+
 const COORDS_QUARTIER = {
   Cocody:        [-3.98,   5.36],
   Plateau:       [-4.0167, 5.3167],
@@ -140,6 +144,9 @@ function CarteMapbox() {
   const [chargement, setChargement] = useState(true)
   const [mapReady, setMapReady] = useState(false)
   const [erreur, setErreur] = useState('')
+  const [showListMobile, setShowListMobile] = useState(false)
+  /** Filtres carte : affichés par défaut ; bouton pour les masquer (mobile + desktop) */
+  const [filtresVisibles, setFiltresVisibles] = useState(true)
 
   const [filtresCarte, setFiltresCarte] = useState({
     type: '', prixMin: '', prixMax: '', beds: '', baths: '',
@@ -263,8 +270,8 @@ function CarteMapbox() {
         const map = new mapboxgl.Map({
           container: mapContainer.current,
           style: 'mapbox://styles/mapbox/streets-v12',
-          center: [-4.0167, 5.3167],
-          zoom: 11,
+          center: ABIDJAN_CENTER,
+          zoom: ABIDJAN_DEFAULT_ZOOM,
           language: 'fr',
         })
 
@@ -452,11 +459,11 @@ function CarteMapbox() {
   const badgeLabel = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#F5F5F5]">
       <SiteHeader />
 
       {/* Barre titre + lien liste */}
-      <div className="bg-white border-b border-gray-100 px-4 py-2.5 flex items-center justify-between gap-3 z-[600] relative">
+      <div className="relative z-[600] flex flex-shrink-0 items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-2.5">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm font-bold text-gray-700">🗺️ Carte interactive</span>
           {!chargement && (
@@ -467,23 +474,34 @@ function CarteMapbox() {
         </div>
         <a
           href={lienListe}
-          className="flex-shrink-0 flex items-center gap-1.5 bg-[#1B5E20] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-800 transition-colors"
+          className="hidden md:flex flex-shrink-0 items-center gap-1.5 bg-[#1B5E20] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-800 transition-colors"
         >
           ☰ Voir en liste
         </a>
+        <button
+          type="button"
+          onClick={() => setShowListMobile((v) => !v)}
+          className="md:hidden flex-shrink-0 flex items-center gap-1 bg-[#1B5E20] text-white px-3 py-1.5 rounded-lg text-xs font-bold"
+        >
+          {showListMobile ? '🗺️ Carte' : '☰ Liste'}
+        </button>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
 
-        {/* Colonne listing */}
-        <div className="w-full md:w-[280px] bg-white border-t md:border-t-0 md:border-r border-gray-100 flex flex-col max-h-[48vh] md:max-h-none flex-shrink-0">
-          <div className="p-3 border-b border-gray-100">
+        {/* Colonne listing — scroll isolé (ne fait pas défiler la page ni la carte) */}
+        <div
+          className={`${
+            showListMobile ? 'flex' : 'hidden'
+          } md:flex min-h-0 w-full flex-shrink-0 flex-col overflow-hidden border-t border-gray-100 bg-white md:w-[260px] md:max-h-none md:border-t-0 md:border-r max-h-[42vh] md:max-h-full`}
+        >
+          <div className="flex-shrink-0 border-b border-gray-100 p-3">
             <h2 className="font-bold text-gray-800 text-sm">
               {chargement ? 'Chargement...' : `${annoncesFiltrees.length} résultats`}
             </h2>
             <p className="text-xs text-gray-400 mt-0.5">Cliquez une annonce pour zoomer</p>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
             {annoncesFiltrees.length === 0 && !chargement ? (
               <div className="p-8 text-center text-gray-400">
                 <p className="text-4xl mb-2">🔍</p>
@@ -528,16 +546,33 @@ function CarteMapbox() {
           </div>
         </div>
 
-        {/* Carte */}
-        <div className="flex-1 relative min-h-[30rem] md:min-h-[calc(100vh-6.5rem)]">
+        {/* Carte — hauteur fixée par le flex parent pour éviter le scroll page */}
+        <div
+          className={`${
+            showListMobile ? 'hidden' : 'block'
+          } relative min-h-0 flex-1 overflow-hidden md:block md:min-h-0`}
+        >
 
           {/* Barre de filtres sur la carte */}
-          <div className="absolute top-3 left-3 right-3 z-20 bg-white/95 backdrop-blur border border-gray-100 rounded-xl p-2.5 shadow-lg">
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+          <div className="absolute left-2 right-2 top-2 z-20 rounded-xl border border-gray-100 bg-white/95 p-2 shadow-lg backdrop-blur">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setFiltresVisibles((v) => !v)}
+                className="rounded-md bg-gray-100 px-2 py-1.5 text-[11px] font-bold text-gray-700 hover:bg-gray-200"
+              >
+                {filtresVisibles ? 'Masquer les filtres' : 'Afficher les filtres'}
+              </button>
+            </div>
+            <div
+              className={`grid grid-cols-2 gap-1.5 md:grid-cols-6 ${
+                filtresVisibles ? '' : 'hidden'
+              }`}
+            >
               <select
                 value={filtresCarte.type}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, type: e.target.value }))}
-                className="border border-gray-200 rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-[#1B5E20]"
+                className="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#1B5E20]"
               >
                 <option value="">Type</option>
                 <option value="location">Location</option>
@@ -548,17 +583,17 @@ function CarteMapbox() {
               <input type="number" value={filtresCarte.prixMin}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, prixMin: e.target.value }))}
                 placeholder="Prix min"
-                className="border border-gray-200 rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-[#1B5E20]"
+                className="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#1B5E20]"
               />
               <input type="number" value={filtresCarte.prixMax}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, prixMax: e.target.value }))}
                 placeholder="Prix max"
-                className="border border-gray-200 rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-[#1B5E20]"
+                className="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#1B5E20]"
               />
               <select
                 value={filtresCarte.beds}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, beds: e.target.value }))}
-                className="border border-gray-200 rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-[#1B5E20]"
+                className="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#1B5E20]"
               >
                 <option value="">Chambres</option>
                 <option value="1">1+</option>
@@ -569,7 +604,7 @@ function CarteMapbox() {
               <select
                 value={filtresCarte.baths}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, baths: e.target.value }))}
-                className="border border-gray-200 rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-[#1B5E20]"
+                className="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#1B5E20]"
               >
                 <option value="">Salles de bain</option>
                 <option value="1">1+</option>
@@ -580,7 +615,7 @@ function CarteMapbox() {
               <button
                 type="button"
                 onClick={() => setFiltresCarte({ type: '', prixMin: '', prixMax: '', beds: '', baths: '' })}
-                className="bg-gray-100 text-gray-700 rounded-lg px-2 py-2 text-xs font-bold hover:bg-gray-200"
+                className="bg-gray-100 text-gray-700 rounded-md px-2 py-1.5 text-[11px] font-bold hover:bg-gray-200"
               >
                 Réinitialiser
               </button>
@@ -588,19 +623,22 @@ function CarteMapbox() {
           </div>
 
           {chargement ? (
-            <div className="w-full h-full min-h-[30rem] bg-gradient-to-br from-[#E8F5E9] to-gray-100 flex flex-col items-center justify-center gap-3">
+            <div className="flex h-full min-h-[12rem] w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#E8F5E9] to-gray-100 md:absolute md:inset-0 md:min-h-0">
               <div className="w-10 h-10 border-4 border-[#1B5E20] border-t-transparent rounded-full animate-spin" />
               <p className="text-[#1B5E20] font-bold text-sm">Chargement de la carte...</p>
             </div>
           ) : erreur ? (
-            <div className="w-full h-full min-h-[30rem] bg-gray-100 flex items-center justify-center px-6">
+            <div className="flex h-full min-h-[12rem] w-full items-center justify-center bg-gray-100 px-6 md:absolute md:inset-0 md:min-h-0">
               <div className="text-center">
                 <p className="text-4xl mb-3">🗺️</p>
                 <p className="text-gray-600 text-sm">{erreur}</p>
               </div>
             </div>
           ) : (
-            <div ref={mapContainer} className="w-full h-full min-h-[30rem] md:absolute md:inset-0" />
+            <div
+              ref={mapContainer}
+              className="h-full min-h-[16rem] w-full md:absolute md:inset-0 md:min-h-0"
+            />
           )}
 
           {/* Fiche annonce sélectionnée (bas de carte) */}

@@ -319,16 +319,16 @@ export default function Accueil() {
         </div>
       </section>
       {/* 4 PILIERS */}
-      <section className="px-4 py-14 max-w-7xl mx-auto">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3">
+      <section className="mx-auto max-w-7xl px-4 py-6 md:py-8">
+        <div className="mb-5 text-center md:mb-6">
+          <h2 className="mb-1.5 text-2xl font-black text-gray-900 md:text-3xl">
             Tout sous un même toit 🏡
           </h2>
-          <p className="text-gray-400 max-w-md mx-auto">
+          <p className="mx-auto max-w-md text-sm text-gray-400 md:text-base">
             Louer, acheter, trouver un artisan — une seule plateforme vérifiée
           </p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
           {[
             { emoji: '🏠', titre: 'Acheter',  desc: 'Titre foncier vérifié',       filtre: 'vente',    bg: 'bg-blue-50',    border: 'hover:border-blue-300',   text: 'text-blue-700' },
             { emoji: '🔑', titre: 'Louer',    desc: 'Bail numérique sécurisé',     filtre: 'location', bg: 'bg-emerald-50', border: 'hover:border-emerald-300', text: 'text-emerald-700' },
@@ -338,13 +338,13 @@ export default function Accueil() {
             <a
               key={p.titre}
               href={`/annonces?type=${p.filtre}`}
-              className={`${p.bg} rounded-2xl p-5 md:p-7 text-center border-2 border-transparent ${p.border} hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group block`}
+              className={`${p.bg} group block rounded-xl border-2 border-transparent p-3 text-center md:rounded-2xl md:p-4 ${p.border} transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md`}
             >
-              <div className="text-4xl md:text-5xl mb-3 group-hover:scale-110 transition-transform duration-300 inline-block">
+              <div className="mb-1.5 inline-block text-3xl transition-transform duration-300 group-hover:scale-105 md:mb-2 md:text-4xl">
                 {p.emoji}
               </div>
-              <h3 className={`text-base md:text-lg font-black ${p.text} mb-1`}>{p.titre}</h3>
-              <p className="text-gray-500 text-xs leading-snug hidden md:block">{p.desc}</p>
+              <h3 className={`mb-0.5 text-sm font-black md:text-base ${p.text}`}>{p.titre}</h3>
+              <p className="hidden text-[11px] leading-snug text-gray-500 md:block md:text-xs">{p.desc}</p>
             </a>
           ))}
         </div>

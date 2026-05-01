@@ -271,8 +271,17 @@ export default function DetailAnnonceClient() {
     window.open(url, '_blank')
   }
 
+  const contacterWhatsappDirect = () => {
+    const brut = proprietaire?.telephone || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''
+    const numero = brut.replace(/[^\d]/g, '')
+    if (!numero) return
+    const texte = `Bonjour, je suis intéressé(e) par votre annonce "${annonce.titre}" (${window.location.href}). Est-elle toujours disponible ?`
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texte)}`, '_blank')
+  }
+
   const estProprietaire =
     utilisateur && annonce && utilisateur.uid === annonce.utilisateur_id
+  const hasWhatsappContact = Boolean((proprietaire?.telephone || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '').replace(/[^\d]/g, ''))
 
   const soumettreSignalement = async () => {
     if (!utilisateur) {
@@ -612,6 +621,15 @@ export default function DetailAnnonceClient() {
                     className="w-full bg-[#1B5E20] text-white py-3 rounded-lg font-bold text-sm hover:bg-green-800"
                   >
                     {utilisateur ? '💬 Envoyer un message' : '🔐 Connectez-vous pour contacter'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={contacterWhatsappDirect}
+                    disabled={!hasWhatsappContact}
+                    className="w-full mt-2 bg-green-500 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-green-600 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <span>🟢</span>
+                    {hasWhatsappContact ? 'WhatsApp direct' : 'WhatsApp indisponible'}
                   </button>
                 </>
               )}
