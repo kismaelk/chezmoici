@@ -80,16 +80,16 @@ export default function APropos() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
               {
-                initial: 'A',
-                nom: 'Arsène N\'Guessan',
+                initial: 'I',
+                nom: 'Ismael Koné',
                 role: 'Président-directeur général (CEO)',
-                desc: 'Expert en technologie et développement de produits numériques. Basé à l’étranger pour la partie investissement et partenariats, il pilote la vision produit et la stratégie globale de Chez Moi CI.',
+                desc: 'Expert en technologie et développement de produits numériques. Basé à Ottawa (Canada), il supervise la vision produit et la stratégie globale de Chez Moi CI.',
               },
               {
-                initial: 'F',
-                nom: 'Fatou Bamba',
-                role: 'Directrice des opérations (COO)',
-                desc: "Spécialiste des opérations et du développement commercial en Afrique de l'Ouest. Coordonne les équipes terrain à Abidjan et les partenariats avec les agences.",
+                initial: 'M',
+                nom: 'Michel Depohi',
+                role: 'Directeur des opérations (COO)',
+                desc: "Spécialiste des opérations et du développement commercial en Afrique de l'Ouest. Il coordonne les équipes terrain à Abidjan et les partenariats avec les agences.",
               },
             ].map((f) => (
               <div key={f.nom} className="flex gap-4">
