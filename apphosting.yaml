@@ -1,24 +1,15 @@
-# Settings for Backend (on Cloud Run).
-# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+# Non utilisé si vous déployez uniquement sur Vercel (ce fichier sert à Firebase App Hosting).
+# Stack actuelle typique : GitHub → Vercel, Supabase, clé Maps dans Google Cloud.
+#
+# Carte en production :
+# Vercel → votre projet → Settings → Environment Variables
+#   - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY  (cochez Production, et Preview si les previews affichent la carte)
+#   - NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID   (optionnel, marqueurs avancés)
+# Puis déclenchez un nouveau déploiement (les NEXT_PUBLIC_* sont figées au build).
+#
+# Google Cloud Console → APIs & Services → Credentials :
+#   activez « Maps JavaScript API », restreignez la clé par référent HTTP, ex. :
+#   https://chezmoici.com/*  https://www.chezmoici.com/*  https://*.vercel.app/*  http://localhost:*
+
 runConfig:
   minInstances: 0
-  # maxInstances: 100
-  # concurrency: 80
-  # cpu: 1
-  # memoryMiB: 512
-
-# Environment variables and secrets.
-# env:
-  # Configure environment variables.
-  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
-  # - variable: MESSAGE
-  #   value: Hello world!
-  #   availability:
-  #     - BUILD
-  #     - RUNTIME
-
-  # Grant access to secrets in Cloud Secret Manager.
-  # You can create secrets with the CLI command `firebase apphosting:secrets:set <secretName>`.
-  # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
-  # - variable: MY_SECRET
-  #   secret: mySecretRef

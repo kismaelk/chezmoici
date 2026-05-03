@@ -609,7 +609,7 @@ function CarteGoogleMaps() {
   const badgeLabel = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
   const erreurAffichee = erreur || (
     !process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-      ? 'Clé Google Maps manquante. Ajoutez NEXT_PUBLIC_GOOGLE_MAPS_API_KEY dans .env.local (Console Google Cloud → Maps JavaScript API).'
+      ? 'Clé Google Maps absente sur ce déploiement. En local : .env.local. En ligne (Vercel) : Project → Settings → Environment Variables → NEXT_PUBLIC_GOOGLE_MAPS_API_KEY pour Production (et Preview si besoin), puis redéployez. Google Cloud : activez Maps JavaScript API et restreignez la clé par référents HTTP (votre domaine + *.vercel.app + localhost).'
       : ''
   )
 

@@ -46,18 +46,18 @@ export default function MesAnnonces() {
     <div className="min-h-screen bg-[#F5F5F5]">
       <SiteHeader />
 
-      <div className="max-w-4xl mx-auto py-10 px-6">
-        <div className="flex items-center justify-between mb-8">
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-[#1B5E20]">Mes annonces</h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="text-2xl font-bold text-[#1B5E20] sm:text-3xl">Mes annonces</h1>
+            <p className="mt-1 text-gray-500">
               {annonces.length} annonce{annonces.length > 1 ? 's' : ''} publiée
               {annonces.length > 1 ? 's' : ''}
             </p>
           </div>
           <a
             href="/publier"
-            className="bg-[#1B5E20] text-white px-5 py-3 rounded-xl font-bold hover:bg-green-800"
+            className="inline-flex shrink-0 items-center justify-center rounded-xl bg-[#1B5E20] px-5 py-3 text-center font-bold text-white hover:bg-green-800"
           >
             + Nouvelle annonce
           </a>
@@ -78,9 +78,9 @@ export default function MesAnnonces() {
         ) : (
           <div className="space-y-4">
             {annonces.map((annonce) => (
-              <div key={annonce.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="flex">
-                  <div className="w-48 h-40 bg-gray-200 flex-shrink-0">
+              <div key={annonce.id} className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+                <div className="flex flex-col sm:flex-row">
+                  <div className="h-48 w-full shrink-0 bg-gray-200 sm:h-auto sm:w-48 sm:min-h-[10rem]">
                     {annonce.photos && annonce.photos[0] ? (
                       <img
                         src={annonce.photos[0]}
@@ -94,13 +94,13 @@ export default function MesAnnonces() {
                     )}
                   </div>
 
-                  <div className="flex-1 p-5">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-bold text-gray-800 text-lg">{annonce.titre}</h3>
-                        <p className="text-gray-500 text-sm">📍 {annonce.quartier}, Abidjan</p>
+                  <div className="flex-1 p-4 sm:p-5">
+                    <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <h3 className="text-lg font-bold text-gray-800">{annonce.titre}</h3>
+                        <p className="text-sm text-gray-500">📍 {annonce.quartier}, Abidjan</p>
                       </div>
-                      <span className="text-sm bg-[#E8F5E9] text-[#1B5E20] px-3 py-1 rounded-full font-bold">
+                      <span className="inline-flex w-fit shrink-0 rounded-full bg-[#E8F5E9] px-3 py-1 text-sm font-bold text-[#1B5E20]">
                         {badgeLabel[annonce.badge] || '🔓 Bronze'}
                       </span>
                     </div>
@@ -114,29 +114,29 @@ export default function MesAnnonces() {
 
                     <p className="text-gray-500 text-sm line-clamp-2 mb-4">{annonce.description}</p>
 
-                    <div className="flex gap-3 flex-wrap">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
                       <a
                         href={`/annonces/${annonce.id}`}
-                        className="text-[#1B5E20] border border-[#1B5E20] px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#E8F5E9]"
+                        className="rounded-lg border border-[#1B5E20] px-4 py-2.5 text-center text-sm font-bold text-[#1B5E20] hover:bg-[#E8F5E9] sm:py-2"
                       >
                         Voir
                       </a>
                       <a
                         href={`/modifier/${annonce.id}`}
-                        className="text-gray-600 border border-gray-300 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-50"
+                        className="rounded-lg border border-gray-300 px-4 py-2.5 text-center text-sm font-bold text-gray-600 hover:bg-gray-50 sm:py-2"
                       >
                         Modifier
                       </a>
                       <button
                         type="button"
                         onClick={() => supprimerAnnonce(annonce.id)}
-                        className="text-red-500 border border-red-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-50"
+                        className="rounded-lg border border-red-200 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 sm:py-2"
                       >
                         Supprimer
                       </button>
                       <a
                         href="/badge"
-                        className="bg-[#F9A825] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-yellow-600 ml-auto"
+                        className="rounded-lg bg-[#F9A825] px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-yellow-600 sm:ml-auto sm:py-2"
                       >
                         ✅ Demander badge vérifié
                       </a>

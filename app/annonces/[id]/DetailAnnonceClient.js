@@ -425,6 +425,23 @@ export default function DetailAnnonceClient() {
       </div>
 
       <div className="max-w-7xl mx-auto py-8 px-4 md:px-6">
+        {estProprietaire && (
+          <div className="mb-6 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-bold text-emerald-900">C&apos;est votre annonce</p>
+              <p className="text-sm text-gray-600">
+                Aperçu public : les photos ci-dessous sont celles publiées. Contact acheteurs = téléphone du profil.
+              </p>
+            </div>
+            <Link
+              href={`/modifier/${annonce.id}`}
+              className="inline-flex flex-shrink-0 items-center justify-center rounded-xl bg-[#1B5E20] px-5 py-2.5 text-sm font-bold text-white hover:bg-green-800"
+            >
+              Modifier l&apos;annonce →
+            </Link>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
           {/* COLONNE GAUCHE — Photos + Infos */}
@@ -437,20 +454,20 @@ export default function DetailAnnonceClient() {
                   <img
                     src={annonce.photos[photoActive]}
                     alt={annonce.titre}
-                    className="w-full h-80 object-cover"
+                    className="max-h-[min(70vh,24rem)] w-full object-contain bg-black/5 sm:max-h-[28rem] md:h-96 md:max-h-none md:object-cover"
                   />
                   {annonce.photos.length > 1 && (
-                    <div className="flex gap-2 p-3 overflow-x-auto">
+                    <div className="flex gap-2 overflow-x-auto p-3">
                       {annonce.photos.map((photo, index) => (
                         <img
                           key={index}
                           src={photo}
                           alt={`Photo ${index + 1}`}
                           onClick={() => setPhotoActive(index)}
-                          className={`w-20 h-16 object-cover rounded-lg cursor-pointer flex-shrink-0 ${
+                          className={`h-20 w-24 flex-shrink-0 cursor-pointer rounded-lg object-cover sm:h-24 sm:w-28 ${
                             photoActive === index
                               ? 'ring-2 ring-[#1B5E20]'
-                              : 'opacity-70 hover:opacity-100'
+                              : 'opacity-75 hover:opacity-100'
                           }`}
                         />
                       ))}
@@ -458,7 +475,7 @@ export default function DetailAnnonceClient() {
                   )}
                 </>
               ) : (
-                <div className="w-full h-80 bg-gray-200 flex items-center justify-center text-gray-400 text-5xl">
+                <div className="flex h-64 w-full items-center justify-center bg-gray-200 text-gray-400 text-5xl sm:h-80">
                   📷
                 </div>
               )}
@@ -779,8 +796,46 @@ export default function DetailAnnonceClient() {
                 </div>
               </div>
 
-              {/* Message */}
-              {envoye ? (
+              {/* Message / propriétaire */}
+              {estProprietaire ? (
+                <div className="space-y-3 rounded-lg border border-emerald-100 bg-emerald-50/50 p-4">
+                  <p className="text-sm font-bold text-gray-800">Téléphone affiché aux acheteurs</p>
+                  <p className="text-xs text-gray-600">
+                    C&apos;est le numéro de votre profil (WhatsApp / appel). Modifiez-le dans Mon profil si besoin.
+                  </p>
+                  {proprietaire?.telephone ? (
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href={`tel:${String(proprietaire.telephone).replace(/\s/g, '')}`}
+                        className="break-all rounded-lg bg-white px-3 py-2 text-center text-base font-bold text-[#1B5E20] ring-1 ring-emerald-200 hover:bg-emerald-50"
+                      >
+                        📞 {proprietaire.telephone}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={contacterWhatsappDirect}
+                        disabled={!hasWhatsappContact}
+                        className="w-full rounded-lg bg-green-600 py-2.5 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        Tester mon lien WhatsApp
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-amber-800">
+                      Aucun numéro sur le profil —{' '}
+                      <Link href="/profil" className="font-bold underline">
+                        compléter Mon profil
+                      </Link>
+                    </p>
+                  )}
+                  <Link
+                    href={`/modifier/${annonce.id}`}
+                    className="block w-full rounded-lg border-2 border-[#1B5E20] py-2.5 text-center text-sm font-bold text-[#1B5E20] hover:bg-[#E8F5E9]"
+                  >
+                    Modifier texte, prix, photos…
+                  </Link>
+                </div>
+              ) : envoye ? (
                 <div className="bg-[#E8F5E9] rounded-lg p-4 text-center">
                   <div className="text-2xl mb-1">✅</div>
                   <p className="text-[#1B5E20] font-bold text-sm">Message envoyé !</p>

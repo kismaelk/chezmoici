@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import Link from 'next/link'
 import { observerConnexion } from '@/lib/auth'
-import { getAnnonceById, updateAnnonce, uploadPhotoChemin } from '@/lib/firestoreApp'
+import { getAnnonceById, updateAnnonce, uploadPhotoChemin, getProfilFirestore } from '@/lib/firestoreApp'
 import { useRouter, useParams } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
@@ -16,6 +17,40 @@ const ARRONDISSEMENTS = [
   'Abobo', 'Adjamé', 'Attécoubé', 'Cocody', 'Koumassi',
   'Marcory', 'Plateau', 'Port-Bouët', 'Treichville', 'Yopougon',
 ]
+
+/** Snapshot stable pour détecter les changements (confirmation sauvegarde) */
+function serialiserEtatEdition(v) {
+  return JSON.stringify({
+    type: v.type || '',
+    titre: (v.titre || '').trim(),
+    description: (v.description || '').trim(),
+    prix: String(v.prix ?? ''),
+    quartier: v.quartier || '',
+    statut: v.statut || '',
+    photos: (v.photos || []).join('|'),
+    nbNouvellesPhotos: v.nbNouvellesPhotos ?? 0,
+    rue: (v.rue || '').trim(),
+    secteur: (v.secteur || '').trim(),
+    arrondissement: v.arrondissement || '',
+    adresseComplete: (v.adresseComplete || '').trim(),
+    lat: v.latitude != null ? String(v.latitude) : '',
+    lng: v.longitude != null ? String(v.longitude) : '',
+    nbChambres: String(v.nbChambres ?? ''),
+    nbPieces: String(v.nbPieces ?? ''),
+    surface: String(v.surface ?? ''),
+    meuble: String(v.meuble ?? ''),
+    disponibilite: String(v.disponibilite ?? ''),
+    dureeBail: String(v.dureeBail ?? ''),
+    inclusions: (v.inclusions || []).slice().sort().join(','),
+    typePropriete: String(v.typePropriete ?? ''),
+    anneeConstruction: String(v.anneeConstruction ?? ''),
+    titreFoncier: String(v.titreFoncier ?? ''),
+    typeService: String(v.typeService ?? ''),
+    zoneDesservie: String(v.zoneDesservie ?? ''),
+    tarifHoraire: String(v.tarifHoraire ?? ''),
+    disponibiliteService: String(v.disponibiliteService ?? ''),
+  })
+}
 
 // ─── Composant sélecteur de localisation GPS ──────────────────────────────────
 
@@ -137,10 +172,107 @@ export default function ModifierAnnonceClient() {
   const [photosExistantes, setPhotosExistantes] = useState([]) // URLs déjà en base
   const [nouvellesFichiers, setNouvellesFichiers] = useState([]) // File[] à uploader
   const [nouvellesAperçus, setNouvellesAperçus] = useState([]) // objectURLs preview
+  const [profil, setProfil] = useState(null)
+
+  const [nbChambres, setNbChambres] = useState('')
+  const [nbPieces, setNbPieces] = useState('')
+  const [surface, setSurface] = useState('')
+  const [meuble, setMeuble] = useState('')
+  const [disponibilite, setDisponibilite] = useState('')
+  const [dureeBail, setDureeBail] = useState('')
+  const [inclusions, setInclusions] = useState([])
+
+  const [typePropriete, setTypePropriete] = useState('')
+  const [anneeConstruction, setAnneeConstruction] = useState('')
+  const [titreFoncier, setTitreFoncier] = useState('')
+
+  const [typeService, setTypeService] = useState('')
+  const [zoneDesservie, setZoneDesservie] = useState('')
+  const [tarifHoraire, setTarifHoraire] = useState('')
+  const [disponibiliteService, setDisponibiliteService] = useState('')
+
+  const [baselineSerialise, setBaselineSerialise] = useState('')
 
   const router = useRouter()
   const params = useParams()
   const id = params?.id
+
+  const etatActuelSerialise = useMemo(
+    () =>
+      serialiserEtatEdition({
+        type,
+        titre,
+        description,
+        prix,
+        quartier,
+        statut,
+        photos: photosExistantes,
+        nbNouvellesPhotos: nouvellesFichiers.length,
+        rue,
+        secteur,
+        arrondissement,
+        adresseComplete,
+        latitude,
+        longitude,
+        nbChambres,
+        nbPieces,
+        surface,
+        meuble,
+        disponibilite,
+        dureeBail,
+        inclusions,
+        typePropriete,
+        anneeConstruction,
+        titreFoncier,
+        typeService,
+        zoneDesservie,
+        tarifHoraire,
+        disponibiliteService,
+      }),
+    [
+      type,
+      titre,
+      description,
+      prix,
+      quartier,
+      statut,
+      photosExistantes,
+      nouvellesFichiers.length,
+      rue,
+      secteur,
+      arrondissement,
+      adresseComplete,
+      latitude,
+      longitude,
+      nbChambres,
+      nbPieces,
+      surface,
+      meuble,
+      disponibilite,
+      dureeBail,
+      inclusions,
+      typePropriete,
+      anneeConstruction,
+      titreFoncier,
+      typeService,
+      zoneDesservie,
+      tarifHoraire,
+      disponibiliteService,
+    ],
+  )
+
+  const isDirty =
+    baselineSerialise !== '' && baselineSerialise !== etatActuelSerialise
+
+  useEffect(() => {
+    const fn = (e) => {
+      if (!isDirty) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', fn)
+    return () => window.removeEventListener('beforeunload', fn)
+  }, [isDirty])
 
   useEffect(() => {
     if (!id) {
@@ -160,19 +292,88 @@ export default function ModifierAnnonceClient() {
         return
       }
 
+      try {
+        const p = await getProfilFirestore(user.uid)
+        setProfil(p)
+      } catch {
+        setProfil(null)
+      }
+
       setType(data.type || 'location')
       setTitre(data.titre || '')
       setDescription(data.description || '')
       setPrix(data.prix?.toString() || '')
       setQuartier(data.quartier || '')
       setStatut(data.statut || 'actif')
-      setPhotosExistantes(data.photos || [])
+      setPhotosExistantes(Array.isArray(data.photos) ? data.photos : [])
       setRue(data.rue || '')
       setSecteur(data.secteur || '')
       setArrondissement(data.arrondissement || '')
       setAdresseComplete(data.adresse_complete || '')
       setLatitude(data.latitude ?? null)
       setLongitude(data.longitude ?? null)
+
+      setNbChambres(data.nb_chambres != null ? String(data.nb_chambres) : '')
+      setNbPieces(data.nb_pieces != null ? String(data.nb_pieces) : '')
+      setSurface(data.surface != null ? String(data.surface) : '')
+      setMeuble(data.meuble === true ? 'true' : data.meuble === false ? 'false' : '')
+      setDureeBail(data.duree_bail || '')
+      setInclusions(Array.isArray(data.equipements) ? data.equipements : [])
+
+      setTypePropriete(data.type_propriete || '')
+      setAnneeConstruction(data.annee_construction != null ? String(data.annee_construction) : '')
+      setTitreFoncier(data.titre_foncier_statut || '')
+
+      setTypeService(data.type_service || '')
+      setZoneDesservie(data.zone_desservie || '')
+      setTarifHoraire(data.tarif_horaire != null ? String(data.tarif_horaire) : '')
+      if (data.type === 'service' || data.type === 'artisan') {
+        setDisponibilite('')
+        setDisponibiliteService(data.disponibilite || '')
+      } else if (data.type === 'location') {
+        setDisponibilite(data.disponibilite || '')
+        setDisponibiliteService('')
+      } else {
+        setDisponibilite('')
+        setDisponibiliteService('')
+      }
+
+      queueMicrotask(() => {
+        setBaselineSerialise(
+          serialiserEtatEdition({
+            type: data.type || 'location',
+            titre: data.titre || '',
+            description: data.description || '',
+            prix: data.prix?.toString() || '',
+            quartier: data.quartier || '',
+            statut: data.statut || 'actif',
+            photos: Array.isArray(data.photos) ? data.photos : [],
+            nbNouvellesPhotos: 0,
+            rue: data.rue || '',
+            secteur: data.secteur || '',
+            arrondissement: data.arrondissement || '',
+            adresseComplete: data.adresse_complete || '',
+            latitude: data.latitude ?? null,
+            longitude: data.longitude ?? null,
+            nbChambres: data.nb_chambres != null ? String(data.nb_chambres) : '',
+            nbPieces: data.nb_pieces != null ? String(data.nb_pieces) : '',
+            surface: data.surface != null ? String(data.surface) : '',
+            meuble: data.meuble === true ? 'true' : data.meuble === false ? 'false' : '',
+            disponibilite: data.type === 'location' ? (data.disponibilite || '') : '',
+            dureeBail: data.duree_bail || '',
+            inclusions: Array.isArray(data.equipements) ? data.equipements : [],
+            typePropriete: data.type_propriete || '',
+            anneeConstruction: data.annee_construction != null ? String(data.annee_construction) : '',
+            titreFoncier: data.titre_foncier_statut || '',
+            typeService: data.type_service || '',
+            zoneDesservie: data.zone_desservie || '',
+            tarifHoraire: data.tarif_horaire != null ? String(data.tarif_horaire) : '',
+            disponibiliteService:
+              data.type === 'service' || data.type === 'artisan' ? (data.disponibilite || '') : '',
+          }),
+        )
+      })
+
       setChargement(false)
     })
     return () => unsub()
@@ -194,6 +395,16 @@ export default function ModifierAnnonceClient() {
     setPhotosExistantes((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const mettrePhotoEnCouverture = (index) => {
+    if (index <= 0) return
+    setPhotosExistantes((prev) => {
+      const next = [...prev]
+      const [item] = next.splice(index, 1)
+      next.unshift(item)
+      return next
+    })
+  }
+
   const supprimerNouvellePhoto = (index) => {
     URL.revokeObjectURL(nouvellesAperçus[index])
     setNouvellesFichiers((prev) => prev.filter((_, i) => i !== index))
@@ -204,6 +415,13 @@ export default function ModifierAnnonceClient() {
     if (!titre) return setErreur('Le titre est obligatoire')
     if (!prix) return setErreur('Le prix est obligatoire')
     if (!quartier) return setErreur('Le quartier est obligatoire')
+
+    if (isDirty) {
+      const ok = window.confirm(
+        'Confirmer l’enregistrement de vos modifications sur le serveur ?\n\nLes visiteurs verront la version mise à jour.',
+      )
+      if (!ok) return
+    }
 
     setSauvegarde(true)
     setErreur('')
@@ -220,22 +438,50 @@ export default function ModifierAnnonceClient() {
 
     const photosFinales = [...photosExistantes, ...urlsNouveaux]
 
+    const payload = {
+      type,
+      titre,
+      description,
+      prix: parseInt(prix, 10),
+      quartier,
+      statut,
+      photos: photosFinales,
+      rue: rue || null,
+      secteur: secteur || null,
+      arrondissement: arrondissement || null,
+      adresse_complete: adresseComplete || null,
+      latitude: latitude ? Number(latitude) : null,
+      longitude: longitude ? Number(longitude) : null,
+    }
+
+    if (type === 'location') {
+      payload.nb_pieces = nbPieces ? parseInt(nbPieces, 10) : null
+      payload.surface = surface ? parseInt(surface, 10) : null
+      payload.meuble = meuble === 'true' ? true : meuble === 'false' ? false : null
+      payload.nb_chambres = nbChambres !== '' ? parseInt(nbChambres, 10) : null
+      if (disponibilite) payload.disponibilite = disponibilite
+      if (dureeBail) payload.duree_bail = dureeBail
+      if (inclusions.length) payload.equipements = inclusions
+    }
+
+    if (type === 'vente') {
+      payload.nb_pieces = nbPieces ? parseInt(nbPieces, 10) : null
+      payload.surface = surface ? parseInt(surface, 10) : null
+      payload.nb_chambres = nbChambres !== '' ? parseInt(nbChambres, 10) : null
+      if (typePropriete) payload.type_propriete = typePropriete
+      if (anneeConstruction) payload.annee_construction = parseInt(anneeConstruction, 10)
+      if (titreFoncier) payload.titre_foncier_statut = titreFoncier
+    }
+
+    if (type === 'service' || type === 'artisan') {
+      if (typeService) payload.type_service = typeService
+      if (zoneDesservie) payload.zone_desservie = zoneDesservie
+      if (tarifHoraire) payload.tarif_horaire = parseInt(tarifHoraire, 10)
+      if (disponibiliteService) payload.disponibilite = disponibiliteService
+    }
+
     try {
-      await updateAnnonce(id, {
-        type,
-        titre,
-        description,
-        prix: parseInt(prix, 10),
-        quartier,
-        statut,
-        photos: photosFinales,
-        rue: rue || null,
-        secteur: secteur || null,
-        arrondissement: arrondissement || null,
-        adresse_complete: adresseComplete || null,
-        latitude: latitude ? Number(latitude) : null,
-        longitude: longitude ? Number(longitude) : null,
-      })
+      await updateAnnonce(id, payload)
     } catch {
       setErreur('Erreur lors de la sauvegarde')
       setSauvegarde(false)
@@ -272,9 +518,42 @@ export default function ModifierAnnonceClient() {
     <div className="min-h-screen bg-[#F5F5F5]">
       <SiteHeader />
 
-      <div className="max-w-2xl mx-auto py-10 px-4">
+      <div className="max-w-3xl mx-auto py-10 px-4">
         <h1 className="text-3xl font-bold text-[#1B5E20] mb-2">Modifier l&apos;annonce</h1>
-        <p className="text-gray-500 mb-8">Mettez à jour les informations de votre bien</p>
+        <p className="text-gray-500 mb-4">Mettez à jour les informations de votre bien</p>
+
+        {isDirty && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <strong>Modifications non enregistrées.</strong> Pensez à sauvegarder avant de quitter la page.
+          </div>
+        )}
+
+        <div className="mb-6 rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-gray-800 mb-2">Contact affiché sur l&apos;annonce</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Le numéro visible par les acheteurs est celui de votre{' '}
+            <Link href="/profil" className="font-bold text-[#1B5E20] underline">
+              profil
+            </Link>
+            . Complétez-le pour WhatsApp et appels.
+          </p>
+          {profil?.telephone ? (
+            <a
+              href={`tel:${String(profil.telephone).replace(/\s/g, '')}`}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#E8F5E9] px-4 py-2 text-base font-bold text-[#1B5E20] hover:bg-emerald-100"
+            >
+              <span aria-hidden>📞</span>
+              {profil.telephone}
+            </a>
+          ) : (
+            <p className="text-sm text-amber-800">
+              Aucun téléphone enregistré —{' '}
+              <Link href="/profil" className="font-bold underline">
+                ajoutez-le dans Mon profil
+              </Link>
+            </p>
+          )}
+        </div>
 
         {/* TYPE */}
         <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
@@ -360,6 +639,293 @@ export default function ModifierAnnonceClient() {
           </div>
         </div>
 
+        {type === 'location' && (
+          <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
+            <h2 className="font-bold text-gray-800 mb-4">Détails de la location</h2>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Nb. chambres</label>
+                  <select
+                    value={nbChambres}
+                    onChange={(e) => setNbChambres(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                  >
+                    <option value="">—</option>
+                    <option value="0">Studio</option>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <option key={n} value={n}>
+                        {n} chambre{n > 1 ? 's' : ''}
+                      </option>
+                    ))}
+                    <option value="6">5+</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Nb. pièces</label>
+                  <select
+                    value={nbPieces}
+                    onChange={(e) => setNbPieces(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                  >
+                    <option value="">—</option>
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <option key={n} value={n}>
+                        {n} pièce{n > 1 ? 's' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Surface (m²)</label>
+                  <input
+                    type="number"
+                    value={surface}
+                    onChange={(e) => setSurface(e.target.value)}
+                    placeholder="65"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Meublé ?</label>
+                  <select
+                    value={meuble}
+                    onChange={(e) => setMeuble(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                  >
+                    <option value="">—</option>
+                    <option value="true">Oui, meublé</option>
+                    <option value="false">Non, vide</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Disponible à partir du</label>
+                  <input
+                    type="date"
+                    value={disponibilite}
+                    onChange={(e) => setDisponibilite(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Durée du bail (optionnel)</label>
+                <input
+                  type="text"
+                  value={dureeBail}
+                  onChange={(e) => setDureeBail(e.target.value)}
+                  placeholder="Ex. 12 mois, 2 ans renouvelable"
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Inclus dans le loyer</label>
+                <div className="flex flex-wrap gap-2">
+                  {['Eau', 'Électricité', 'Internet', 'Gardien', 'Parking', 'Piscine', 'Climatisation', 'Groupe électrogène'].map(
+                    (item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() =>
+                          setInclusions((prev) =>
+                            prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item],
+                          )
+                        }
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                          inclusions.includes(item)
+                            ? 'border-[#1B5E20] bg-[#1B5E20] text-white'
+                            : 'border-gray-200 text-gray-600 hover:border-green-300'
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {type === 'vente' && (
+          <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
+            <h2 className="font-bold text-gray-800 mb-4">Détails de la vente</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Type de propriété</label>
+                <select
+                  value={typePropriete}
+                  onChange={(e) => setTypePropriete(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                >
+                  <option value="">Sélectionner</option>
+                  {['Appartement', 'Villa', 'Maison', 'Duplex', 'Terrain', 'Bureau', 'Local commercial', 'Immeuble'].map(
+                    (v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Nb. chambres</label>
+                  <select
+                    value={nbChambres}
+                    onChange={(e) => setNbChambres(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                  >
+                    <option value="">—</option>
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Nb. pièces</label>
+                  <select
+                    value={nbPieces}
+                    onChange={(e) => setNbPieces(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                  >
+                    <option value="">—</option>
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Surface (m²)</label>
+                  <input
+                    type="number"
+                    value={surface}
+                    onChange={(e) => setSurface(e.target.value)}
+                    placeholder="120"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Année de construction</label>
+                <input
+                  type="number"
+                  value={anneeConstruction}
+                  onChange={(e) => setAnneeConstruction(e.target.value)}
+                  placeholder="2020"
+                  className="w-full max-w-xs border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Titre foncier</label>
+                <select
+                  value={titreFoncier}
+                  onChange={(e) => setTitreFoncier(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                >
+                  <option value="">—</option>
+                  <option value="oui">Oui — titre foncier disponible</option>
+                  <option value="non">Non — en cours d&apos;obtention</option>
+                  <option value="attente">En attente de régularisation</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(type === 'service' || type === 'artisan') && (
+          <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
+            <h2 className="font-bold text-gray-800 mb-4">Détails du service</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  {type === 'artisan' ? 'Métier / spécialité' : 'Type de service'}
+                </label>
+                <select
+                  value={typeService}
+                  onChange={(e) => setTypeService(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                >
+                  <option value="">Sélectionner</option>
+                  {type === 'artisan' ? (
+                    <>
+                      <option>Électricien</option>
+                      <option>Plombier</option>
+                      <option>Menuisier</option>
+                      <option>Carreleur</option>
+                      <option>Peintre</option>
+                      <option>Maçon</option>
+                      <option>Climatiseur</option>
+                      <option>Soudeur</option>
+                      <option>Ferrailleur</option>
+                    </>
+                  ) : (
+                    <>
+                      <option>Nettoyage</option>
+                      <option>Déménagement</option>
+                      <option>Jardinage</option>
+                      <option>Sécurité / Gardiennage</option>
+                      <option>Livraison</option>
+                      <option>Décoration intérieure</option>
+                      <option>Photographie immobilière</option>
+                    </>
+                  )}
+                </select>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Tarif horaire (FCFA)</label>
+                  <input
+                    type="number"
+                    value={tarifHoraire}
+                    onChange={(e) => setTarifHoraire(e.target.value)}
+                    placeholder="5000"
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Disponibilité</label>
+                  <select
+                    value={disponibiliteService}
+                    onChange={(e) => setDisponibiliteService(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-[#1B5E20]"
+                  >
+                    <option value="">—</option>
+                    <option>Disponible maintenant</option>
+                    <option>Lun – Ven</option>
+                    <option>7j/7</option>
+                    <option>Sur rendez-vous</option>
+                    <option>Week-end uniquement</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Zone desservie</label>
+                <div className="flex flex-wrap gap-2">
+                  {[...QUARTIERS, 'Tout Abidjan'].map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setZoneDesservie((prev) => (prev === q ? '' : q))}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                        zoneDesservie === q ? 'border-[#1B5E20] bg-[#1B5E20] text-white' : 'border-gray-200 text-gray-600'
+                      }`}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* PHOTOS */}
         <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
           <div className="flex items-center justify-between mb-2">
@@ -372,55 +938,82 @@ export default function ModifierAnnonceClient() {
             )}
           </div>
           <p className="text-gray-400 text-xs mb-4">
-            Cliquez sur ✕ pour supprimer une photo. La première photo sera la principale.
+            Aperçu en grand : la <strong>première</strong> image est la couverture sur le site. Utilisez « Couverture » pour
+            remonter une photo. Sur mobile, les boutons ✕ et Couverture restent visibles.
           </p>
 
           {totalPhotos === 0 ? (
-            <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-[#1B5E20] transition-colors">
-              <div className="text-3xl mb-2">📷</div>
-              <div className="font-bold text-gray-700 text-sm">Cliquer pour ajouter des photos</div>
-              <div className="text-gray-400 text-xs mt-1">JPG, PNG — Max 10 photos</div>
+            <label className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#1B5E20] transition-colors">
+              <div className="text-4xl mb-2">📷</div>
+              <div className="font-bold text-gray-700">Ajouter des photos</div>
+              <div className="text-gray-400 text-xs mt-1">JPG, PNG — max 10 photos</div>
               <input type="file" multiple accept="image/*" onChange={ajouterPhotos} className="hidden" />
             </label>
           ) : (
-            <div className="grid grid-cols-4 gap-2">
-              {/* Photos existantes */}
-              {photosExistantes.map((url, i) => (
-                <div key={`ex-${i}`} className="relative group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="w-full h-20 object-cover rounded-lg" />
-                  {i === 0 && photosExistantes.length > 0 && (
-                    <span className="absolute top-1 left-1 bg-[#1B5E20] text-white text-xs px-1 py-0.5 rounded text-[10px]">
-                      Principale
+            <>
+              <div className="mb-4 overflow-hidden rounded-xl border border-gray-200 bg-slate-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photosExistantes[0] || nouvellesAperçus[0]}
+                  alt="Aperçu couverture"
+                  className="mx-auto max-h-[min(70vh,28rem)] w-full object-contain sm:max-h-96"
+                />
+                <p className="border-t border-gray-200 bg-white px-3 py-2 text-center text-xs text-gray-500">
+                  Couverture actuelle — ordre modifiable ci-dessous
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {photosExistantes.map((url, i) => (
+                  <div key={`ex-${url}-${i}`} className="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="aspect-square w-full object-cover" />
+                    {i === 0 && (
+                      <span className="absolute left-2 top-2 rounded bg-[#1B5E20] px-2 py-0.5 text-[10px] font-bold text-white">
+                        Couverture
+                      </span>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 flex gap-1 bg-black/55 p-1.5">
+                      {i > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => mettrePhotoEnCouverture(i)}
+                          className="flex-1 rounded bg-white/95 px-1 py-1 text-[10px] font-bold text-[#1B5E20] hover:bg-white"
+                        >
+                          Couverture
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => supprimerPhotoExistante(i)}
+                        className="rounded bg-red-600 px-2 py-1 text-xs font-bold text-white hover:bg-red-700 md:opacity-90"
+                        aria-label="Supprimer la photo"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {nouvellesAperçus.map((url, i) => (
+                  <div key={`new-${i}`} className="relative overflow-hidden rounded-xl border-2 border-blue-400 bg-gray-50 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="aspect-square w-full object-cover" />
+                    <span className="absolute left-2 top-2 rounded bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                      Nouveau
                     </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => supprimerPhotoExistante(i)}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-              {/* Nouvelles photos */}
-              {nouvellesAperçus.map((url, i) => (
-                <div key={`new-${i}`} className="relative group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="w-full h-20 object-cover rounded-lg border-2 border-blue-300" />
-                  <span className="absolute top-1 left-1 bg-blue-500 text-white text-[10px] px-1 py-0.5 rounded">
-                    Nouveau
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => supprimerNouvellePhoto(i)}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <div className="absolute bottom-0 left-0 right-0 flex justify-end bg-black/55 p-1.5">
+                      <button
+                        type="button"
+                        onClick={() => supprimerNouvellePhoto(i)}
+                        className="rounded bg-red-600 px-2 py-1 text-xs font-bold text-white hover:bg-red-700"
+                        aria-label="Retirer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
@@ -497,13 +1090,18 @@ export default function ModifierAnnonceClient() {
           </div>
         )}
 
-        <div className="flex gap-3">
-          <a
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Link
             href="/mes-annonces"
+            onClick={(e) => {
+              if (isDirty && !window.confirm('Quitter sans enregistrer les modifications ?')) {
+                e.preventDefault()
+              }
+            }}
             className="flex-1 border-2 border-gray-300 text-gray-600 py-4 rounded-xl font-bold text-center hover:bg-gray-50"
           >
-            Annuler
-          </a>
+            Retour sans sauvegarder
+          </Link>
           <button
             type="button"
             onClick={sauvegarder}
