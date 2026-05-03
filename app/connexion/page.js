@@ -2,6 +2,14 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+
+function destinationApresConnexion() {
+  if (typeof window === 'undefined') return '/tableau-de-bord'
+  const p = new URLSearchParams(window.location.search).get('redirect')
+  if (p && p.startsWith('/') && !p.startsWith('//')) return p
+  return '/tableau-de-bord'
+}
 import {
   connecterAvecEmail,
   connecterAvecGoogle,
@@ -26,7 +34,8 @@ export default function Connexion() {
     setErreur('')
     try {
       await connecterAvecEmail(email, motDePasse)
-      router.push('/tableau-de-bord')
+      router.push(destinationApresConnexion())
+      router.refresh()
     } catch {
       setErreur('Courriel ou mot de passe incorrect')
       setChargement(false)
@@ -38,7 +47,8 @@ export default function Connexion() {
     setErreur('')
     try {
       await connecterAvecGoogle()
-      router.push('/tableau-de-bord')
+      router.push(destinationApresConnexion())
+      router.refresh()
     } catch (err) {
       setErreur('Erreur Google : ' + err.message)
       setChargement(false)
@@ -50,7 +60,8 @@ export default function Connexion() {
     setErreur('')
     try {
       await connecterAvecFacebook()
-      router.push('/tableau-de-bord')
+      router.push(destinationApresConnexion())
+      router.refresh()
     } catch (err) {
       setErreur('Erreur Facebook : ' + err.message)
       setChargement(false)
@@ -77,7 +88,8 @@ export default function Connexion() {
     setErreur('')
     try {
       await verifierCodeConnexionSMS(telephone.trim(), codeSMS.trim())
-      router.push('/tableau-de-bord')
+      router.push(destinationApresConnexion())
+      router.refresh()
     } catch (err) {
       setErreur('Code SMS invalide : ' + err.message)
       setChargement(false)
@@ -87,9 +99,9 @@ export default function Connexion() {
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
       <nav className="bg-[#1B5E20] px-4 py-4">
-        <a href="/" className="text-white text-xl font-bold">
+        <Link href="/" className="text-white text-xl font-bold">
           Chez Moi CI
-        </a>
+        </Link>
       </nav>
 
       <div className="flex-1 flex items-center justify-center px-4 py-8">
@@ -166,7 +178,7 @@ export default function Connexion() {
               <label className="text-sm font-medium text-gray-700 block mb-1">Adresse courriel</label>
               <input
                 type="email"
-                placeholder="votre@email.com"
+                placeholder="compte.exemple@mail.ci"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && connecter()}

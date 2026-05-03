@@ -53,7 +53,7 @@ export default function MotDePasseOublie() {
               <label className="text-sm font-medium text-gray-700 block mb-1">Adresse courriel</label>
               <input
                 type="email"
-                placeholder="votre@email.com"
+                placeholder="compte.exemple@mail.ci"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && envoyer()}

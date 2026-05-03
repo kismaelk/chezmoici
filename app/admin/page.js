@@ -17,8 +17,10 @@ import { useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
 
-// Fallback : adresse courriel autorisée si is_admin n'est pas encore en base
-const ADMIN_EMAIL = 'ismael@chezmoici.com'
+// Fallback si is_admin n'est pas en base : définir NEXT_PUBLIC_ADMIN_EMAIL_FALLBACK dans .env.local
+const ADMIN_EMAIL =
+  (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_ADMIN_EMAIL_FALLBACK) ||
+  'contact@chezmoici.com'
 
 const BADGE_LABEL = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
 const BADGE_OPTIONS = ['bronze', 'argent', 'or']

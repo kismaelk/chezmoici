@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { observerConnexion } from '@/lib/auth'
 import {
   getAnnonceById,
@@ -13,6 +14,7 @@ import {
   sendMessageFirestore,
   addNotification,
   addSignalement,
+  fetchAnnoncesAssocieesPourDetail,
 } from '@/lib/firestoreApp'
 import { useParams, useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
@@ -33,6 +35,26 @@ const COORDS_QUARTIER = {
   Angré:         [-3.97,   5.38],
 }
 
+function moisMembreDepuis(iso) {
+  if (!iso) return null
+  try {
+    return new Date(iso).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+  } catch {
+    return null
+  }
+}
+
+function prixCourtFcfa(prix, type) {
+  if (prix == null) return '—'
+  const n = Number(prix)
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000
+    const s = Number.isInteger(m) ? String(m) : m.toFixed(1).replace('.', ',')
+    return s + (m >= 2 ? ' millions' : ' million') + ' FCFA'
+  }
+  return n.toLocaleString('fr-FR') + ' FCFA' + (type === 'location' ? ' /mois' : '')
+}
+
 function MiniCarte({ annonce }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
@@ -42,7 +64,10 @@ function MiniCarte({ annonce }) {
     if (!containerRef.current || mapRef.current) return
 
     const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-    if (!TOKEN) { setErreur(true); return }
+    if (!TOKEN) {
+      queueMicrotask(() => setErreur(true))
+      return
+    }
 
     let coords = null
     if (annonce.longitude != null && annonce.latitude != null &&
@@ -147,6 +172,7 @@ export default function DetailAnnonceClient() {
   const [detailsSignalement, setDetailsSignalement] = useState('')
   const [envoiSignalement, setEnvoiSignalement] = useState(false)
   const [signalementOk, setSignalementOk] = useState(false)
+  const [annoncesAssociees, setAnnoncesAssociees] = useState([])
 
   const params = useParams()
   const router = useRouter()
@@ -222,6 +248,17 @@ export default function DetailAnnonceClient() {
       unsub()
     }
   }, [annonceId, router])
+
+  useEffect(() => {
+    if (!annonce?.id) return
+    let cancelled = false
+    fetchAnnoncesAssocieesPourDetail(annonce, 12).then((rows) => {
+      if (!cancelled) setAnnoncesAssociees(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [annonce])
 
   const envoyerMessage = async () => {
     if (!utilisateur) {
@@ -350,12 +387,12 @@ export default function DetailAnnonceClient() {
           <p className="text-gray-500 mb-6">
             {erreur || "Cette annonce n'existe pas ou a été supprimée."}
           </p>
-          <a
+          <Link
             href="/annonces"
-            className="bg-[#1B5E20] text-white px-6 py-3 rounded-xl font-bold hover:bg-green-800"
+            className="inline-block bg-[#1B5E20] text-white px-6 py-3 rounded-xl font-bold hover:bg-green-800"
           >
             Voir toutes les annonces
-          </a>
+          </Link>
         </div>
         <SiteFooter />
       </div>
@@ -381,8 +418,8 @@ export default function DetailAnnonceClient() {
 
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 text-xs text-gray-400">
-          <a href="/" className="hover:text-[#1B5E20]">Accueil</a> /{' '}
-          <a href="/annonces" className="hover:text-[#1B5E20]">Annonces</a> /{' '}
+          <Link href="/" className="hover:text-[#1B5E20]">Accueil</Link> /{' '}
+          <Link href="/annonces" className="hover:text-[#1B5E20]">Annonces</Link> /{' '}
           <span className="text-gray-600">{annonce.titre}</span>
         </div>
       </div>
@@ -482,6 +519,119 @@ export default function DetailAnnonceClient() {
               </p>
             </div>
 
+            {annonce.type === 'vente' && (
+              <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50/40 p-6 shadow-sm">
+                <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+                  <div>
+                    <h2 className="font-bold text-gray-800 text-lg">Fiche du bien</h2>
+                    <p className="text-xs text-slate-500">
+                      Vue détaillée — comme sur les grands portails immobiliers
+                    </p>
+                  </div>
+                  {annonce.titre_foncier_statut && (
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-900">
+                      Titre : {annonce.titre_foncier_statut}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {annonce.type_propriete != null && annonce.type_propriete !== '' && (
+                    <div className="rounded-xl border border-slate-100 bg-white/90 p-4 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Type de bien</p>
+                      <p className="mt-1 text-base font-bold text-slate-800">{annonce.type_propriete}</p>
+                    </div>
+                  )}
+                  {annonce.surface != null && Number(annonce.surface) > 0 && (
+                    <div className="rounded-xl border border-slate-100 bg-white/90 p-4 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Surface</p>
+                      <p className="mt-1 text-base font-bold text-slate-800">
+                        {Number(annonce.surface).toLocaleString('fr-FR')} m²
+                      </p>
+                    </div>
+                  )}
+                  {annonce.nb_pieces != null && annonce.nb_pieces > 0 && (
+                    <div className="rounded-xl border border-slate-100 bg-white/90 p-4 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Pièces</p>
+                      <p className="mt-1 text-base font-bold text-slate-800">{annonce.nb_pieces}</p>
+                    </div>
+                  )}
+                  {annonce.nb_chambres != null && annonce.nb_chambres > 0 && (
+                    <div className="rounded-xl border border-slate-100 bg-white/90 p-4 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Chambres</p>
+                      <p className="mt-1 text-base font-bold text-slate-800">{annonce.nb_chambres}</p>
+                    </div>
+                  )}
+                  {annonce.annee_construction != null && annonce.annee_construction > 0 && (
+                    <div className="rounded-xl border border-slate-100 bg-white/90 p-4 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Année</p>
+                      <p className="mt-1 text-base font-bold text-slate-800">{annonce.annee_construction}</p>
+                    </div>
+                  )}
+                  {annonce.meuble != null && (
+                    <div className="rounded-xl border border-slate-100 bg-white/90 p-4 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Meublé</p>
+                      <p className="mt-1 text-base font-bold text-slate-800">{annonce.meuble ? 'Oui' : 'Non'}</p>
+                    </div>
+                  )}
+                </div>
+                {Array.isArray(annonce.equipements) && annonce.equipements.length > 0 && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                      Équipements & confort
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {annonce.equipements.map((eq) => (
+                        <span
+                          key={eq}
+                          className="rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-900"
+                        >
+                          {eq}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {annonce.type === 'location' && (
+              <div className="rounded-xl border border-sky-100 bg-gradient-to-br from-white to-sky-50/30 p-6 shadow-sm">
+                <h2 className="font-bold text-gray-800 text-lg mb-4">Détails location</h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {annonce.nb_chambres != null && annonce.nb_chambres > 0 && (
+                    <div className="rounded-lg border border-slate-100 bg-white p-3">
+                      <p className="text-[10px] uppercase text-slate-500">Chambres</p>
+                      <p className="font-bold text-slate-800">{annonce.nb_chambres}</p>
+                    </div>
+                  )}
+                  {annonce.surface != null && Number(annonce.surface) > 0 && (
+                    <div className="rounded-lg border border-slate-100 bg-white p-3">
+                      <p className="text-[10px] uppercase text-slate-500">Surface</p>
+                      <p className="font-bold text-slate-800">{Number(annonce.surface)} m²</p>
+                    </div>
+                  )}
+                  {annonce.meuble != null && (
+                    <div className="rounded-lg border border-slate-100 bg-white p-3">
+                      <p className="text-[10px] uppercase text-slate-500">Meublé</p>
+                      <p className="font-bold text-slate-800">{annonce.meuble ? 'Oui' : 'Non'}</p>
+                    </div>
+                  )}
+                  {annonce.duree_bail && (
+                    <div className="rounded-lg border border-slate-100 bg-white p-3">
+                      <p className="text-[10px] uppercase text-slate-500">Bail</p>
+                      <p className="font-bold text-slate-800">{annonce.duree_bail}</p>
+                    </div>
+                  )}
+                  {annonce.disponibilite && (
+                    <div className="rounded-lg border border-slate-100 bg-white p-3">
+                      <p className="text-[10px] uppercase text-slate-500">Disponibilité</p>
+                      <p className="font-bold text-slate-800">{annonce.disponibilite}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* MINI CARTE */}
             <MiniCarte annonce={annonce} />
 
@@ -533,7 +683,7 @@ export default function DetailAnnonceClient() {
               {/* Liste des avis */}
               {avis.length === 0 ? (
                 <p className="text-gray-400 text-sm text-center py-4">
-                  Aucun avis pour l'instant. Soyez le premier à donner votre avis.
+                  Aucun avis pour l&apos;instant. Soyez le premier à donner votre avis.
                 </p>
               ) : (
                 <div className="space-y-4">
@@ -587,14 +737,45 @@ export default function DetailAnnonceClient() {
                     {proprietaire?.nom?.[0] || '?'}
                   </div>
                 )}
-                <div>
-                  <a
-                    href={`/profil/${proprietaire?.id}`}
-                    className="font-bold text-gray-800 hover:text-[#1B5E20] hover:underline"
-                  >
-                    {proprietaire?.nom || 'Propriétaire'}
-                  </a>
+                <div className="min-w-0 flex-1">
+                  {utilisateur && proprietaire?.id ? (
+                    estProprietaire ? (
+                      <Link
+                        href="/profil"
+                        className="font-bold text-gray-800 hover:text-[color:var(--chez-green,#1B5E20)] hover:underline block truncate"
+                      >
+                        Vous (modifier le profil)
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/profil/${proprietaire.id}`}
+                        className="font-bold text-gray-800 hover:text-[color:var(--chez-green,#1B5E20)] hover:underline block truncate"
+                      >
+                        {proprietaire?.nom || 'Propriétaire'}
+                      </Link>
+                    )
+                  ) : (
+                    <span className="font-bold text-gray-800 block truncate">
+                      {proprietaire?.nom || 'Propriétaire'}
+                    </span>
+                  )}
                   <p className="text-gray-400 text-sm">📍 {proprietaire?.quartier || 'Abidjan'}</p>
+                  {(proprietaire?.created_at || proprietaire?.cree_le) && (
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Membre depuis {moisMembreDepuis(proprietaire.created_at || proprietaire.cree_le)}
+                    </p>
+                  )}
+                  {!utilisateur && proprietaire?.id && (
+                    <p className="mt-2 text-xs">
+                      <Link
+                        href={`/connexion?redirect=/profil/${proprietaire.id}`}
+                        className="font-semibold text-[color:var(--chez-coral,#e85d04)] hover:underline"
+                      >
+                        Connectez-vous
+                      </Link>
+                      <span className="text-slate-500"> pour ouvrir le profil public (coordonnées limitées).</span>
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -652,6 +833,29 @@ export default function DetailAnnonceClient() {
               >
                 En savoir plus sur nos badges →
               </a>
+            </div>
+
+            <div className="rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50 via-white to-cyan-50 p-5 shadow-sm">
+              <h3 className="font-bold text-teal-900 mb-2 flex items-center gap-2">
+                <span aria-hidden>🛡️</span> Visites accompagnées
+              </h3>
+              <p className="text-gray-600 text-sm leading-relaxed mb-3">
+                Pour votre sécurité et une visite structurée, Chez Moi CI peut organiser des visites avec des professionnels de confiance (identification des parties, présence sur site, conseils avant signature).
+              </p>
+              <div className="flex flex-col gap-2">
+                <Link
+                  href="/packs"
+                  className="block text-center rounded-lg bg-teal-700 px-3 py-2 text-xs font-bold text-white hover:bg-teal-800"
+                >
+                  Voir les options d&apos;accompagnement →
+                </Link>
+                <Link
+                  href="/contact"
+                  className="block text-center text-xs font-semibold text-teal-800 hover:underline"
+                >
+                  Demander une visite sécurisée
+                </Link>
+              </div>
             </div>
 
             {/* CALCULATEUR DE PRÊT (vente) */}
@@ -722,6 +926,46 @@ export default function DetailAnnonceClient() {
 
           </div>
         </div>
+
+        {annoncesAssociees.length > 0 && (
+          <section className="mt-12 border-t border-slate-200 pt-10" aria-labelledby="assoc-heading">
+            <h2 id="assoc-heading" className="text-xl font-bold text-slate-800 mb-1">
+              À explorer aussi
+            </h2>
+            <p className="text-sm text-slate-500 mb-6">
+              Du même vendeur, du même quartier ou annonces similaires à proximité en prix.
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {annoncesAssociees.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/annonces/${a.id}`}
+                  className="group flex overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition hover:border-[color:var(--chez-green,#1B5E20)]/30 hover:shadow-md"
+                >
+                  <div className="relative h-28 w-28 flex-shrink-0 bg-slate-100">
+                    {a.photos?.[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={a.photos[0]} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">
+                        📷
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col justify-center p-3">
+                    <p className="line-clamp-2 text-sm font-bold text-slate-800 group-hover:text-[color:var(--chez-green,#1B5E20)]">
+                      {a.titre}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-slate-500">📍 {a.quartier}</p>
+                    <p className="mt-1 text-sm font-bold tabular-nums text-[color:var(--chez-coral,#ea580c)]">
+                      {prixCourtFcfa(a.prix, a.type)}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {modalSignalement && (

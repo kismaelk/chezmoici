@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react'
 import { observerConnexion, deconnecter } from '@/lib/auth'
 import { getProfilFirestore } from '@/lib/firestoreApp'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Notifications from '@/app/components/Notifications'
 
+/** « Carte » est le bouton à côté de Publier (évite le doublon dans la barre) */
 const LIENS = [
   { href: '/annonces?type=location', label: 'Louer' },
   { href: '/annonces?type=vente', label: 'Acheter' },
   { href: '/services', label: 'Services' },
   { href: '/artisans', label: 'Artisans' },
-  { href: '/carte', label: 'Carte' },
   { href: '/packs', label: 'Packs' },
 ]
 
@@ -56,28 +57,28 @@ export default function SiteHeader({ variant = 'default' }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-4 md:px-6 h-16 min-w-0">
-        <a href="/" className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-9 h-9 rounded-lg bg-[#1B5E20] text-white flex items-center justify-center font-bold text-lg">
+        <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-[color:var(--chez-green,#1B5E20)] text-white flex items-center justify-center font-bold text-lg shadow-sm">
             CI
           </div>
           <div className="hidden sm:block">
-            <div className="font-bold text-[#1B5E20] leading-tight">
+            <div className="font-bold text-[color:var(--chez-green,#1B5E20)] leading-tight">
               Chez Moi CI
             </div>
             <div className="text-[10px] text-gray-400 leading-tight -mt-0.5">
               Immobilier de confiance · Abidjan
             </div>
           </div>
-        </a>
+        </Link>
 
         <nav className="hidden lg:flex items-center gap-1">
           {LIENS.map((l) => (
             <a
               key={l.href}
               href={l.href}
-              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20] transition-colors"
+              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-[color:var(--chez-green,#1B5E20)] transition-colors"
             >
               {l.label}
             </a>
@@ -87,9 +88,9 @@ export default function SiteHeader({ variant = 'default' }) {
         <div className="flex items-center gap-2">
           <a
             href="/carte"
-            className="inline-flex items-center gap-1.5 border border-[#1B5E20]/20 text-[#1B5E20] px-3 py-2 rounded-lg text-sm font-bold hover:bg-[#E8F5E9] transition-colors"
+            className="inline-flex items-center gap-1.5 border border-[color:var(--chez-green,#1B5E20)]/25 text-[color:var(--chez-green,#1B5E20)] px-3 py-2 rounded-lg text-sm font-bold hover:bg-emerald-50 transition-colors"
           >
-            <span>🗺️</span>
+            <span aria-hidden>🗺️</span>
             <span className="hidden sm:inline">Carte</span>
           </a>
           <a

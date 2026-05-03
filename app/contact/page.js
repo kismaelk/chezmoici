@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { addContactMessage } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
@@ -12,6 +13,22 @@ export default function Contact() {
   const [message, setMessage] = useState('')
   const [envoye, setEnvoye] = useState(false)
   const [chargement, setChargement] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const p = new URLSearchParams(window.location.search).get('poste')
+    if (!p) return
+    const label = decodeURIComponent(p)
+    queueMicrotask(() => {
+      setSujet('Candidature / recrutement')
+      setMessage(
+        (prev) =>
+          prev.trim() ||
+          `Bonjour,\n\nJe souhaite postuler pour : ${label}.\n\nCV joint ou disponible sur demande.\n\nCordialement,`
+      )
+    })
+  }, [])
+
   const envoyer = async () => {
     if (!nom || !email || !message) return
     setChargement(true)
@@ -47,12 +64,12 @@ export default function Contact() {
             <p className="text-gray-500 mb-6">
               Nous vous répondrons à <strong>{email}</strong> sous 24 heures.
             </p>
-            <a
+            <Link
               href="/"
               className="inline-block bg-[#1B5E20] text-white px-6 py-3 rounded-xl font-bold hover:bg-green-800"
             >
               Retour à l&apos;accueil
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -66,7 +83,7 @@ export default function Contact() {
                     type="text"
                     value={nom}
                     onChange={(e) => setNom(e.target.value)}
-                    placeholder="Koné Ismael"
+                    placeholder="Ex. Aminata Diabaté"
                     className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] text-sm"
                   />
                 </div>
@@ -78,7 +95,7 @@ export default function Contact() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="votre@email.com"
+                    placeholder="exemple.nom@mail.ci"
                     className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] text-sm"
                   />
                 </div>
@@ -98,6 +115,7 @@ export default function Contact() {
                   <option>Signaler une fraude</option>
                   <option>Demande de badge vérifié</option>
                   <option>Partenariat agence</option>
+                  <option>Candidature / recrutement</option>
                   <option>Autre</option>
                 </select>
               </div>

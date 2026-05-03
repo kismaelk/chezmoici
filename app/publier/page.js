@@ -8,6 +8,7 @@ import {
   createAnnonce,
 } from '@/lib/firestoreApp'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 const QUARTIERS = [
   'Cocody', 'Plateau', 'Marcory', 'Yopougon', 'Bingerville',
@@ -299,8 +300,8 @@ export default function Publier() {
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
       <nav className="bg-[#1B5E20] px-4 py-3 flex items-center justify-between">
-        <a href="/" className="text-white font-bold text-lg">Chez Moi CI</a>
-        <a href="/tableau-de-bord" className="text-green-200 hover:text-white text-sm">← Tableau de bord</a>
+        <Link href="/" className="text-white font-bold text-lg">Chez Moi CI</Link>
+        <Link href="/tableau-de-bord" className="text-green-200 hover:text-white text-sm">← Tableau de bord</Link>
       </nav>
 
       <div className="max-w-2xl mx-auto py-10 px-4">
@@ -311,9 +312,9 @@ export default function Publier() {
           <span className="text-xl flex-shrink-0">💡</span>
           <p className="text-sm text-gray-700">
             Pour que les acheteurs puissent vous contacter,{' '}
-            <a href="/profil" className="text-[#1B5E20] font-bold hover:underline">
+            <Link href="/profil" className="text-[#1B5E20] font-bold hover:underline">
               complétez votre profil
-            </a>{' '}
+            </Link>{' '}
             (nom + téléphone) si ce n&apos;est pas encore fait.
           </p>
         </div>
@@ -622,7 +623,7 @@ export default function Publier() {
             {/* 5 — PHOTOS */}
             <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="font-bold text-gray-800">5 — Photos ({photosFichiers.length}/10)</h2>
+                <h2 className="font-bold text-gray-800">5 — Photos (optionnel) ({photosFichiers.length}/10)</h2>
                 {photosFichiers.length > 0 && photosFichiers.length < 10 && (
                   <label className="cursor-pointer bg-[#1B5E20] text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-green-800 transition-colors">
                     + Ajouter
@@ -631,14 +632,14 @@ export default function Publier() {
                 )}
               </div>
               <p className="text-gray-400 text-xs mb-4">
-                La première photo sera la principale. Cliquez ✕ pour enlever une photo.
+                Les photos augmentent les contacts, mais vous pouvez publier une annonce <span className="font-semibold text-gray-600">sans photo</span> (vente, location, service). La première image sera la couverture. Cliquez ✕ pour en retirer une.
               </p>
 
               {photosFichiers.length === 0 ? (
                 <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-[#1B5E20] transition-colors">
                   <div className="text-3xl mb-2">📷</div>
-                  <div className="font-bold text-gray-700 text-sm">Cliquer pour ajouter des photos</div>
-                  <div className="text-gray-400 text-xs mt-1">JPG, PNG — Max 10 photos</div>
+                  <div className="font-bold text-gray-700 text-sm">Ajouter des photos (recommandé)</div>
+                  <div className="text-gray-400 text-xs mt-1">JPG, PNG — max 10 · ou passez cette étape</div>
                   <input type="file" multiple accept="image/*" onChange={ajouterPhotos} className="hidden" />
                 </label>
               ) : (

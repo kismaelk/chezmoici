@@ -8,6 +8,7 @@ const ROUTES = [
   '/artisans',
   '/avis',
   '/badge',
+  '/carriere',
   '/calculateur-pret',
   '/carte',
   '/conditions',

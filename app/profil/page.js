@@ -15,6 +15,7 @@ function ProfilContenu() {
   const [nom, setNom] = useState('')
   const [telephone, setTelephone] = useState('')
   const [quartier, setQuartier] = useState('')
+  const [adressePublique, setAdressePublique] = useState('')
   const [photoFichier, setPhotoFichier] = useState(null)
   const [photoApercu, setPhotoApercu] = useState(null)
   const [chargement, setChargement] = useState(true)
@@ -36,6 +37,7 @@ function ProfilContenu() {
         setNom(data.nom || '')
         setTelephone(data.telephone || '')
         setQuartier(data.quartier || '')
+        setAdressePublique(data.adresse_publique || '')
       }
       setChargement(false)
     })
@@ -62,7 +64,7 @@ function ProfilContenu() {
       }
     }
 
-    const payload = { nom, telephone, quartier }
+    const payload = { nom, telephone, quartier, adresse_publique: adressePublique.trim() || null }
     // Firestore refuse explicitement les valeurs `undefined`.
     // On n'envoie photo_url que si une image existe deja ou vient d'etre uploadee.
     if (typeof photoUrl === 'string' && photoUrl.trim()) {
@@ -171,7 +173,7 @@ function ProfilContenu() {
                 type="text"
                 value={nom}
                 onChange={(e) => setNom(e.target.value)}
-                placeholder="Votre nom complet"
+                placeholder="Ex. Traoré Mariam"
                 className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20]"
               />
             </div>
@@ -184,7 +186,7 @@ function ProfilContenu() {
                 type="tel"
                 value={telephone}
                 onChange={(e) => setTelephone(e.target.value)}
-                placeholder="+225 07 00 00 00 00"
+                placeholder="+225 07 XX XX XX XX"
                 className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20]"
               />
               <p className="text-gray-400 text-xs mt-1">
@@ -215,6 +217,22 @@ function ProfilContenu() {
                 <option>Attécoubé</option>
                 <option>Hors de Côte d&apos;Ivoire</option>
               </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">
+                Adresse bureau / point de rencontre (optionnel)
+              </label>
+              <textarea
+                value={adressePublique}
+                onChange={(e) => setAdressePublique(e.target.value)}
+                rows={2}
+                placeholder="Ex. Plateau, rue… — visible uniquement par les membres connectés (agences, pros)."
+                className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] resize-y text-sm"
+              />
+              <p className="text-gray-400 text-xs mt-1">
+                Utile pour les agences : affichée sur votre profil public aux acheteurs et bailleurs connectés.
+              </p>
             </div>
 
             <div>

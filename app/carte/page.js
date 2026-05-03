@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
+import { point as turfPoint, polygon as turfPolygon } from '@turf/helpers'
 import { fetchAnnoncesList } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 
@@ -17,11 +20,20 @@ function formaterPrix(p) {
   return p.toLocaleString('fr-FR') + ' FCFA'
 }
 
+/** Couleurs d’origine (goutte sur la carte, comme sur ta capture) */
 const TYPE_COLORS = {
-  vente:    { bg: '#2563EB', border: '#1D4ED8', text: 'white' },
-  location: { bg: '#059669', border: '#047857', text: 'white' },
-  service:  { bg: '#EA580C', border: '#C2410C', text: 'white' },
-  artisan:  { bg: '#7C3AED', border: '#6D28D9', text: 'white' },
+  vente:    { marker: '#2563EB', price: '#2563EB' },
+  location: { marker: '#059669', price: '#059669' },
+  service:  { marker: '#EA580C', price: '#EA580C' },
+  artisan:  { marker: '#7C3AED', price: '#7C3AED' },
+}
+const MARKER_SELECTED = '#F59E0B'
+
+/** Pins compacts (largeur × hauteur, ancre bas centre) */
+function getClassicPinMetrics(sel) {
+  return sel
+    ? { w: 36, h: 44, ax: 18, ay: 44 }
+    : { w: 32, h: 38, ax: 16, ay: 38 }
 }
 
 const SERVICE_ICON = {
@@ -40,8 +52,8 @@ function getMarkerEmoji(annonce) {
   return { location: '🔑', vente: '🏠', service: '🔧', artisan: '🛠️' }[annonce.type] || '📍'
 }
 
-/** Centre d’Abidjan au chargement — [longitude, latitude] (Mapbox) */
-const ABIDJAN_CENTER = [-4.021, 5.325]
+/** Abidjan — GeoJSON / Mapbox order: [longitude, latitude] */
+const ABIDJAN_CENTER = { lat: 5.325, lng: -4.021 }
 const ABIDJAN_DEFAULT_ZOOM = 11.5
 
 const COORDS_QUARTIER = {
@@ -69,75 +81,103 @@ function getAnnonceCoords(annonce) {
   return COORDS_QUARTIER[annonce.quartier] || null
 }
 
-// ─── Création du marqueur HTML ─────────────────────────────────────────────────
+function getListingCoverSrc(annonce) {
+  if (annonce.photos?.[0]) return annonce.photos[0]
+  const t = annonce.type
+  if (t === 'vente' || t === 'location' || t === 'service' || t === 'artisan') {
+    return `/placeholders/listing-${t}.svg`
+  }
+  return '/placeholders/listing-vente.svg'
+}
 
-function createMarkerElement(annonce, selected = false) {
-  const col = TYPE_COLORS[annonce.type] || TYPE_COLORS.vente
-  const emoji = getMarkerEmoji(annonce)
-  const size = selected ? 46 : 36
+/** Contenu DOM pour AdvancedMarkerElement (goutte ; clic = événement `gmp-click` sur le marqueur) */
+function buildMarkerContentElement(annonce, selected) {
+  let emoji = getMarkerEmoji(annonce)
+  if (typeof emoji !== 'string') emoji = '📍'
+  const el = document.createElement('div')
+  el.style.display = 'flex'
+  el.style.alignItems = 'center'
+  el.style.justifyContent = 'center'
+  el.style.cursor = 'pointer'
+  el.style.pointerEvents = 'auto'
+  el.style.touchAction = 'manipulation'
 
-  const el = document.createElement('button')
-  el.type = 'button'
-  el.setAttribute('aria-label', annonce.titre)
-  el.style.cssText = `
-    all: unset;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    outline: none;
-  `
+  const fill = selected
+    ? MARKER_SELECTED
+    : (TYPE_COLORS[annonce.type] || TYPE_COLORS.vente).marker
+  const w = selected ? 36 : 32
+  const h = selected ? 44 : 38
+  el.style.width = `${w}px`
+  el.style.height = `${h}px`
+  el.style.borderRadius = '9999px 9999px 9999px 0'
+  el.style.transform = 'rotate(-45deg)'
+  el.style.background = fill
+  el.style.border = 'none'
+  el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)'
 
-  // Corps de la gouttelette / pin
-  const pin = document.createElement('div')
-  pin.style.cssText = `
-    width: ${size}px;
-    height: ${size}px;
-    border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
-    background: ${selected ? '#F59E0B' : col.bg};
-    border: 3px solid ${selected ? '#92400E' : col.border};
-    box-shadow: 0 4px 14px rgba(0,0,0,${selected ? '0.45' : '0.3'});
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  `
-
-  const inner = document.createElement('span')
-  inner.style.cssText = `
-    transform: rotate(45deg);
-    font-size: ${selected ? 20 : 16}px;
-    line-height: 1;
-    display: block;
-    user-select: none;
-  `
-  inner.textContent = emoji
-
-  pin.appendChild(inner)
-  el.appendChild(pin)
-
-  // Hover effect
-  el.addEventListener('mouseenter', () => {
-    pin.style.transform = 'rotate(-45deg) scale(1.15)'
-    pin.style.boxShadow = '0 6px 20px rgba(0,0,0,0.45)'
-  })
-  el.addEventListener('mouseleave', () => {
-    pin.style.transform = 'rotate(-45deg) scale(1)'
-    pin.style.boxShadow = `0 4px 14px rgba(0,0,0,${selected ? '0.45' : '0.3'})`
-  })
+  const glyph = document.createElement('span')
+  glyph.textContent = emoji
+  glyph.style.transform = 'rotate(45deg)'
+  glyph.style.fontSize = selected ? '15px' : '13px'
+  glyph.style.lineHeight = '1'
+  glyph.style.pointerEvents = 'none'
+  el.appendChild(glyph)
 
   return el
 }
 
-// ─── Composant principal ───────────────────────────────────────────────────────
+/** Pin classique (google.maps.Marker) — même goutte, taille réduite */
+function buildPinIconDataUrl(annonce, selected) {
+  let emoji = getMarkerEmoji(annonce)
+  if (typeof emoji !== 'string') emoji = '📍'
+  const fill = selected
+    ? MARKER_SELECTED
+    : (TYPE_COLORS[annonce.type] || TYPE_COLORS.vente).marker
+  const m = getClassicPinMetrics(selected)
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${m.w}" height="${m.h}" viewBox="0 0 48 56">
+    <path d="M24 3 C12 3 3 12 3 24 C3 38 24 53 24 53 C24 53 45 38 45 24 C45 12 36 3 24 3 Z"
+      fill="${fill}" stroke="none"/>
+    <text x="24" y="31" text-anchor="middle" font-size="${selected ? 14 : 12}" dominant-baseline="middle">${emoji}</text>
+  </svg>`
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+}
 
-function CarteMapbox() {
+function releaseMapMarker(marker) {
+  if (!marker) return
+  try {
+    if ('map' in marker && marker.map != null) marker.map = null
+    else if (typeof marker.setMap === 'function') marker.setMap(null)
+  } catch { /* ignore */ }
+}
+
+function pathToClosedRingLngLat(googlePath) {
+  const ring = []
+  googlePath.forEach((latLng) => {
+    ring.push([latLng.lng(), latLng.lat()])
+  })
+  if (ring.length < 3) return null
+  const a = ring[0]
+  const b = ring[ring.length - 1]
+  if (a[0] !== b[0] || a[1] !== b[1]) ring.push([a[0], a[1]])
+  return ring.length >= 4 ? ring : null
+}
+
+// ─── Composant principal — Google Maps ───────────────────────────────────────
+
+function CarteGoogleMaps() {
   const searchParams = useSearchParams()
-  const mapContainer = useRef(null)
+  const mapShellRef = useRef(null)
+  const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
-  const mapboxglRef = useRef(null)
-  const domMarkersRef = useRef(new Map()) // id → { marker, annonce, el }
+  const clustererRef = useRef(null)
+  const markerEntriesRef = useRef([])
+  const advancedMarkerCtorRef = useRef(null)
+  const usingAdvancedMarkersRef = useRef(false)
+  const mapClickListenerRef = useRef(null)
+  const draftLineRef = useRef(null)
+  const draftPointsRef = useRef([])
+  const drawnPolygonRef = useRef(null)
+
   const [annonces, setAnnonces] = useState([])
   const [selectionne, setSelectionne] = useState(null)
   const selectionneRef = useRef(null)
@@ -145,12 +185,10 @@ function CarteMapbox() {
   const [mapReady, setMapReady] = useState(false)
   const [erreur, setErreur] = useState('')
   const [showListMobile, setShowListMobile] = useState(false)
-  /** Filtres carte : affichés par défaut ; bouton pour les masquer (mobile + desktop) */
-  const [filtresVisibles, setFiltresVisibles] = useState(true)
-
-  const [filtresCarte, setFiltresCarte] = useState({
-    type: '', prixMin: '', prixMax: '', beds: '', baths: '',
-  })
+  const [filtresVisibles, setFiltresVisibles] = useState(false)
+  /** Anneau fermé GeoJSON [lng,lat][] pour filtre Turf, ou null */
+  const [zoneRing, setZoneRing] = useState(null)
+  const [dessinZoneActif, setDessinZoneActif] = useState(false)
 
   const filtresURL = useMemo(() => ({
     type:          searchParams.get('type')          || '',
@@ -168,16 +206,13 @@ function CarteMapbox() {
     disponibilite: searchParams.get('disponibilite') || '',
   }), [searchParams])
 
-  useEffect(() => {
-    setFiltresCarte((prev) => ({
-      ...prev,
-      type:    filtresURL.type      || prev.type,
-      prixMin: filtresURL.prixMin   || prev.prixMin,
-      prixMax: filtresURL.prixMax   || prev.prixMax,
-      beds:    filtresURL.nbChambres || prev.beds,
-      baths:   filtresURL.nbPieces  || prev.baths,
-    }))
-  }, [filtresURL.type, filtresURL.prixMin, filtresURL.prixMax, filtresURL.nbChambres, filtresURL.nbPieces])
+  const [filtresCarte, setFiltresCarte] = useState({
+    type: filtresURL.type || '',
+    prixMin: filtresURL.prixMin || '',
+    prixMax: filtresURL.prixMax || '',
+    beds: filtresURL.nbChambres || '',
+    baths: filtresURL.nbPieces || '',
+  })
 
   const lienListe = useMemo(() => {
     const p = new URLSearchParams()
@@ -185,7 +220,6 @@ function CarteMapbox() {
     return '/annonces' + (p.toString() ? '?' + p.toString() : '')
   }, [filtresURL])
 
-  // Chargement des annonces
   useEffect(() => {
     async function charger() {
       setChargement(true)
@@ -215,47 +249,55 @@ function CarteMapbox() {
     })
   }, [annonces, filtresCarte])
 
-  const selectionIndex = useMemo(
-    () => annoncesFiltrees.findIndex((a) => a.id === selectionne?.id),
-    [annoncesFiltrees, selectionne?.id],
-  )
+  const annoncesAffichees = useMemo(() => {
+    if (!zoneRing || zoneRing.length < 4) return annoncesFiltrees
+    try {
+      const poly = turfPolygon([zoneRing])
+      return annoncesFiltrees.filter((a) => {
+        const c = getAnnonceCoords(a)
+        if (!c) return false
+        return booleanPointInPolygon(turfPoint(c), poly)
+      })
+    } catch {
+      return annoncesFiltrees
+    }
+  }, [annoncesFiltrees, zoneRing])
 
-  // Maintenir selectionneRef à jour (utilisé dans les callbacks carte)
   useEffect(() => { selectionneRef.current = selectionne }, [selectionne])
+
+  const selectionIndex = useMemo(
+    () => annoncesAffichees.findIndex((a) => a.id === selectionne?.id),
+    [annoncesAffichees, selectionne?.id],
+  )
 
   const allerAnnonce = useCallback((annonce) => {
     if (!annonce) return
     setSelectionne(annonce)
     const coords = getAnnonceCoords(annonce)
-    if (coords && mapRef.current) {
-      mapRef.current.flyTo({ center: coords, zoom: Math.max(mapRef.current.getZoom(), 14), duration: 700 })
+    const map = mapRef.current
+    if (coords && map) {
+      map.panTo({ lat: coords[1], lng: coords[0] })
+      map.setZoom(Math.max(map.getZoom() || 11, 14))
     }
   }, [])
 
-  const allerSuivante   = () => { if (selectionIndex >= 0 && selectionIndex < annoncesFiltrees.length - 1) allerAnnonce(annoncesFiltrees[selectionIndex + 1]) }
-  const allerPrecedente = () => { if (selectionIndex > 0) allerAnnonce(annoncesFiltrees[selectionIndex - 1]) }
+  const allerSuivante   = () => { if (selectionIndex >= 0 && selectionIndex < annoncesAffichees.length - 1) allerAnnonce(annoncesAffichees[selectionIndex + 1]) }
+  const allerPrecedente = () => { if (selectionIndex > 0) allerAnnonce(annoncesAffichees[selectionIndex - 1]) }
 
-  // Mise à jour visibilité marqueurs DOM selon état cluster
-  const syncMarkerVisibility = useCallback(() => {
-    const map = mapRef.current
-    if (!map) return
-    try {
-      const unclustered = map.querySourceFeatures('annonces-source', {
-        filter: ['!', ['has', 'point_count']],
-      })
-      const visibles = new Set(unclustered.map((f) => f.properties?.annonceId).filter(Boolean))
-      domMarkersRef.current.forEach(({ marker }, id) => {
-        marker.getElement().style.display = visibles.has(id) ? '' : 'none'
-      })
-    } catch { /* ignore — source pas encore prête */ }
+  const effacerZone = useCallback(() => {
+    if (drawnPolygonRef.current) {
+      try { drawnPolygonRef.current.setMap(null) } catch { /* ignore */ }
+      drawnPolygonRef.current = null
+    }
+    setZoneRing(null)
+    setDessinZoneActif(false)
   }, [])
 
-  // Initialisation Mapbox (1 seule fois)
+  // Initialisation Google Maps + dessin
   useEffect(() => {
-    if (chargement || !mapContainer.current || mapRef.current) return
-    const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-    if (!TOKEN) {
-      setErreur('Token Mapbox manquant. Ajoutez NEXT_PUBLIC_MAPBOX_TOKEN dans vos variables d\'environnement.')
+    if (chargement || !mapContainerRef.current || mapRef.current) return
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    if (!apiKey) {
       return
     }
 
@@ -263,93 +305,60 @@ function CarteMapbox() {
 
     async function initMap() {
       try {
-        const mapboxgl = (await import('mapbox-gl')).default
-        if (cancelled || !mapContainer.current) return
+        const mapIdFromEnv = (process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || '').trim()
+        advancedMarkerCtorRef.current = null
+        usingAdvancedMarkersRef.current = false
 
-        mapboxgl.accessToken = TOKEN
-        const map = new mapboxgl.Map({
-          container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/streets-v12',
+        const mapsAlreadyLoaded =
+          typeof window !== 'undefined' &&
+          !!window.google?.maps &&
+          typeof window.google.maps.importLibrary === 'function'
+
+        if (!mapsAlreadyLoaded) {
+          const { Loader } = await import('@googlemaps/js-api-loader')
+          const libraries = ['places', 'geometry']
+          if (mapIdFromEnv) libraries.push('marker')
+          const loader = new Loader({
+            apiKey,
+            version: 'weekly',
+            libraries,
+            language: 'fr',
+            region: 'CI',
+          })
+          await loader.load()
+        }
+        if (cancelled || !mapContainerRef.current) return
+
+        let mapId = mapIdFromEnv
+        if (mapIdFromEnv) {
+          try {
+            const { AdvancedMarkerElement } = await google.maps.importLibrary('marker')
+            advancedMarkerCtorRef.current = AdvancedMarkerElement
+            usingAdvancedMarkersRef.current = true
+          } catch (e) {
+            console.warn('[Google Maps] Repères avancés indisponibles, utilisation des marqueurs classiques.', e)
+            mapId = ''
+            advancedMarkerCtorRef.current = null
+            usingAdvancedMarkersRef.current = false
+          }
+        }
+
+        const map = new google.maps.Map(mapContainerRef.current, {
           center: ABIDJAN_CENTER,
           zoom: ABIDJAN_DEFAULT_ZOOM,
-          language: 'fr',
+          mapId: mapId || undefined,
+          mapTypeControl: true,
+          streetViewControl: true,
+          fullscreenControl: true,
+          mapTypeControlOptions: { position: google.maps.ControlPosition.TOP_LEFT },
         })
+        mapRef.current = map
 
-        map.addControl(new mapboxgl.NavigationControl(), 'top-right')
-        map.addControl(new mapboxgl.ScaleControl({ unit: 'metric' }), 'bottom-left')
-        map.addControl(
-          new mapboxgl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }),
-          'top-right',
-        )
-
-        map.on('load', () => {
-          if (cancelled) return
-
-          // ── Source GeoJSON avec clustering ──────────────────────────
-          map.addSource('annonces-source', {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] },
-            cluster: true,
-            clusterMaxZoom: 13,
-            clusterRadius: 50,
-          })
-
-          // Cercles de cluster
-          map.addLayer({
-            id: 'clusters',
-            type: 'circle',
-            source: 'annonces-source',
-            filter: ['has', 'point_count'],
-            paint: {
-              'circle-color': [
-                'step', ['get', 'point_count'],
-                '#1B5E20', 10, '#059669', 30, '#047857',
-              ],
-              'circle-radius': ['step', ['get', 'point_count'], 20, 10, 26, 30, 32],
-              'circle-stroke-width': 3,
-              'circle-stroke-color': '#ffffff',
-            },
-          })
-
-          // Compteur dans le cluster
-          map.addLayer({
-            id: 'cluster-count',
-            type: 'symbol',
-            source: 'annonces-source',
-            filter: ['has', 'point_count'],
-            layout: {
-              'text-field': ['get', 'point_count_abbreviated'],
-              'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-              'text-size': 13,
-            },
-            paint: { 'text-color': '#ffffff' },
-          })
-
-          // Clic cluster → zoom pour déplier
-          map.on('click', 'clusters', (e) => {
-            const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] })
-            const clusterId = features?.[0]?.properties?.cluster_id
-            const source = map.getSource('annonces-source')
-            if (!source || clusterId == null) return
-            source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-              if (err) return
-              map.easeTo({ center: features[0].geometry.coordinates, zoom })
-            })
-          })
-          map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer' })
-          map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = '' })
-
-          // Synchroniser la visibilité des marqueurs DOM sur chaque rendu
-          map.on('render', syncMarkerVisibility)
-
-          mapRef.current = map
-          mapboxglRef.current = mapboxgl
-          setMapReady(true)
-        })
+        setMapReady(true)
       } catch (e) {
         if (!cancelled) {
-          console.error('[Mapbox]', e)
-          setErreur('Impossible d\'afficher la carte. Vérifiez la connexion.')
+          console.error('[Google Maps]', e)
+          setErreur('Impossible d\'afficher la carte. Vérifiez la clé API et la facturation Google Cloud.')
         }
       }
     }
@@ -357,187 +366,343 @@ function CarteMapbox() {
     initMap()
     return () => {
       cancelled = true
-      domMarkersRef.current.forEach(({ marker }) => {
-        try { marker.remove() } catch { /* ignore */ }
-      })
-      domMarkersRef.current.clear()
-      if (mapRef.current) {
-        try { mapRef.current.remove() } catch { /* ignore */ }
-        mapRef.current = null
+      if (clustererRef.current) {
+        try { clustererRef.current.clearMarkers() } catch { /* ignore */ }
+        clustererRef.current = null
       }
+      if (mapClickListenerRef.current) {
+        try { google.maps.event.removeListener(mapClickListenerRef.current) } catch { /* ignore */ }
+        mapClickListenerRef.current = null
+      }
+      if (draftLineRef.current) {
+        try { draftLineRef.current.setMap(null) } catch { /* ignore */ }
+        draftLineRef.current = null
+      }
+      draftPointsRef.current = []
+      markerEntriesRef.current.forEach(({ marker }) => {
+        releaseMapMarker(marker)
+      })
+      markerEntriesRef.current = []
+      if (drawnPolygonRef.current) {
+        try { drawnPolygonRef.current.setMap(null) } catch { /* ignore */ }
+        drawnPolygonRef.current = null
+      }
+      advancedMarkerCtorRef.current = null
+      usingAdvancedMarkersRef.current = false
+      mapRef.current = null
       setMapReady(false)
-      mapboxglRef.current = null
     }
-  }, [chargement, syncMarkerVisibility])
+  }, [chargement])
 
-  // Gérer les marqueurs DOM + source GeoJSON quand les annonces filtrées changent
+  // Mode dessin : clics successifs pour tracer la zone
   useEffect(() => {
-    if (!mapReady || !mapRef.current || !mapboxglRef.current) return
+    if (!mapReady || !mapRef.current || typeof google === 'undefined') return
     const map = mapRef.current
-    const mapboxgl = mapboxglRef.current
 
-    // ── Mettre à jour la source GeoJSON (pour le clustering) ─────────
-    const src = map.getSource('annonces-source')
-    if (src) {
-      const features = annoncesFiltrees
-        .map((a) => {
-          const coords = getAnnonceCoords(a)
-          if (!coords) return null
-          return {
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: coords },
-            properties: { annonceId: String(a.id) },
-          }
-        })
-        .filter(Boolean)
-      src.setData({ type: 'FeatureCollection', features })
+    const finaliserZone = () => {
+      const pts = draftPointsRef.current
+      if (pts.length < 3) {
+        draftPointsRef.current = []
+        if (draftLineRef.current) {
+          try { draftLineRef.current.setMap(null) } catch { /* ignore */ }
+          draftLineRef.current = null
+        }
+        setZoneRing(null)
+        return
+      }
+      if (drawnPolygonRef.current) {
+        try { drawnPolygonRef.current.setMap(null) } catch { /* ignore */ }
+      }
+      drawnPolygonRef.current = new google.maps.Polygon({
+        paths: pts,
+        fillColor: '#0f766e',
+        fillOpacity: 0.18,
+        strokeColor: '#0f766e',
+        strokeWeight: 2,
+        clickable: false,
+        editable: false,
+        zIndex: 1,
+      })
+      drawnPolygonRef.current.setMap(map)
+      const ring = pathToClosedRingLngLat(drawnPolygonRef.current.getPath())
+      setZoneRing(ring)
+      draftPointsRef.current = []
+      if (draftLineRef.current) {
+        try { draftLineRef.current.setMap(null) } catch { /* ignore */ }
+        draftLineRef.current = null
+      }
     }
 
-    // ── Supprimer les anciens marqueurs DOM ───────────────────────────
-    domMarkersRef.current.forEach(({ marker }) => {
-      try { marker.remove() } catch { /* ignore */ }
-    })
-    domMarkersRef.current.clear()
+    if (dessinZoneActif) {
+      if (!draftLineRef.current) {
+        draftLineRef.current = new google.maps.Polyline({
+          strokeColor: '#0f766e',
+          strokeWeight: 2,
+          map,
+        })
+      }
+      mapClickListenerRef.current = google.maps.event.addListener(map, 'click', (e) => {
+        const p = e.latLng
+        if (!p) return
+        draftPointsRef.current.push({ lat: p.lat(), lng: p.lng() })
+        draftLineRef.current?.setPath(draftPointsRef.current)
+      })
+    } else {
+      if (mapClickListenerRef.current) {
+        try { google.maps.event.removeListener(mapClickListenerRef.current) } catch { /* ignore */ }
+        mapClickListenerRef.current = null
+      }
+      finaliserZone()
+    }
+    return () => {
+      if (mapClickListenerRef.current) {
+        try { google.maps.event.removeListener(mapClickListenerRef.current) } catch { /* ignore */ }
+        mapClickListenerRef.current = null
+      }
+    }
+  }, [dessinZoneActif, mapReady])
 
-    // ── Créer un marqueur DOM pour chaque annonce ─────────────────────
-    annoncesFiltrees.forEach((annonce) => {
+  // Marqueurs + clusters
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || typeof google === 'undefined') return
+    const map = mapRef.current
+
+    if (clustererRef.current) {
+      try { clustererRef.current.clearMarkers() } catch { /* ignore */ }
+      clustererRef.current = null
+    }
+    markerEntriesRef.current.forEach(({ marker }) => {
+      releaseMapMarker(marker)
+    })
+    markerEntriesRef.current = []
+
+    const markers = []
+    const useAdvanced = usingAdvancedMarkersRef.current
+    const AdvancedMarkerElement = advancedMarkerCtorRef.current
+
+    annoncesAffichees.forEach((annonce) => {
       const coords = getAnnonceCoords(annonce)
       if (!coords) return
-
-      const isSelected = selectionneRef.current?.id === annonce.id
-      const el = createMarkerElement(annonce, isSelected)
-      // Caché par défaut — syncMarkerVisibility le rendra visible si non-clustérisé
-      el.style.display = 'none'
-
-      const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-        .setLngLat(coords)
-        .addTo(map)
-
-      el.addEventListener('click', () => {
-        setSelectionne(annonce)
-        map.flyTo({ center: coords, zoom: Math.max(map.getZoom(), 14), duration: 600 })
-      })
-
-      domMarkersRef.current.set(String(annonce.id), { marker, annonce, el })
+      const pos = { lat: coords[1], lng: coords[0] }
+      const sel = selectionneRef.current?.id === annonce.id
+      let marker
+      if (useAdvanced && AdvancedMarkerElement) {
+        const content = buildMarkerContentElement(annonce, sel)
+        marker = new AdvancedMarkerElement({
+          map,
+          position: pos,
+          content,
+          title: annonce.titre || '',
+          gmpClickable: true,
+        })
+        marker.addEventListener('gmp-click', () => allerAnnonce(annonce))
+      } else {
+        const m = getClassicPinMetrics(sel)
+        marker = new google.maps.Marker({
+          map,
+          position: pos,
+          icon: {
+            url: buildPinIconDataUrl(annonce, sel),
+            scaledSize: new google.maps.Size(m.w, m.h),
+            anchor: new google.maps.Point(m.ax, m.ay),
+          },
+          title: annonce.titre || '',
+        })
+      }
+      if (!useAdvanced || !AdvancedMarkerElement) {
+        marker.addListener('click', () => allerAnnonce(annonce))
+      }
+      markers.push(marker)
+      markerEntriesRef.current.push({ marker, annonce })
     })
 
-    // Forcer une synchro de visibilité immédiate
-    setTimeout(syncMarkerVisibility, 100)
-  }, [annoncesFiltrees, mapReady, syncMarkerVisibility])
+    import('@googlemaps/markerclusterer').then(({ MarkerClusterer }) => {
+      if (!mapRef.current) return
+      const clusterRenderer = {
+        render(cluster) {
+          const count = cluster.count
+          const position = cluster.position
+          const r = 17
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38">
+            <circle cx="19" cy="19" r="${r}" fill="#475569"/>
+          </svg>`
+          return new google.maps.Marker({
+            position,
+            icon: {
+              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+              scaledSize: new google.maps.Size(38, 38),
+              anchor: new google.maps.Point(19, 19),
+            },
+            label: {
+              text: String(count),
+              color: 'rgba(255,255,255,0.95)',
+              fontSize: '10px',
+              fontWeight: '600',
+            },
+            zIndex: 1000 + count,
+          })
+        },
+      }
+      clustererRef.current = new MarkerClusterer({ map, markers, renderer: clusterRenderer })
+    })
+  }, [annoncesAffichees, mapReady, allerAnnonce])
 
-  // Mettre à jour visuellement le marqueur sélectionné
+  // Mise à jour visuelle sélection
   useEffect(() => {
-    if (!mapReady) return
-    domMarkersRef.current.forEach(({ marker, annonce }, id) => {
-      const isSelected = selectionne?.id === annonce.id
-      const el = marker.getElement()
-      const pin = el.querySelector('div')
-      if (!pin) return
-
-      const col = TYPE_COLORS[annonce.type] || TYPE_COLORS.vente
-      const size = isSelected ? 46 : 36
-      pin.style.width = `${size}px`
-      pin.style.height = `${size}px`
-      pin.style.background = isSelected ? '#F59E0B' : col.bg
-      pin.style.border = `3px solid ${isSelected ? '#92400E' : col.border}`
-      pin.style.boxShadow = `0 4px 14px rgba(0,0,0,${isSelected ? '0.45' : '0.3'})`
-
-      const inner = pin.querySelector('span')
-      if (inner) inner.style.fontSize = isSelected ? '20px' : '16px'
+    if (!mapReady || typeof google === 'undefined') return
+    markerEntriesRef.current.forEach(({ marker, annonce }) => {
+      const sel = selectionne?.id === annonce.id
+      if (usingAdvancedMarkersRef.current && advancedMarkerCtorRef.current) {
+        marker.content = buildMarkerContentElement(annonce, sel)
+      } else {
+        const m = getClassicPinMetrics(sel)
+        marker.setIcon({
+          url: buildPinIconDataUrl(annonce, sel),
+          scaledSize: new google.maps.Size(m.w, m.h),
+          anchor: new google.maps.Point(m.ax, m.ay),
+        })
+      }
     })
   }, [selectionne, mapReady])
 
-  function updateSelection(annonce, entry) {
-    if (!entry) return
-    setSelectionne(annonce)
-    const coords = getAnnonceCoords(annonce)
-    if (coords && mapRef.current) {
-      mapRef.current.flyTo({ center: coords, zoom: Math.max(mapRef.current.getZoom(), 14), duration: 600 })
+  // LocalLogic (optionnel) — même pattern que REALTOR.ca ; couverture dépend du contrat
+  useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_LOCALLOGIC_TOKEN
+    if (!token || !mapReady || !mapRef.current || !mapShellRef.current) return
+
+    let cancelled = false
+    const cbName = 'initLocallogicChezMoiCI'
+
+    function runAssistant() {
+      if (cancelled || !mapRef.current || !mapShellRef.current) return
+      const ll = typeof window !== 'undefined' && window.locallogic
+      if (!ll || typeof ll.createMapAssistant !== 'function') return
+      try {
+        ll.createMapAssistant({
+          locale: 'fr',
+          googleMapsMap: mapRef.current,
+          mapContainer: mapShellRef.current,
+        })
+      } catch (e) {
+        console.warn('[LocalLogic]', e)
+      }
     }
-  }
+
+    if (typeof window !== 'undefined' && window.locallogic) {
+      runAssistant()
+      return () => { cancelled = true }
+    }
+
+    window[cbName] = runAssistant
+    const s = document.createElement('script')
+    s.async = true
+    s.src = `https://cdn.locallogic.co/sdk/?token=${encodeURIComponent(token)}&callback=${cbName}`
+    document.body.appendChild(s)
+
+    return () => {
+      cancelled = true
+      try { delete window[cbName] } catch { /* ignore */ }
+      try { s.remove() } catch { /* ignore */ }
+    }
+  }, [mapReady])
 
   const badgeLabel = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
+  const erreurAffichee = erreur || (
+    !process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+      ? 'Clé Google Maps manquante. Ajoutez NEXT_PUBLIC_GOOGLE_MAPS_API_KEY dans .env.local (Console Google Cloud → Maps JavaScript API).'
+      : ''
+  )
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#F5F5F5]">
       <SiteHeader />
 
-      {/* Barre titre + lien liste */}
-      <div className="relative z-[600] flex flex-shrink-0 items-center justify-between gap-3 border-b border-gray-100 bg-white px-4 py-2.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-bold text-gray-700">🗺️ Carte interactive</span>
-          {!chargement && (
-            <span className="text-xs text-gray-400 flex-shrink-0">
-              {annoncesFiltrees.length} annonce{annoncesFiltrees.length > 1 ? 's' : ''}
-            </span>
-          )}
+      <div className="relative z-[600] flex flex-shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-[#F5F5F5] px-4 py-2">
+        <div className="flex flex-col min-w-0 gap-0.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold text-slate-800">Carte — Côte d&apos;Ivoire</span>
+            {!chargement && (
+              <span className="text-xs text-slate-500 flex-shrink-0">
+                {annoncesAffichees.length} sur {annoncesFiltrees.length} annonce{annoncesFiltrees.length > 1 ? 's' : ''}
+                {zoneRing ? ' (zone)' : ''}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] text-slate-400 truncate">Chez Moi CI · Google Maps</span>
         </div>
-        <a
+        <Link
           href={lienListe}
-          className="hidden md:flex flex-shrink-0 items-center gap-1.5 bg-[#1B5E20] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-800 transition-colors"
+          className="hidden md:flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-[#1B5E20] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#2E7D32]"
         >
-          ☰ Voir en liste
-        </a>
+          Voir en liste
+        </Link>
         <button
           type="button"
           onClick={() => setShowListMobile((v) => !v)}
-          className="md:hidden flex-shrink-0 flex items-center gap-1 bg-[#1B5E20] text-white px-3 py-1.5 rounded-lg text-xs font-bold"
+          className="md:hidden flex-shrink-0 flex items-center gap-1 rounded-lg bg-[#1B5E20] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#2E7D32]"
         >
-          {showListMobile ? '🗺️ Carte' : '☰ Liste'}
+          {showListMobile ? 'Carte' : 'Liste'}
         </button>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
 
-        {/* Colonne listing — scroll isolé (ne fait pas défiler la page ni la carte) */}
         <div
           className={`${
             showListMobile ? 'flex' : 'hidden'
-          } md:flex min-h-0 w-full flex-shrink-0 flex-col overflow-hidden border-t border-gray-100 bg-white md:w-[260px] md:max-h-none md:border-t-0 md:border-r max-h-[42vh] md:max-h-full`}
+          } md:flex min-h-0 w-full flex-shrink-0 flex-col overflow-hidden border-t border-slate-200 bg-white md:w-[300px] md:max-h-none md:border-t-0 md:border-r md:border-slate-200 max-h-[42vh] md:max-h-full`}
         >
-          <div className="flex-shrink-0 border-b border-gray-100 p-3">
-            <h2 className="font-bold text-gray-800 text-sm">
-              {chargement ? 'Chargement...' : `${annoncesFiltrees.length} résultats`}
+          <div className="flex-shrink-0 border-b border-slate-100 bg-slate-50/80 px-3 py-2.5">
+            <h2 className="text-sm font-semibold text-slate-800">
+              {chargement ? 'Chargement...' : `${annoncesAffichees.length} résultats`}
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">Cliquez une annonce pour zoomer</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Toucher une ligne pour centrer la carte</p>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
-            {annoncesFiltrees.length === 0 && !chargement ? (
-              <div className="p-8 text-center text-gray-400">
+          <div className="cartes-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
+            {annoncesAffichees.length === 0 && !chargement ? (
+              <div className="p-8 text-center text-slate-400">
                 <p className="text-4xl mb-2">🔍</p>
-                <p className="text-sm">Aucune annonce trouvée</p>
+                <p className="text-sm">Aucune annonce dans cette zone</p>
+                {zoneRing && (
+                  <button type="button" onClick={effacerZone} className="mt-3 text-xs font-semibold text-emerald-800 underline decoration-emerald-800/40 underline-offset-2">
+                    Effacer le filtre zone
+                  </button>
+                )}
               </div>
             ) : (
-              annoncesFiltrees.slice(0, 80).map((annonce) => {
+              annoncesAffichees.slice(0, 80).map((annonce) => {
                 const estSel = selectionne?.id === annonce.id
                 const col = TYPE_COLORS[annonce.type] || TYPE_COLORS.vente
+                const cover = getListingCoverSrc(annonce)
                 return (
                   <button
                     key={annonce.id}
                     type="button"
                     onClick={() => allerAnnonce(annonce)}
-                    className={`w-full p-3 text-left border-b border-gray-50 flex gap-3 transition-colors ${
-                      estSel ? 'bg-amber-50 border-l-4 border-l-amber-400' : 'hover:bg-[#F5F5F5]'
+                    className={`w-full border-b border-slate-100 px-2.5 py-2 text-left transition-colors ${
+                      estSel ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200/60' : 'hover:bg-slate-50'
                     }`}
                   >
-                    <div className="w-14 h-12 rounded-lg flex-shrink-0 overflow-hidden">
-                      {annonce.photos?.[0] ? (
-                        <img src={annonce.photos[0]} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div
-                          className="w-full h-full flex items-center justify-center text-xl"
-                          style={{ background: col.bg + '22', color: col.bg }}
-                        >
-                          {getMarkerEmoji(annonce)}
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200/80">
+                        <img src={cover} alt="" className="h-full w-full object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="truncate text-[13px] font-semibold leading-tight text-slate-800">
+                            {annonce.titre}
+                          </p>
+                          <span className="flex-shrink-0 text-[12px] font-semibold tabular-nums" style={{ color: col.price }}>
+                            {formaterPrix(annonce.prix)}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-gray-800 truncate">{annonce.titre}</p>
-                      <p className="text-gray-400 text-xs truncate">📍 {annonce.quartier}</p>
-                      <p className="font-bold text-sm mt-0.5" style={{ color: col.bg }}>
-                        {formaterPrix(annonce.prix)}
-                      </p>
+                        <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                          {annonce.quartier}
+                          {(annonce.type === 'service' || annonce.type === 'artisan') && annonce.type_service
+                            ? ` · ${annonce.type_service}`
+                            : ''}
+                        </p>
+                      </div>
                     </div>
                   </button>
                 )
@@ -546,33 +711,55 @@ function CarteMapbox() {
           </div>
         </div>
 
-        {/* Carte — hauteur fixée par le flex parent pour éviter le scroll page */}
         <div
           className={`${
             showListMobile ? 'hidden' : 'block'
           } relative min-h-0 flex-1 overflow-hidden md:block md:min-h-0`}
+          ref={mapShellRef}
         >
 
-          {/* Barre de filtres sur la carte */}
-          <div className="absolute left-2 right-2 top-2 z-20 rounded-xl border border-gray-100 bg-white/95 p-2 shadow-lg backdrop-blur">
-            <div className="mb-1 flex items-center justify-between gap-2">
+          <div className="absolute left-2 right-2 top-2 z-20 flex max-h-[32vh] flex-col gap-1 overflow-y-auto rounded-lg border border-emerald-900/10 bg-white/92 p-1.5 shadow-sm backdrop-blur-sm">
+            <div className="flex flex-wrap items-center gap-1">
               <button
                 type="button"
                 onClick={() => setFiltresVisibles((v) => !v)}
-                className="rounded-md bg-gray-100 px-2 py-1.5 text-[11px] font-bold text-gray-700 hover:bg-gray-200"
+                className="rounded-md bg-stone-100 px-2 py-1 text-[10px] font-semibold text-stone-700 hover:bg-stone-200"
               >
-                {filtresVisibles ? 'Masquer les filtres' : 'Afficher les filtres'}
+                {filtresVisibles ? 'Masquer' : 'Filtres'}
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDessinZoneActif((v) => !v)
+                }}
+                className={`rounded-md px-2 py-1 text-[10px] font-semibold ${
+                  dessinZoneActif ? 'bg-amber-500 text-white' : 'bg-emerald-700 text-white hover:bg-emerald-800'
+                }`}
+              >
+                {dessinZoneActif ? 'Fin zone' : 'Zone'}
+              </button>
+              {zoneRing && (
+                <button
+                  type="button"
+                  onClick={effacerZone}
+                  className="rounded-md border border-stone-200 bg-white px-2 py-1 text-[10px] font-medium text-stone-600 hover:bg-stone-50"
+                >
+                  Effacer
+                </button>
+              )}
+              {dessinZoneActif && (
+                <span className="text-[9px] font-medium text-amber-900/75">Clics sur la carte, puis Fin zone</span>
+              )}
             </div>
             <div
-              className={`grid grid-cols-2 gap-1.5 md:grid-cols-6 ${
+              className={`grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-6 ${
                 filtresVisibles ? '' : 'hidden'
               }`}
             >
               <select
                 value={filtresCarte.type}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, type: e.target.value }))}
-                className="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#1B5E20]"
+                className="rounded border border-stone-200 bg-white px-1.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-400"
               >
                 <option value="">Type</option>
                 <option value="location">Location</option>
@@ -583,17 +770,17 @@ function CarteMapbox() {
               <input type="number" value={filtresCarte.prixMin}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, prixMin: e.target.value }))}
                 placeholder="Prix min"
-                className="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#1B5E20]"
+                className="rounded border border-stone-200 bg-white px-1.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-400"
               />
               <input type="number" value={filtresCarte.prixMax}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, prixMax: e.target.value }))}
                 placeholder="Prix max"
-                className="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#1B5E20]"
+                className="rounded border border-stone-200 bg-white px-1.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-400"
               />
               <select
                 value={filtresCarte.beds}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, beds: e.target.value }))}
-                className="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#1B5E20]"
+                className="rounded border border-stone-200 bg-white px-1.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-400"
               >
                 <option value="">Chambres</option>
                 <option value="1">1+</option>
@@ -604,7 +791,7 @@ function CarteMapbox() {
               <select
                 value={filtresCarte.baths}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, baths: e.target.value }))}
-                className="border border-gray-200 rounded-md px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#1B5E20]"
+                className="rounded border border-stone-200 bg-white px-1.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-400"
               >
                 <option value="">Salles de bain</option>
                 <option value="1">1+</option>
@@ -615,66 +802,59 @@ function CarteMapbox() {
               <button
                 type="button"
                 onClick={() => setFiltresCarte({ type: '', prixMin: '', prixMax: '', beds: '', baths: '' })}
-                className="bg-gray-100 text-gray-700 rounded-md px-2 py-1.5 text-[11px] font-bold hover:bg-gray-200"
+                className="rounded border border-stone-200 bg-stone-50 px-1.5 py-1 text-[10px] font-semibold text-stone-600 hover:bg-stone-100"
               >
-                Réinitialiser
+                Réinit.
               </button>
             </div>
           </div>
 
           {chargement ? (
-            <div className="flex h-full min-h-[12rem] w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#E8F5E9] to-gray-100 md:absolute md:inset-0 md:min-h-0">
-              <div className="w-10 h-10 border-4 border-[#1B5E20] border-t-transparent rounded-full animate-spin" />
-              <p className="text-[#1B5E20] font-bold text-sm">Chargement de la carte...</p>
+            <div className="flex h-full min-h-[12rem] w-full flex-col items-center justify-center gap-3 bg-[#F5F5F5] md:absolute md:inset-0 md:min-h-0">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+              <p className="text-sm font-semibold text-slate-700">Chargement de la carte...</p>
             </div>
-          ) : erreur ? (
+          ) : erreurAffichee ? (
             <div className="flex h-full min-h-[12rem] w-full items-center justify-center bg-gray-100 px-6 md:absolute md:inset-0 md:min-h-0">
               <div className="text-center">
                 <p className="text-4xl mb-3">🗺️</p>
-                <p className="text-gray-600 text-sm">{erreur}</p>
+                <p className="text-gray-600 text-sm">{erreurAffichee}</p>
               </div>
             </div>
           ) : (
             <div
-              ref={mapContainer}
+              ref={mapContainerRef}
               className="h-full min-h-[16rem] w-full md:absolute md:inset-0 md:min-h-0"
             />
           )}
 
-          {/* Fiche annonce sélectionnée (bas de carte) */}
-          {selectionne && !chargement && !erreur && (
-            <div className="absolute bottom-3 left-3 right-3 md:left-auto md:right-3 md:w-[360px] z-20 bg-white rounded-xl shadow-xl border border-gray-100 p-3">
+          {selectionne && !chargement && !erreurAffichee && (
+            <div className="absolute bottom-3 left-3 right-3 z-20 rounded-xl border border-slate-200 bg-white p-3 shadow-lg md:left-auto md:right-3 md:w-[360px]">
               <div className="flex items-start gap-3">
-                {selectionne.photos?.[0] ? (
-                  <img src={selectionne.photos[0]} alt={selectionne.titre}
-                    className="w-24 h-20 object-cover rounded-lg flex-shrink-0" />
-                ) : (
-                  <div
-                    className="w-24 h-20 rounded-lg flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{ background: (TYPE_COLORS[selectionne.type] || TYPE_COLORS.vente).bg + '22' }}
-                  >
-                    {getMarkerEmoji(selectionne)}
-                  </div>
-                )}
+                <img
+                  src={getListingCoverSrc(selectionne)}
+                  alt={selectionne.titre}
+                  className="h-20 w-24 flex-shrink-0 rounded-lg object-cover ring-1 ring-slate-200"
+                />
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-sm text-gray-800 truncate">{selectionne.titre}</p>
-                  <p className="text-gray-400 text-xs truncate">📍 {selectionne.quartier}</p>
-                  <p className="font-bold text-sm mt-1" style={{ color: (TYPE_COLORS[selectionne.type] || TYPE_COLORS.vente).bg }}>
+                  <p className="truncate text-sm font-semibold text-slate-800">{selectionne.titre}</p>
+                  <p className="truncate text-xs text-slate-500">{selectionne.quartier}</p>
+                  <p className="mt-1 text-sm font-semibold tabular-nums" style={{ color: (TYPE_COLORS[selectionne.type] || TYPE_COLORS.vente).price }}>
                     {formaterPrix(selectionne.prix)}
                   </p>
                   <div className="mt-2 flex items-center justify-between gap-2">
                     <span className="text-[11px] text-gray-500">{badgeLabel[selectionne.badge] || '🔓 Bronze'}</span>
-                    <a href={`/annonces/${selectionne.id}`}
-                      className="text-xs bg-[#1B5E20] text-white px-3 py-1.5 rounded-lg font-bold hover:bg-green-800">
+                    <Link href={`/annonces/${selectionne.id}`}
+                      className="rounded-lg bg-[#1B5E20] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#2E7D32]">
                       Détails →
-                    </a>
+                    </Link>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <button type="button" onClick={allerPrecedente} disabled={selectionIndex <= 0}
                       className="text-xs bg-gray-100 text-gray-700 py-1.5 rounded-lg font-bold disabled:opacity-40">
                       ← Précédent
                     </button>
-                    <button type="button" onClick={allerSuivante} disabled={selectionIndex < 0 || selectionIndex >= annoncesFiltrees.length - 1}
+                    <button type="button" onClick={allerSuivante} disabled={selectionIndex < 0 || selectionIndex >= annoncesAffichees.length - 1}
                       className="text-xs bg-gray-100 text-gray-700 py-1.5 rounded-lg font-bold disabled:opacity-40">
                       Suivant →
                     </button>
@@ -696,11 +876,11 @@ function CarteMapbox() {
 export default function Carte() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#1B5E20] border-t-transparent rounded-full animate-spin" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-100">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
       </div>
     }>
-      <CarteMapbox />
+      <CarteGoogleMaps />
     </Suspense>
   )
 }

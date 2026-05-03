@@ -160,7 +160,7 @@ export default function Inscription() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex : Ismael"
+                  placeholder="Ex. : Aminata"
                   value={prenom}
                   onChange={(e) => setPrenom(e.target.value)}
                   autoComplete="given-name"
@@ -173,7 +173,7 @@ export default function Inscription() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex : Koné"
+                  placeholder="Ex. : Kouadio"
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   autoComplete="family-name"
@@ -188,7 +188,7 @@ export default function Inscription() {
               </label>
               <input
                 type="email"
-                placeholder="votre@email.com"
+                placeholder="prenom.nom@exemple.ci"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"

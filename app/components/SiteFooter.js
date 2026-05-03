@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function SiteFooter() {
   const annee = new Date().getFullYear()
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '2250700000000'
@@ -35,29 +37,29 @@ export default function SiteFooter() {
             <h4 className="font-bold text-sm mb-3">Explorer</h4>
             <ul className="space-y-2 text-green-200 text-sm">
               <li>
-                <a href="/annonces?type=location" className="hover:text-white">
+                <Link href="/annonces?type=location" className="hover:text-white">
                   Location
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/annonces?type=vente" className="hover:text-white">
+                <Link href="/annonces?type=vente" className="hover:text-white">
                   Vente
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/services" className="hover:text-white">
+                <Link href="/services" className="hover:text-white">
                   Services
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/artisans" className="hover:text-white">
+                <Link href="/artisans" className="hover:text-white">
                   Artisans
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/carte" className="hover:text-white">
+                <Link href="/carte" className="hover:text-white">
                   Carte interactive
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -66,29 +68,29 @@ export default function SiteFooter() {
             <h4 className="font-bold text-sm mb-3">Outils</h4>
             <ul className="space-y-2 text-green-200 text-sm">
               <li>
-                <a href="/calculateur-pret" className="hover:text-white">
+                <Link href="/calculateur-pret" className="hover:text-white">
                   Calculateur de prêt
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/estimation" className="hover:text-white">
+                <Link href="/estimation" className="hover:text-white">
                   Estimation de bien
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/packs" className="hover:text-white">
+                <Link href="/packs" className="hover:text-white">
                   Packs accompagnement
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/badge" className="hover:text-white">
+                <Link href="/badge" className="hover:text-white">
                   Badge Vérifié
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/publier" className="hover:text-white">
+                <Link href="/publier" className="hover:text-white">
                   Publier une annonce
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -97,24 +99,29 @@ export default function SiteFooter() {
             <h4 className="font-bold text-sm mb-3">Entreprise</h4>
             <ul className="space-y-2 text-green-200 text-sm">
               <li>
-                <a href="/a-propos" className="hover:text-white">
+                <Link href="/a-propos" className="hover:text-white">
                   À propos
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/contact" className="hover:text-white">
+                <Link href="/carriere" className="hover:text-white">
+                  Carrière
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="hover:text-white">
                   Contact
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/conditions" className="hover:text-white">
+                <Link href="/conditions" className="hover:text-white">
                   Conditions d&apos;utilisation
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/confidentialite" className="hover:text-white">
+                <Link href="/confidentialite" className="hover:text-white">
                   Confidentialité
-                </a>
+                </Link>
               </li>
               <li>
                 <a

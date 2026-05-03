@@ -17,7 +17,8 @@ create table if not exists profiles (
   photo_url   text,
   badge       text default 'bronze',
   is_admin    boolean default false,
-  created_at  timestamptz default now()
+  created_at  timestamptz default now(),
+  adresse_publique text
 );
 
 create table if not exists annonces (
