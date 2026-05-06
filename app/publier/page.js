@@ -263,6 +263,7 @@ export default function Publier() {
       if (disponibilite) donnees.disponibilite = disponibilite
       if (dureeBail) donnees.duree_bail = dureeBail
       if (inclusions.length) donnees.equipements = inclusions
+      if (zonesDesservies.length) donnees.zone_desservie = zonesDesservies.join(', ')
     }
 
     if (type === 'vente') {
@@ -509,6 +510,30 @@ export default function Publier() {
                           onClick={() => setInclusions((prev) => prev.includes(item) ? prev.filter(i=>i!==item) : [...prev, item])}
                           className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${inclusions.includes(item) ? 'bg-[#1B5E20] text-white border-[#1B5E20]' : 'border-gray-200 text-gray-600 hover:border-green-300'}`}
                         >{item}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Zones desservies</label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Choisissez plusieurs communes si vous proposez la location dans plusieurs zones.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {[...getCommunesParVille(ville), `Toute la ville: ${ville}`].map((q) => (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => setZonesDesservies((prev) => (
+                            prev.includes(q) ? prev.filter((z) => z !== q) : [...prev, q]
+                          ))}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                            zonesDesservies.includes(q)
+                              ? 'bg-[#1B5E20] text-white border-[#1B5E20]'
+                              : 'border-gray-200 text-gray-600 hover:border-green-300'
+                          } ${String(q).startsWith('Toute la ville') ? 'font-bold' : ''}`}
+                        >
+                          {q}
+                        </button>
                       ))}
                     </div>
                   </div>

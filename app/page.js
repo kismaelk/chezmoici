@@ -334,7 +334,7 @@ export default function Accueil() {
             Louer, acheter, faire appel à un pro
           </h2>
           <p className="mx-auto max-w-md text-sm text-gray-400 md:text-base">
-            Trois entrées simples — le détail (badge, packs, outils) est dans le menu.
+            Trois entrées simples. Le détail (badge, packs, outils) reste accessible dans le menu.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 md:gap-3">
@@ -378,7 +378,7 @@ export default function Accueil() {
       <GrilleAnnonces
         type="prestations"
         titre="Services & Pro"
-        sousTitre="Prestataires et corps de métier — contact pour encadrer l’intervention"
+        sousTitre="Professionnels qualifiés — contactez-nous pour encadrer l’intervention"
         href="/annonces?type=prestations"
       />
 

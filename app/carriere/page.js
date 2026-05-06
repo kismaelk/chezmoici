@@ -153,7 +153,7 @@ export default function CarrierePage() {
         <h1 className="text-3xl font-bold text-white sm:text-4xl mb-3">Carrières</h1>
         <p className="text-green-100 text-lg max-w-2xl mx-auto leading-relaxed">
           Rejoignez l&apos;équipe Chez Moi CI — nous construisons la référence confiance pour
-          l&apos;immobilier et les services à Abidjan. Rémunérations en brut mensuel indicatif,
+          l&apos;immobilier et les Services & Pro à Abidjan. Rémunérations en brut mensuel indicatif,
           alignées sur une jeune structure en croissance (à valider en entretien).
         </p>
       </div>

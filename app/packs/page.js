@@ -97,11 +97,11 @@ export default function Packs() {
           Packs d’accompagnement
         </span>
         <h1 className="text-white text-3xl md:text-5xl font-bold mb-3">
-          Un expert à vos côtés, de A à Z
+          Un expert à vos côtés, de A à Z.
         </h1>
         <p className="text-green-100 max-w-2xl mx-auto">
           Location, achat, investissement diaspora, certification Services & Pro —
-          4 packs conçus pour sécuriser chaque étape de votre projet immobilier
+          4 packs conçus pour sécuriser chaque étape de votre projet
           à Abidjan.
         </p>
       </section>
