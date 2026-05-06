@@ -18,6 +18,7 @@ export default function AuthCallback() {
               nom: session.user.user_metadata?.full_name || session.user.user_metadata?.nom || session.user.email?.split('@')[0] || 'Utilisateur',
               badge: 'bronze',
               type: 'particulier',
+              account_status: 'en_attente',
             },
             { onConflict: 'id', ignoreDuplicates: true }
           )

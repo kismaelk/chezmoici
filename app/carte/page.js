@@ -69,6 +69,20 @@ const COORDS_QUARTIER = {
   'Port-Bouët':  [-3.9333, 5.25],
   Riviera:       [-3.95,   5.37],
   Angré:         [-3.97,   5.38],
+  Abidjan:       [-4.021,  5.325],
+  Bouaké:        [-5.033,  7.69],
+  Daloa:         [-6.45,   6.89],
+  Yamoussoukro:  [-5.2767, 6.8167],
+  'San-Pédro':   [-6.64,   4.75],
+  Korhogo:       [-5.63,   9.46],
+  Man:           [-7.55,   7.41],
+  Gagnoa:        [-5.95,   6.13],
+  Abengourou:    [-3.5,    6.72],
+  Anyama:        [-4.05,   5.5],
+  Soubré:        [-6.6,    5.78],
+  Divo:          [-5.36,   5.84],
+  Odienné:       [-7.56,   9.51],
+  Bondoukou:     [-2.8,    8.04],
 }
 
 function getAnnonceCoords(annonce) {
@@ -227,7 +241,7 @@ function CarteGoogleMaps() {
     { id: '', label: 'Tout' },
     { id: 'location', label: 'Location' },
     { id: 'vente', label: 'Vente' },
-    { id: 'prestations', label: 'Services & pros' },
+    { id: 'prestations', label: 'Services & Pro' },
   ]
 
   const appliquerFiltreTypeRapide = (typeId) => {

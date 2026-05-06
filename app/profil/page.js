@@ -89,7 +89,7 @@ function ProfilContenu() {
     locataire: '🔍 Particulier',
     proprietaire: '🏠 Propriétaire',
     agence: '🏢 Agence immobilière',
-    artisan: '🔧 Artisan / Prestataire',
+    artisan: '🛠️ Services & Pro',
   }
 
   const badgeLabel = {

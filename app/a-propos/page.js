@@ -29,7 +29,7 @@ export default function APropos() {
           </p>
           <p className="text-gray-600 leading-relaxed mb-4">
             Des dépôts de garantie perdus, des appartements qui n&apos;existent
-            pas, des artisans qui disparaissent après avoir été payés. Ces
+            pas, des prestataires qui disparaissent après avoir été payés. Ces
             histoires, nous les avons vécues ou entendues de nos proches. Nous
             avons décidé qu&apos;il était temps de changer ça.
           </p>
@@ -59,7 +59,7 @@ export default function APropos() {
             {
               emoji: '⚡',
               titre: 'Simplicité',
-              desc: 'Trouver un logement, contacter un artisan, signer un bail — tout en quelques clics, en toute sécurité.',
+              desc: 'Trouver un logement, contacter un Service & Pro, signer un bail — tout en quelques clics, en toute sécurité.',
             },
           ].map((val) => (
             <div
@@ -114,7 +114,7 @@ export default function APropos() {
           </h2>
           <p className="text-green-200 mb-6">
             Que vous cherchiez un logement, que vous ayez un bien à louer ou que
-            vous soyez artisan, Chez Moi CI est fait pour vous.
+            vous proposiez des Services & Pro, Chez Moi CI est fait pour vous.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a

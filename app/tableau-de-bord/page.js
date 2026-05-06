@@ -37,7 +37,7 @@ export default function TableauDeBord() {
 
   const menuParticulier = [
     { emoji: "🔍", titre: "Chercher un logement", desc: "Annonces location & vente", lien: "/annonces" },
-    { emoji: "🛠️", titre: "Services & artisans", desc: "Prestataires et artisans à Abidjan", lien: "/annonces?type=prestations" },
+    { emoji: "🛠️", titre: "Services & Pro", desc: "Professionnels de services à Abidjan", lien: "/annonces?type=prestations" },
     { emoji: "💬", titre: "Mes messages", desc: "Conversations avec les propriétaires", lien: "/messages" },
     { emoji: "❤️", titre: "Mes favoris", desc: "Annonces sauvegardées", lien: "/favoris" },
     { emoji: "📋", titre: "Mes demandes", desc: "Suivi de vos demandes", lien: "/demandes" },
@@ -72,7 +72,7 @@ export default function TableauDeBord() {
     locataire: "Particulier",
     proprietaire: "Propriétaire",
     agence: "Agence immobilière",
-    artisan: "Artisan / Prestataire",
+    artisan: "Services & Pro",
   }
 
   const menu = menuParType[profil?.type] || menuParType.particulier

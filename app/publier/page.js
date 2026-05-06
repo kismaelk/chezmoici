@@ -10,11 +10,8 @@ import {
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-
-const QUARTIERS = [
-  'Cocody', 'Plateau', 'Marcory', 'Yopougon', 'Bingerville',
-  'Adjamé', 'Abobo', 'Koumassi', 'Port-Bouët', 'Treichville', 'Attécoubé', 'Riviera', 'Angré',
-]
+import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
+import SiteHeader from '@/app/components/SiteHeader'
 
 const ARRONDISSEMENTS = [
   'Abobo', 'Adjamé', 'Attécoubé', 'Cocody', 'Koumassi',
@@ -123,6 +120,7 @@ function CarteGPS({ latitude, longitude, onCoordChange }) {
 
 export default function Publier() {
   const [utilisateur, setUtilisateur] = useState(null)
+  const [profilCompte, setProfilCompte] = useState(null)
   const [chargement, setChargement] = useState(false)
   const [succes, setSucces] = useState(false)
   const [erreur, setErreur] = useState('')
@@ -136,6 +134,7 @@ export default function Publier() {
   const [titre, setTitre] = useState('')
   const [description, setDescription] = useState('')
   const [prix, setPrix] = useState('')
+  const [ville, setVille] = useState('Abidjan')
   const [quartier, setQuartier] = useState('')
 
   // Localisation précise
@@ -162,7 +161,7 @@ export default function Publier() {
 
   // Service / Artisan
   const [typeService, setTypeService] = useState('')
-  const [zoneDesservie, setZoneDesservie] = useState('')
+  const [zonesDesservies, setZonesDesservies] = useState([])
   const [tarifHoraire, setTarifHoraire] = useState('')
   const [disponibiliteService, setDisponibiliteService] = useState('')
 
@@ -183,8 +182,10 @@ export default function Publier() {
           telephone: '',
           quartier: '',
           badge: 'bronze',
+          account_status: 'en_attente',
         })
       }
+      setProfilCompte(p || null)
       setUtilisateur(user)
     })
     return () => unsub()
@@ -222,6 +223,9 @@ export default function Publier() {
 
   const publier = async () => {
     if (!type) return setErreur("Choisissez un type d'annonce")
+    if (profilCompte?.account_status && profilCompte.account_status !== 'active') {
+      return setErreur('Votre compte est en attente de vérification. Vous pourrez publier une fois le compte vérifié.')
+    }
     if (!titre) return setErreur('Le titre est obligatoire')
     if (!prix) return setErreur('Le prix est obligatoire')
     if (!quartier) return setErreur('Le quartier est obligatoire')
@@ -272,7 +276,7 @@ export default function Publier() {
 
     if (type === 'service' || type === 'artisan') {
       if (typeService) donnees.type_service = typeService
-      if (zoneDesservie) donnees.zone_desservie = zoneDesservie
+      if (zonesDesservies.length) donnees.zone_desservie = zonesDesservies.join(', ')
       if (tarifHoraire) donnees.tarif_horaire = parseInt(tarifHoraire, 10)
       if (disponibiliteService) donnees.disponibilite = disponibiliteService
     }
@@ -315,7 +319,7 @@ export default function Publier() {
           <h2 className="text-2xl font-bold text-[#1B5E20] mb-2">Annonce reçue</h2>
           <p className="text-gray-600 text-sm leading-relaxed">
             Notre équipe vérifie chaque annonce (délai habituel entre <strong>30 minutes et 24 heures</strong>).
-            Vous la verrez en ligne une fois le statut passé à « actif ». Suivez l&apos;état dans <strong>Mes annonces</strong>.
+            Suivez simplement l&apos;état dans <strong>Mes annonces</strong>.
           </p>
           <p className="text-gray-400 text-xs mt-4">Redirection en cours...</p>
         </div>
@@ -324,10 +328,7 @@ export default function Publier() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
-      <nav className="bg-[#1B5E20] px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-white font-bold text-lg">Chez Moi CI</Link>
-        <Link href="/tableau-de-bord" className="text-green-200 hover:text-white text-sm">← Tableau de bord</Link>
-      </nav>
+      <SiteHeader />
 
       <div className="max-w-2xl mx-auto py-10 px-4">
         <h1 className="text-3xl font-bold text-[#1B5E20] mb-2">Publier une annonce</h1>
@@ -347,10 +348,16 @@ export default function Publier() {
         <div className="bg-[#E8F5E9] border border-[#1B5E20]/30 rounded-xl p-4 mb-6 flex items-start gap-3">
           <span className="text-xl flex-shrink-0">🛡️</span>
           <p className="text-sm text-gray-800">
-            <strong>Photo obligatoire</strong> pour toute annonce. Après envoi, vérification humaine sous{' '}
-            <strong>30 min à 24 h</strong> avant mise en ligne publique (tableau admin : passage au statut « actif »).
+            <strong>Photo obligatoire</strong> pour toute annonce. Ajoutez une photo personnelle, du magasin
+            ou du lieu de travail. Vérification humaine sous <strong>30 min à 24 h</strong> avant mise en ligne.
           </p>
         </div>
+
+        {profilCompte?.account_status && profilCompte.account_status !== 'active' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-800">
+            Votre compte est en attente de vérification. La publication est débloquée après validation.
+          </div>
+        )}
 
         {/* 1 — TYPE */}
         <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
@@ -359,8 +366,8 @@ export default function Publier() {
             {[
               { id: 'location', emoji: '🔑', label: 'Mettre en location', desc: 'Loyer mensuel, bail' },
               { id: 'vente',    emoji: '🏠', label: 'Mettre en vente',    desc: 'Prix de vente, propriété' },
-              { id: 'service',  emoji: '🔧', label: 'Offrir un service',  desc: 'Prestation, tarif' },
-              { id: 'artisan',  emoji: '👷', label: 'Artisan / Pro',      desc: 'Métier, zone, tarif' },
+              { id: 'service',  emoji: '🛠️', label: 'Services & Pro', desc: 'Prestation, zones, tarif' },
+              { id: 'artisan',  emoji: '🛠️', label: 'Services & Pro', desc: 'Métier, zones, tarif' },
             ].map((t) => (
               <button
                 key={t.id}
@@ -424,16 +431,31 @@ export default function Publier() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1">Quartier *</label>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Ville *</label>
                     <select
-                      value={quartier}
-                      onChange={(e) => setQuartier(e.target.value)}
+                      value={ville}
+                      onChange={(e) => {
+                        setVille(e.target.value)
+                        setQuartier('')
+                        setZonesDesservies([])
+                      }}
                       className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] text-sm"
                     >
                       <option value="">Choisir</option>
-                      {QUARTIERS.map((q) => <option key={q} value={q}>{q}</option>)}
+                      {VILLES_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
                     </select>
                   </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Commune / Quartier *</label>
+                  <select
+                    value={quartier}
+                    onChange={(e) => setQuartier(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] text-sm"
+                  >
+                    <option value="">Choisir</option>
+                    {getCommunesParVille(ville).map((q) => <option key={q} value={q}>{q}</option>)}
+                  </select>
                 </div>
               </div>
             </div>
@@ -581,15 +603,26 @@ export default function Publier() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1">Zone desservie</label>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Zones desservies</label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Choisissez plusieurs communes ; vous pouvez aussi couvrir toute la ville.
+                    </p>
                     <div className="flex flex-wrap gap-2">
-                      {[...QUARTIERS, 'Tout Abidjan'].map((q) => (
-                        <button key={q} type="button"
-                          onClick={() => setZoneDesservie((prev) => prev === q ? '' : q)}
+                      {[...getCommunesParVille(ville), `Toute la ville: ${ville}`].map((q) => (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => setZonesDesservies((prev) => (
+                            prev.includes(q) ? prev.filter((z) => z !== q) : [...prev, q]
+                          ))}
                           className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                            zoneDesservie === q ? 'bg-[#1B5E20] text-white border-[#1B5E20]' : 'border-gray-200 text-gray-600 hover:border-green-300'
-                          } ${q === 'Tout Abidjan' ? 'font-bold' : ''}`}
-                        >{q}</button>
+                            zonesDesservies.includes(q)
+                              ? 'bg-[#1B5E20] text-white border-[#1B5E20]'
+                              : 'border-gray-200 text-gray-600 hover:border-green-300'
+                          } ${String(q).startsWith('Toute la ville') ? 'font-bold' : ''}`}
+                        >
+                          {q}
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -665,7 +698,8 @@ export default function Publier() {
                 )}
               </div>
               <p className="text-gray-500 text-xs mb-4">
-                Au moins <strong>une photo</strong> est requise. La première image est la couverture. Formats JPG, PNG — max 10 fichiers.
+                Au moins <strong>une photo</strong> est requise : photo personnelle, du magasin ou du lieu de travail.
+                La première image est la couverture. Formats JPG, PNG — max 10 fichiers.
               </p>
 
               {photosFichiers.length === 0 ? (
@@ -717,7 +751,7 @@ export default function Publier() {
         </button>
 
         <p className="text-center text-gray-500 text-sm mt-4">
-          Après validation (30 min – 24 h), votre annonce passera au statut actif et sera visible sur le site et la carte.
+          Après validation (30 min – 24 h), votre annonce sera visible sur le site et la carte.
         </p>
       </div>
     </div>

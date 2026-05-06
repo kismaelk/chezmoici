@@ -43,6 +43,10 @@ export default function SiteHeader({ variant = 'default' }) {
   }
 
   const initiale = (profil?.nom || user?.email || '?')[0].toUpperCase()
+  const statutCompte = profil?.account_status || 'en_attente'
+  const compteBadge = statutCompte === 'active'
+    ? { text: 'Compte vérifié', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
+    : { text: 'Vérification en attente', cls: 'bg-amber-100 text-amber-800 border-amber-200' }
   const accountLinks = [
     { href: '/tableau-de-bord', label: 'Tableau', icon: '🏠' },
     { href: '/publier', label: 'Publier', icon: '➕' },
@@ -56,7 +60,7 @@ export default function SiteHeader({ variant = 'default' }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm">
+    <header className="sticky top-0 z-[1000] border-b border-emerald-100 bg-white/95 backdrop-blur shadow-md">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-4 md:px-6 h-16 min-w-0">
         <Link href="/" className="flex items-center gap-2 flex-shrink-0">
           <div className="w-9 h-9 rounded-lg bg-[color:var(--chez-green,#1B5E20)] text-white flex items-center justify-center font-bold text-lg shadow-sm">
@@ -67,7 +71,7 @@ export default function SiteHeader({ variant = 'default' }) {
               Chez Moi CI
             </div>
             <div className="text-[10px] text-gray-400 leading-tight -mt-0.5">
-              Immobilier de confiance · Abidjan
+              Immobilier de confiance · Côte d&apos;Ivoire
             </div>
           </div>
         </Link>
@@ -123,6 +127,9 @@ export default function SiteHeader({ variant = 'default' }) {
                   )}
                   <span className="hidden sm:inline text-sm font-medium text-gray-700">
                     {profil?.nom?.split(' ')[0] || 'Compte'}
+                  </span>
+                  <span className={`hidden md:inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${compteBadge.cls}`}>
+                    {compteBadge.text}
                   </span>
                 </button>
                 {ouvert && (

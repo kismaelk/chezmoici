@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import SiteHeader from '@/app/components/SiteHeader'
 
 function destinationApresConnexion() {
   if (typeof window === 'undefined') return '/tableau-de-bord'
@@ -98,16 +99,15 @@ export default function Connexion() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
-      <nav className="bg-[#1B5E20] px-4 py-4">
-        <Link href="/" className="text-white text-xl font-bold">
-          Chez Moi CI
-        </Link>
-      </nav>
+      <SiteHeader />
 
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="bg-white rounded-xl shadow-sm p-8 w-full max-w-md">
           <h1 className="text-2xl font-bold text-[#1B5E20] mb-1">Connexion</h1>
           <p className="text-gray-500 mb-6 text-sm">Bienvenue sur Chez Moi CI</p>
+          <p className="text-[11px] text-gray-500 mb-5">
+            Utilisez Google, Facebook, SMS ou courriel. Le même numéro / compte social reste lié à un seul compte.
+          </p>
 
           <button
             type="button"

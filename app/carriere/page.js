@@ -20,7 +20,7 @@ const PILIERS = [
   {
     id: 'croissance',
     titre: 'Croissance & partenariats',
-    desc: 'Réseau agences, artisans, services à la carte, revenus récurrents.',
+    desc: 'Réseau agences, Services & Pro, services à la carte, revenus récurrents.',
   },
   {
     id: 'marque',

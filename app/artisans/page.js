@@ -58,10 +58,10 @@ export default function Artisans() {
 
       <section className="bg-gradient-to-br from-[#0F3F12] to-[#1B5E20] py-12 px-4 text-center">
         <span className="inline-block bg-white/10 text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/20 mb-4">
-          👷 Artisans certifiés
+          🛠️ Services & Pro certifiés
         </span>
         <h1 className="text-white text-3xl md:text-4xl font-bold">
-          Artisans vérifiés à Abidjan
+          Services & Pro vérifiés à Abidjan
         </h1>
         <p className="text-green-100 mt-2 max-w-2xl mx-auto">
           Diplômes vérifiés, références contrôlées, garantie travaux. Trouvez
@@ -109,7 +109,7 @@ export default function Artisans() {
             ))}
           </select>
           <span className="text-gray-400 text-sm">
-            {annonces.length} artisan{annonces.length > 1 ? 's' : ''}
+            {annonces.length} pro{annonces.length > 1 ? 's' : ''}
           </span>
         </div>
 
@@ -126,17 +126,17 @@ export default function Artisans() {
           <div className="bg-white rounded-xl p-10 text-center border border-gray-100">
             <div className="text-5xl mb-3">🔧</div>
             <h2 className="text-lg font-bold text-gray-700 mb-2">
-              Bientôt des artisans certifiés ici
+              Bientôt des Services & Pro certifiés ici
             </h2>
             <p className="text-gray-400 text-sm mb-5">
-              Nous recrutons et certifions les meilleurs artisans d’Abidjan.
-              Vous êtes artisan ? Inscrivez-vous et obtenez votre badge.
+              Nous recrutons et certifions les meilleurs professionnels d’Abidjan.
+              Vous êtes un pro ? Inscrivez-vous et obtenez votre badge.
             </p>
             <a
               href="/inscription"
               className="inline-block bg-[#1B5E20] text-white px-6 py-3 rounded-lg font-bold text-sm hover:bg-green-800"
             >
-              Je suis artisan, je m’inscris
+              Je suis pro, je m’inscris
             </a>
           </div>
         ) : (
@@ -172,7 +172,7 @@ export default function Artisans() {
                   </p>
                   <div className="mt-3 flex items-center justify-between text-xs">
                     <span className="text-[#1B5E20] font-bold">
-                      {a.profiles?.nom || 'Artisan'}
+                      {a.profiles?.nom || 'Services & Pro'}
                     </span>
                     <span className="text-[#F9A825] font-bold">
                       À partir de {a.prix?.toLocaleString()} FCFA
@@ -189,7 +189,7 @@ export default function Artisans() {
           <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-center">
             <div>
               <h2 className="text-2xl font-bold mb-2">
-                Vous êtes artisan ? Obtenez le badge Artisan Pro
+                Vous êtes un pro ? Obtenez le badge Services & Pro
               </h2>
               <p className="text-green-100 text-sm">
                 35 000 FCFA/mois · certification complète, profil premium, badge

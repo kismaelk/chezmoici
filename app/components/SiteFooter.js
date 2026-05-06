@@ -48,7 +48,7 @@ export default function SiteFooter() {
               </li>
               <li>
                 <Link href="/annonces?type=prestations" className="hover:text-white">
-                  Services & artisans
+                  Services & Pro
                 </Link>
               </li>
               <li>

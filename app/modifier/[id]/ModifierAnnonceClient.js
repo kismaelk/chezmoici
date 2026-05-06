@@ -7,16 +7,20 @@ import { getAnnonceById, updateAnnonce, uploadPhotoChemin, getProfilFirestore } 
 import { useRouter, useParams } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
-
-const QUARTIERS = [
-  'Cocody', 'Plateau', 'Marcory', 'Yopougon', 'Bingerville',
-  'Adjamé', 'Abobo', 'Koumassi', 'Port-Bouët', 'Treichville', 'Attécoubé', 'Riviera', 'Angré',
-]
+import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
 
 const ARRONDISSEMENTS = [
   'Abobo', 'Adjamé', 'Attécoubé', 'Cocody', 'Koumassi',
   'Marcory', 'Plateau', 'Port-Bouët', 'Treichville', 'Yopougon',
 ]
+
+function trouverVilleDepuisCommune(commune) {
+  if (!commune) return 'Abidjan'
+  for (const v of VILLES_OPTIONS) {
+    if (getCommunesParVille(v).includes(commune)) return v
+  }
+  return 'Abidjan'
+}
 
 /** Snapshot stable pour détecter les changements (confirmation sauvegarde) */
 function serialiserEtatEdition(v) {
@@ -157,6 +161,7 @@ export default function ModifierAnnonceClient() {
   const [titre, setTitre] = useState('')
   const [description, setDescription] = useState('')
   const [prix, setPrix] = useState('')
+  const [ville, setVille] = useState('Abidjan')
   const [quartier, setQuartier] = useState('')
   const [statut, setStatut] = useState('actif')
 
@@ -304,6 +309,7 @@ export default function ModifierAnnonceClient() {
       setDescription(data.description || '')
       setPrix(data.prix?.toString() || '')
       setQuartier(data.quartier || '')
+      setVille(trouverVilleDepuisCommune(data.quartier || ''))
       setStatut(data.statut || 'actif')
       setPhotosExistantes(Array.isArray(data.photos) ? data.photos : [])
       setRue(data.rue || '')
@@ -617,14 +623,28 @@ export default function ModifierAnnonceClient() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Quartier *</label>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Ville *</label>
+                <select
+                  value={ville}
+                  onChange={(e) => {
+                    setVille(e.target.value)
+                    setQuartier('')
+                  }}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20]"
+                >
+                  <option value="">Choisir</option>
+                  {VILLES_OPTIONS.map((v) => <option key={v}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Commune / Quartier *</label>
                 <select
                   value={quartier}
                   onChange={(e) => setQuartier(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20]"
                 >
                   <option value="">Choisir</option>
-                  {QUARTIERS.map((q) => <option key={q}>{q}</option>)}
+                  {getCommunesParVille(ville).map((q) => <option key={q}>{q}</option>)}
                 </select>
               </div>
             </div>
@@ -911,7 +931,7 @@ export default function ModifierAnnonceClient() {
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">Zone desservie</label>
                 <div className="flex flex-wrap gap-2">
-                  {[...QUARTIERS, 'Tout Abidjan'].map((q) => (
+                  {[...getCommunesParVille(ville), `Toute la ville: ${ville}`].map((q) => (
                     <button
                       key={q}
                       type="button"

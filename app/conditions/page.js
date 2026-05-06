@@ -11,7 +11,7 @@ export default function Conditions() {
     {
       titre: '2. Description du service',
       contenu:
-        "Chez Moi CI est une plateforme d'intermédiation numérique permettant la mise en relation entre propriétaires, locataires, agences immobilières, artisans et prestataires de services à Abidjan, Côte d'Ivoire. Chez Moi CI n'est pas un agent immobilier et n'intervient pas directement dans les transactions.",
+        "Chez Moi CI est une plateforme d'intermédiation numérique permettant la mise en relation entre propriétaires, locataires, agences immobilières et professionnels de services (Services & Pro) à Abidjan, Côte d'Ivoire. Chez Moi CI n'est pas un agent immobilier et n'intervient pas directement dans les transactions.",
     },
     {
       titre: '3. Comptes utilisateurs',

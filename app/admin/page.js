@@ -37,7 +37,7 @@ const TYPE_LABEL = {
   locataire: '🔍 Particulier',
   proprietaire: '🏠 Propriétaire',
   agence: '🏢 Agence',
-  artisan: '🔧 Artisan',
+  artisan: '🛠️ Services & Pro',
 }
 
 const STATUT_SIGNALEMENT_OPTIONS = [

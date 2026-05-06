@@ -41,7 +41,7 @@ export default function ProfilPublicClient() {
   useEffect(() => {
     async function chargerProfil() {
       if (!params.id) {
-        router.replace('/artisans')
+        router.replace('/annonces?type=prestations')
         return
       }
       let row = null
@@ -78,7 +78,7 @@ export default function ProfilPublicClient() {
     locataire: '🔍 Particulier',
     proprietaire: '🏠 Propriétaire',
     agence: '🏢 Agence immobilière',
-    artisan: '🔧 Artisan / Prestataire',
+    artisan: '🛠️ Services & Pro',
   }
   const badgeLabel = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
 

@@ -65,12 +65,12 @@ const PACKS = [
     featured: true,
   },
   {
-    id: 'artisan',
-    emoji: '👷',
-    nom: 'Artisan Pro',
+    id: 'services-pro',
+    emoji: '🛠️',
+    nom: 'Services & Pro',
     prix: '35 000 FCFA',
     prixCAD: '~55 CAD',
-    cible: 'Artisans & prestataires',
+    cible: 'Professionnels de services',
     description:
       'Certification professionnelle et visibilité premium — soyez choisi avant les autres.',
     inclus: [
@@ -100,7 +100,7 @@ export default function Packs() {
           Un expert à vos côtés, de A à Z
         </h1>
         <p className="text-green-100 max-w-2xl mx-auto">
-          Location, achat, investissement diaspora, certification artisan —
+          Location, achat, investissement diaspora, certification Services & Pro —
           4 packs conçus pour sécuriser chaque étape de votre projet immobilier
           à Abidjan.
         </p>

@@ -5,22 +5,7 @@ import { useRouter } from 'next/navigation'
 import { fetchAnnoncesList } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
-
-const QUARTIERS = [
-  'Cocody',
-  'Plateau',
-  'Marcory',
-  'Yopougon',
-  'Bingerville',
-  'Adjamé',
-  'Abobo',
-  'Koumassi',
-  'Port-Bouët',
-  'Treichville',
-  'Attécoubé',
-  'Riviera',
-  'Angré',
-]
+import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
 
 function formaterPrix(p) {
   if (!p) return '—'
@@ -183,6 +168,7 @@ function GrilleAnnonces({ type, titre, sousTitre, href, limit = 6 }) {
 
 export default function Accueil() {
   const [mode, setMode] = useState('location')
+  const [ville, setVille] = useState('Abidjan')
   const [quartier, setQuartier] = useState('')
   const [prixMax, setPrixMax] = useState('')
   const [nbPieces, setNbPieces] = useState('')
@@ -191,6 +177,7 @@ export default function Accueil() {
   const rechercher = () => {
     const params = new URLSearchParams()
     if (mode) params.set('type', mode)
+    if (ville) params.set('ville', ville)
     if (quartier) params.set('quartier', quartier)
     if (prixMax) params.set('prixMax', prixMax)
     if (nbPieces) params.set('nbPieces', nbPieces)
@@ -245,7 +232,7 @@ export default function Accueil() {
               {[
                 { id: 'location', label: '🔑 Louer' },
                 { id: 'vente', label: '🏠 Acheter' },
-                { id: 'prestations', label: '🛠️ Services & pros' },
+                { id: 'prestations', label: '🛠️ Services & Pro' },
               ].map((m) => (
                 <button
                   key={m.id}
@@ -265,17 +252,30 @@ export default function Accueil() {
             <div
               className={`grid grid-cols-1 gap-2 ${
                 mode === 'prestations'
-                  ? 'md:grid-cols-[1.2fr_1fr_auto]'
-                  : 'md:grid-cols-[1.3fr_1fr_1fr_auto]'
+                  ? 'md:grid-cols-[1fr_1fr_1fr_auto]'
+                  : 'md:grid-cols-[1fr_1fr_1fr_1fr_auto]'
               }`}
             >
+              <select
+                value={ville}
+                onChange={(e) => {
+                  setVille(e.target.value)
+                  setQuartier('')
+                }}
+                className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
+              >
+                <option value="">🏙️ Ville</option>
+                {VILLES_OPTIONS.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
               <select
                 value={quartier}
                 onChange={(e) => setQuartier(e.target.value)}
                 className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
               >
-                <option value="">📍 Quartier (tous)</option>
-                {QUARTIERS.map((q) => (
+                <option value="">📍 Commune / Quartier</option>
+                {getCommunesParVille(ville).map((q) => (
                   <option key={q}>{q}</option>
                 ))}
               </select>
@@ -341,7 +341,7 @@ export default function Accueil() {
           {[
             { emoji: '🔑', titre: 'Louer', desc: 'Bail & visite encadrée possible', filtre: 'location', bg: 'bg-emerald-50', border: 'hover:border-emerald-300', text: 'text-emerald-700' },
             { emoji: '🏠', titre: 'Acheter', desc: 'Vérification titre & accompagnement', filtre: 'vente', bg: 'bg-blue-50', border: 'hover:border-blue-300', text: 'text-blue-700' },
-            { emoji: '🛠️', titre: 'Services & pros', desc: 'Artisans & prestataires à Abidjan', filtre: 'prestations', bg: 'bg-orange-50', border: 'hover:border-orange-300', text: 'text-orange-700' },
+            { emoji: '🛠️', titre: 'Services & Pro', desc: 'Professionnels de services à Abidjan', filtre: 'prestations', bg: 'bg-orange-50', border: 'hover:border-orange-300', text: 'text-orange-700' },
           ].map((p) => (
             <a
               key={p.titre}
@@ -377,7 +377,7 @@ export default function Accueil() {
       {/* PRESTATIONS */}
       <GrilleAnnonces
         type="prestations"
-        titre="Services & artisans"
+        titre="Services & Pro"
         sousTitre="Prestataires et corps de métier — contact pour encadrer l’intervention"
         href="/annonces?type=prestations"
       />
@@ -413,7 +413,7 @@ export default function Accueil() {
             </h2>
             <p className="text-green-100 text-sm md:text-base max-w-2xl mx-auto">
               Pour une location ou un achat, nous pouvons vous mettre en relation avec un agent pour visiter,
-              vérifier l&apos;annonce et sécuriser les étapes. Pour un service ou un artisan, nous pouvons
+              vérifier l&apos;annonce et sécuriser les étapes. Pour les Services & Pro, nous pouvons
               vous aider à encadrer l&apos;intervention et la conformité.
             </p>
           </div>
@@ -427,7 +427,7 @@ export default function Accueil() {
             </div>
             <div className="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-5 text-white">
               <div className="text-2xl mb-2">🛠️</div>
-              <h3 className="font-bold text-lg mb-1">Services & artisans</h3>
+              <h3 className="font-bold text-lg mb-1">Services & Pro</h3>
               <p className="text-green-100 text-sm leading-relaxed">
                 Certification profil, badge et mise en confiance — idéal si vous voulez limiter les arnaques sur place.
               </p>

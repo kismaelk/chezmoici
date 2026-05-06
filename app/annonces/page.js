@@ -6,11 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { fetchAnnoncesList } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
-
-const QUARTIERS = [
-  'Cocody', 'Plateau', 'Marcory', 'Yopougon', 'Bingerville',
-  'Adjamé', 'Abobo', 'Koumassi', 'Port-Bouët', 'Treichville', 'Attécoubé', 'Riviera', 'Angré',
-]
+import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
 
 // ─── Définition des filtres par catégorie ────────────────────────────────────
 
@@ -18,7 +14,7 @@ const CATEGORIES = [
   { id: '', label: 'Tout', emoji: '🔎' },
   { id: 'location', label: 'Location', emoji: '🔑' },
   { id: 'vente', label: 'Vente', emoji: '🏠' },
-  { id: 'prestations', label: 'Services & artisans', emoji: '🛠️' },
+  { id: 'prestations', label: 'Services & Pro', emoji: '🛠️' },
 ]
 
 /** Filtre métier / prestation (services à domicile + artisans) */
@@ -36,7 +32,8 @@ const OPTIONS_PRESTATION = [
 // Les champs de filtre propres à chaque catégorie
 const CHAMPS_FILTRES = {
   '': [
-    { key: 'quartier', label: 'Quartier', type: 'select', options: QUARTIERS.map(q => ({ value: q, label: q })) },
+    { key: 'ville', label: 'Ville', type: 'select', options: VILLES_OPTIONS.map(v => ({ value: v, label: v })) },
+    { key: 'quartier', label: 'Commune / Quartier', type: 'select', options: [] },
     { key: 'prixMax', label: 'Budget max (FCFA)', type: 'number', placeholder: 'Ex : 500 000' },
     { key: 'badge', label: 'Niveau vérification', type: 'radio', options: [
       { value: '', label: 'Tous' },
@@ -46,7 +43,8 @@ const CHAMPS_FILTRES = {
     ]},
   ],
   location: [
-    { key: 'quartier', label: 'Quartier', type: 'select', options: QUARTIERS.map(q => ({ value: q, label: q })) },
+    { key: 'ville', label: 'Ville', type: 'select', options: VILLES_OPTIONS.map(v => ({ value: v, label: v })) },
+    { key: 'quartier', label: 'Commune / Quartier', type: 'select', options: [] },
     { key: 'prixMin', label: 'Loyer min (FCFA/mois)', type: 'number', placeholder: 'Ex : 80 000' },
     { key: 'prixMax', label: 'Loyer max (FCFA/mois)', type: 'number', placeholder: 'Ex : 300 000' },
     { key: 'nbChambres', label: 'Chambres', type: 'chips', options: [
@@ -71,7 +69,8 @@ const CHAMPS_FILTRES = {
     ]},
   ],
   vente: [
-    { key: 'quartier', label: 'Quartier', type: 'select', options: QUARTIERS.map(q => ({ value: q, label: q })) },
+    { key: 'ville', label: 'Ville', type: 'select', options: VILLES_OPTIONS.map(v => ({ value: v, label: v })) },
+    { key: 'quartier', label: 'Commune / Quartier', type: 'select', options: [] },
     { key: 'prixMin', label: 'Prix min (FCFA)', type: 'number', placeholder: 'Ex : 10 000 000' },
     { key: 'prixMax', label: 'Prix max (FCFA)', type: 'number', placeholder: 'Ex : 100 000 000' },
     { key: 'typePropriete', label: 'Type de bien', type: 'select', options: [
@@ -94,7 +93,8 @@ const CHAMPS_FILTRES = {
     ]},
   ],
   prestations: [
-    { key: 'quartier', label: 'Zone / Quartier', type: 'select', options: QUARTIERS.map(q => ({ value: q, label: q })) },
+    { key: 'ville', label: 'Ville', type: 'select', options: VILLES_OPTIONS.map(v => ({ value: v, label: v })) },
+    { key: 'quartier', label: 'Zone / Commune', type: 'select', options: [] },
     { key: 'typeService', label: 'Service ou métier', type: 'select', options: OPTIONS_PRESTATION },
     { key: 'prixMax', label: 'Budget ou tarif max (FCFA)', type: 'number', placeholder: 'Ex : 50 000' },
     { key: 'disponibilite', label: 'Disponibilité', type: 'chips', options: [
@@ -115,6 +115,7 @@ const CHAMPS_FILTRES = {
 
 const FILTRES_VIDES = {
   type: '',
+  ville: 'Abidjan',
   quartier: '',
   prixMin: '',
   prixMax: '',
@@ -392,6 +393,7 @@ function AnnoncesContenu() {
   const [filtres, setFiltres] = useState(() => ({
     ...FILTRES_VIDES,
     type: searchParams.get('type') || '',
+    ville: searchParams.get('ville') || 'Abidjan',
     quartier: searchParams.get('quartier') || '',
     prixMin: searchParams.get('prixMin') || '',
     prixMax: searchParams.get('prixMax') || '',
@@ -435,14 +437,26 @@ function AnnoncesContenu() {
   }
 
   // Changer un filtre individuel
-  const maj = (key, val) => setFiltres(f => ({ ...f, [key]: val }))
+  const maj = (key, val) => {
+    if (key === 'ville') {
+      setFiltres((f) => ({ ...f, ville: val, quartier: '' }))
+      return
+    }
+    setFiltres((f) => ({ ...f, [key]: val }))
+  }
 
   // Effacer les filtres secondaires (garde la catégorie)
   const effacerFiltres = () => setFiltres({ ...FILTRES_VIDES, type: filtres.type })
 
+  const communesOptions = getCommunesParVille(filtres.ville || 'Abidjan').map((q) => ({ value: q, label: q }))
+
   const champsActifs =
     (filtres.type && CHAMPS_FILTRES[filtres.type]) ||
     (['service', 'artisan'].includes(filtres.type) ? CHAMPS_FILTRES.prestations : CHAMPS_FILTRES[''])
+
+  const champsActifsFinal = champsActifs.map((c) =>
+    c.key === 'quartier' ? { ...c, options: communesOptions } : c
+  )
 
   const ongletCategorieActif = (catId) =>
     filtres.type === catId ||
@@ -480,7 +494,7 @@ function AnnoncesContenu() {
         </div>
 
         {/* Champs dynamiques */}
-        {champsActifs.map(champ => (
+        {champsActifsFinal.map(champ => (
           <ChampFiltre
             key={champ.key}
             champ={champ}

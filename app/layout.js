@@ -1,11 +1,12 @@
 import './globals.css'
+import BackToTopButton from '@/app/components/BackToTopButton'
 
 export const metadata = {
   title: 'Chez Moi CI — Immobilier de confiance à Abidjan',
   description:
     'Trouvez votre logement idéal à Abidjan en toute sécurité. Annonces vérifiées physiquement, dépôt de garantie sécurisé, bail numérique légal. Badge Vérifié ✅',
   keywords:
-    "immobilier Abidjan, location appartement Abidjan, vente maison Côte d'Ivoire, artisans Abidjan, Badge Vérifié",
+    "immobilier Côte d'Ivoire, location appartement, vente maison, services et pro, Badge Vérifié",
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -60,6 +61,7 @@ export default function RootLayout({ children }) {
     <html lang="fr">
       <body className="font-sans antialiased" style={{ fontFamily: 'Arial, sans-serif' }}>
         {children}
+        <BackToTopButton />
       </body>
     </html>
   )
