@@ -5,6 +5,7 @@ import { getProfilFirestore, upsertProfilFirestore, uploadPhotoChemin } from '@/
 import { useRouter, useSearchParams } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
+import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
 
 function ProfilContenu() {
   const searchParams = useSearchParams()
@@ -14,6 +15,7 @@ function ProfilContenu() {
   const [profil, setProfil] = useState(null)
   const [nom, setNom] = useState('')
   const [telephone, setTelephone] = useState('')
+  const [ville, setVille] = useState('Abidjan')
   const [quartier, setQuartier] = useState('')
   const [adressePublique, setAdressePublique] = useState('')
   const [photoFichier, setPhotoFichier] = useState(null)
@@ -36,6 +38,7 @@ function ProfilContenu() {
         setProfil(data)
         setNom(data.nom || '')
         setTelephone(data.telephone || '')
+        setVille('Abidjan')
         setQuartier(data.quartier || '')
         setAdressePublique(data.adresse_publique || '')
       }
@@ -196,7 +199,26 @@ function ProfilContenu() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">
-                Quartier à Abidjan
+                Ville
+              </label>
+              <select
+                value={ville}
+                onChange={(e) => {
+                  setVille(e.target.value)
+                  setQuartier('')
+                }}
+                className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20]"
+              >
+                <option value="">Sélectionner</option>
+                {VILLES_OPTIONS.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">
+                Commune / Quartier
               </label>
               <select
                 value={quartier}
@@ -204,18 +226,9 @@ function ProfilContenu() {
                 className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20]"
               >
                 <option value="">Sélectionner</option>
-                <option>Cocody</option>
-                <option>Plateau</option>
-                <option>Marcory</option>
-                <option>Yopougon</option>
-                <option>Bingerville</option>
-                <option>Adjamé</option>
-                <option>Abobo</option>
-                <option>Koumassi</option>
-                <option>Port-Bouët</option>
-                <option>Treichville</option>
-                <option>Attécoubé</option>
-                <option>Hors de Côte d&apos;Ivoire</option>
+                {getCommunesParVille(ville).map((q) => (
+                  <option key={q}>{q}</option>
+                ))}
               </select>
             </div>
 

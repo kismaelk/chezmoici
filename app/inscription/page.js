@@ -11,6 +11,7 @@ import {
 } from '@/lib/auth'
 import { getProfilByTelephone } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
+import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
 
 const OBJECTIFS = [
   { value: '', label: '—' },
@@ -26,6 +27,7 @@ export default function Inscription() {
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
   const [telephone, setTelephone] = useState('')
+  const [ville, setVille] = useState('Abidjan')
   const [quartier, setQuartier] = useState('')
   const [dateNaissance, setDateNaissance] = useState('')
   const [numeroCni, setNumeroCni] = useState('')
@@ -305,7 +307,28 @@ export default function Inscription() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">
-                Quartier à Abidjan <span className="text-gray-400 text-xs font-normal">(optionnel)</span>
+                Ville <span className="text-gray-400 text-xs font-normal">(optionnel)</span>
+              </label>
+              <select
+                value={ville}
+                onChange={(e) => {
+                  setVille(e.target.value)
+                  setQuartier('')
+                }}
+                className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] text-sm"
+              >
+                <option value="">—</option>
+                {VILLES_OPTIONS.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">
+                Commune / Quartier <span className="text-gray-400 text-xs font-normal">(optionnel)</span>
               </label>
               <select
                 value={quartier}
@@ -313,18 +336,7 @@ export default function Inscription() {
                 className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] text-sm"
               >
                 <option value="">—</option>
-                {[
-                  'Cocody',
-                  'Plateau',
-                  'Marcory',
-                  'Yopougon',
-                  'Bingerville',
-                  'Adjamé',
-                  'Abobo',
-                  'Koumassi',
-                  'Port-Bouët',
-                  'Treichville',
-                ].map((q) => (
+                {getCommunesParVille(ville).map((q) => (
                   <option key={q} value={q}>
                     {q}
                   </option>

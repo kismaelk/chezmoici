@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { fetchAnnoncesList, enrichAnnoncesWithProfiles } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
+import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
 
 const METIERS = [
   { id: '', label: 'Tous', emoji: '👷' },
@@ -21,6 +22,7 @@ export default function Artisans() {
   const [annonces, setAnnonces] = useState([])
   const [chargement, setChargement] = useState(true)
   const [metier, setMetier] = useState('')
+  const [ville, setVille] = useState('Abidjan')
   const [quartier, setQuartier] = useState('')
   useEffect(() => {
     async function charger() {
@@ -87,24 +89,27 @@ export default function Artisans() {
           ))}
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-6 flex-wrap">
+          <select
+            value={ville}
+            onChange={(e) => {
+              setVille(e.target.value)
+              setQuartier('')
+            }}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#1B5E20]"
+          >
+            <option value="">Toutes les villes</option>
+            {VILLES_OPTIONS.map((v) => (
+              <option key={v}>{v}</option>
+            ))}
+          </select>
           <select
             value={quartier}
             onChange={(e) => setQuartier(e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#1B5E20]"
           >
-            <option value="">Tous les quartiers</option>
-            {[
-              'Cocody',
-              'Plateau',
-              'Marcory',
-              'Yopougon',
-              'Bingerville',
-              'Adjamé',
-              'Abobo',
-              'Koumassi',
-              'Treichville',
-            ].map((q) => (
+            <option value="">Toutes les communes</option>
+            {getCommunesParVille(ville).map((q) => (
               <option key={q}>{q}</option>
             ))}
           </select>
