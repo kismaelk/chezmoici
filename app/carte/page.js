@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
 import { point as turfPoint, polygon as turfPolygon } from '@turf/helpers'
@@ -166,6 +166,7 @@ function pathToClosedRingLngLat(googlePath) {
 
 function CarteGoogleMaps() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const mapShellRef = useRef(null)
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
@@ -214,6 +215,29 @@ function CarteGoogleMaps() {
     baths: filtresURL.nbPieces || '',
   })
 
+  /** Aligne le filtre « type » sur l’URL (bouton retour, lien partagé) sans effacer prix/chambres saisis sur la carte */
+  useEffect(() => {
+    setFiltresCarte((prev) => ({
+      ...prev,
+      type: filtresURL.type || '',
+    }))
+  }, [filtresURL.type])
+
+  const FILTRES_TYPE_RAPIDES = [
+    { id: '', label: 'Tout' },
+    { id: 'location', label: 'Location' },
+    { id: 'vente', label: 'Vente' },
+    { id: 'prestations', label: 'Services & pros' },
+  ]
+
+  const appliquerFiltreTypeRapide = (typeId) => {
+    const next = new URLSearchParams(searchParams.toString())
+    if (typeId) next.set('type', typeId)
+    else next.delete('type')
+    const q = next.toString()
+    router.replace(q ? `/carte?${q}` : '/carte', { scroll: false })
+  }
+
   const lienListe = useMemo(() => {
     const p = new URLSearchParams()
     Object.entries(filtresURL).forEach(([k, v]) => { if (v) p.set(k, v) })
@@ -240,7 +264,13 @@ function CarteGoogleMaps() {
     const beds    = Number(filtresCarte.beds    || 0)
     const baths   = Number(filtresCarte.baths   || 0)
     return annonces.filter((a) => {
-      if (filtresCarte.type && a.type !== filtresCarte.type) return false
+      if (filtresCarte.type) {
+        if (filtresCarte.type === 'prestations') {
+          if (a.type !== 'service' && a.type !== 'artisan') return false
+        } else if (a.type !== filtresCarte.type) {
+          return false
+        }
+      }
       if (prixMin > 0 && Number(a.prix || 0) < prixMin) return false
       if (prixMax > 0 && Number(a.prix || 0) > prixMax) return false
       if (beds  > 0 && Number(a.nb_chambres || 0) < beds)  return false
@@ -617,9 +647,9 @@ function CarteGoogleMaps() {
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#F5F5F5]">
       <SiteHeader />
 
-      <div className="relative z-[600] flex flex-shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-[#F5F5F5] px-4 py-2">
-        <div className="flex flex-col min-w-0 gap-0.5">
-          <div className="flex items-center gap-2 min-w-0">
+      <div className="relative z-[600] flex flex-shrink-0 flex-col gap-2 border-b border-gray-200 bg-white px-3 py-2 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <div className="flex flex-col min-w-0 gap-0.5 sm:max-w-[40%]">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
             <span className="text-sm font-semibold text-slate-800">Carte — Côte d&apos;Ivoire</span>
             {!chargement && (
               <span className="text-xs text-slate-500 flex-shrink-0">
@@ -630,19 +660,42 @@ function CarteGoogleMaps() {
           </div>
           <span className="text-[10px] text-slate-400 truncate">Chez Moi CI · Google Maps</span>
         </div>
-        <Link
-          href={lienListe}
-          className="hidden md:flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-[#1B5E20] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#2E7D32]"
-        >
-          Voir en liste
-        </Link>
-        <button
-          type="button"
-          onClick={() => setShowListMobile((v) => !v)}
-          className="md:hidden flex-shrink-0 flex items-center gap-1 rounded-lg bg-[#1B5E20] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#2E7D32]"
-        >
-          {showListMobile ? 'Carte' : 'Liste'}
-        </button>
+
+        <div className="flex flex-1 flex-wrap items-center justify-center gap-1 sm:px-2">
+          {FILTRES_TYPE_RAPIDES.map((f) => {
+            const actif = (filtresURL.type || '') === f.id
+            return (
+              <button
+                key={f.id || 'all'}
+                type="button"
+                onClick={() => appliquerFiltreTypeRapide(f.id)}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                  actif
+                    ? 'bg-[#1B5E20] text-white shadow-md'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {f.label}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex flex-shrink-0 items-center justify-end gap-2">
+          <Link
+            href={lienListe}
+            className="hidden md:inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-[#1B5E20] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#2E7D32]"
+          >
+            Voir en liste
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowListMobile((v) => !v)}
+            className="md:hidden inline-flex flex-shrink-0 items-center gap-1 rounded-lg bg-[#1B5E20] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#2E7D32]"
+          >
+            {showListMobile ? 'Carte' : 'Liste'}
+          </button>
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
@@ -674,33 +727,45 @@ function CarteGoogleMaps() {
                 const estSel = selectionne?.id === annonce.id
                 const col = TYPE_COLORS[annonce.type] || TYPE_COLORS.vente
                 const cover = getListingCoverSrc(annonce)
+                const estPrestation = annonce.type === 'service' || annonce.type === 'artisan'
                 return (
                   <button
                     key={annonce.id}
                     type="button"
                     onClick={() => allerAnnonce(annonce)}
-                    className={`w-full border-b border-slate-100 px-2.5 py-2 text-left transition-colors ${
-                      estSel ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200/60' : 'hover:bg-slate-50'
-                    }`}
+                    className={`w-full border-b border-slate-100 text-left transition-colors ${
+                      estPrestation ? 'px-2 py-1.5' : 'px-2.5 py-2'
+                    } ${estSel ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200/60' : 'hover:bg-slate-50'}`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200/80">
+                    <div className={`flex items-center ${estPrestation ? 'gap-2' : 'gap-2.5'}`}>
+                      <div
+                        className={`flex-shrink-0 overflow-hidden rounded-md bg-slate-100 ring-1 ring-slate-200/80 ${
+                          estPrestation ? 'h-8 w-8' : 'h-11 w-11 rounded-lg'
+                        }`}
+                      >
                         <img src={cover} alt="" className="h-full w-full object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2">
-                          <p className="truncate text-[13px] font-semibold leading-tight text-slate-800">
+                          <p
+                            className={`truncate font-semibold leading-tight text-slate-800 ${
+                              estPrestation ? 'text-[11px]' : 'text-[13px]'
+                            }`}
+                          >
                             {annonce.titre}
                           </p>
-                          <span className="flex-shrink-0 text-[12px] font-semibold tabular-nums" style={{ color: col.price }}>
+                          <span
+                            className={`flex-shrink-0 font-semibold tabular-nums ${
+                              estPrestation ? 'text-[10px]' : 'text-[12px]'
+                            }`}
+                            style={{ color: col.price }}
+                          >
                             {formaterPrix(annonce.prix)}
                           </span>
                         </div>
-                        <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                        <p className={`truncate text-slate-500 ${estPrestation ? 'mt-0 text-[10px]' : 'mt-0.5 text-[11px]'}`}>
                           {annonce.quartier}
-                          {(annonce.type === 'service' || annonce.type === 'artisan') && annonce.type_service
-                            ? ` · ${annonce.type_service}`
-                            : ''}
+                          {estPrestation && annonce.type_service ? ` · ${annonce.type_service}` : ''}
                         </p>
                       </div>
                     </div>
@@ -752,21 +817,10 @@ function CarteGoogleMaps() {
               )}
             </div>
             <div
-              className={`grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-6 ${
+              className={`grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-5 ${
                 filtresVisibles ? '' : 'hidden'
               }`}
             >
-              <select
-                value={filtresCarte.type}
-                onChange={(e) => setFiltresCarte((p) => ({ ...p, type: e.target.value }))}
-                className="rounded border border-stone-200 bg-white px-1.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-400"
-              >
-                <option value="">Type</option>
-                <option value="location">Location</option>
-                <option value="vente">Vente</option>
-                <option value="service">Service</option>
-                <option value="artisan">Artisan</option>
-              </select>
               <input type="number" value={filtresCarte.prixMin}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, prixMin: e.target.value }))}
                 placeholder="Prix min"
@@ -801,7 +855,10 @@ function CarteGoogleMaps() {
               </select>
               <button
                 type="button"
-                onClick={() => setFiltresCarte({ type: '', prixMin: '', prixMax: '', beds: '', baths: '' })}
+                onClick={() => {
+                  appliquerFiltreTypeRapide('')
+                  setFiltresCarte({ type: '', prixMin: '', prixMax: '', beds: '', baths: '' })
+                }}
                 className="rounded border border-stone-200 bg-stone-50 px-1.5 py-1 text-[10px] font-semibold text-stone-600 hover:bg-stone-100"
               >
                 Réinit.

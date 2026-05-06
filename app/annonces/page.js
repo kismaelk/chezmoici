@@ -18,9 +18,20 @@ const CATEGORIES = [
   { id: '', label: 'Tout', emoji: '🔎' },
   { id: 'location', label: 'Location', emoji: '🔑' },
   { id: 'vente', label: 'Vente', emoji: '🏠' },
-  { id: 'service', label: 'Services', emoji: '🔧' },
-  { id: 'artisan', label: 'Artisans', emoji: '👷' },
+  { id: 'prestations', label: 'Services & artisans', emoji: '🛠️' },
 ]
+
+/** Filtre métier / prestation (services à domicile + artisans) */
+const OPTIONS_PRESTATION = [
+  ...[
+    'Nettoyage', 'Déménagement', 'Jardinage', 'Sécurité / Gardiennage', 'Livraison',
+    'Décoration intérieure', 'Photographie immobilière',
+  ],
+  ...[
+    'Électricien', 'Plombier', 'Menuisier', 'Carreleur', 'Peintre', 'Maçon',
+    'Climatiseur', 'Soudeur', 'Ferrailleur',
+  ],
+].map((v) => ({ value: v, label: v }))
 
 // Les champs de filtre propres à chaque catégorie
 const CHAMPS_FILTRES = {
@@ -82,12 +93,10 @@ const CHAMPS_FILTRES = {
       { value: 'or', label: '🥇 Or (titre foncier)' },
     ]},
   ],
-  service: [
+  prestations: [
     { key: 'quartier', label: 'Zone / Quartier', type: 'select', options: QUARTIERS.map(q => ({ value: q, label: q })) },
-    { key: 'typeService', label: 'Type de service', type: 'select', options: [
-      'Nettoyage', 'Déménagement', 'Jardinage', 'Sécurité / Gardiennage', 'Livraison', 'Décoration intérieure', 'Photographie immobilière',
-    ].map(v => ({ value: v, label: v })) },
-    { key: 'prixMax', label: 'Budget max (FCFA)', type: 'number', placeholder: 'Ex : 50 000' },
+    { key: 'typeService', label: 'Service ou métier', type: 'select', options: OPTIONS_PRESTATION },
+    { key: 'prixMax', label: 'Budget ou tarif max (FCFA)', type: 'number', placeholder: 'Ex : 50 000' },
     { key: 'disponibilite', label: 'Disponibilité', type: 'chips', options: [
       { value: '', label: 'Toutes' },
       { value: 'Disponible maintenant', label: 'Dispo maintenant' },
@@ -95,24 +104,11 @@ const CHAMPS_FILTRES = {
       { value: 'Sur rendez-vous', label: 'Sur RDV' },
       { value: 'Lun – Ven', label: 'Lun–Ven' },
     ]},
-  ],
-  artisan: [
-    { key: 'quartier', label: 'Zone / Quartier', type: 'select', options: QUARTIERS.map(q => ({ value: q, label: q })) },
-    { key: 'typeService', label: 'Métier / Spécialité', type: 'select', options: [
-      'Électricien', 'Plombier', 'Menuisier', 'Carreleur', 'Peintre', 'Maçon', 'Climatiseur', 'Soudeur', 'Ferrailleur',
-    ].map(v => ({ value: v, label: v })) },
-    { key: 'prixMax', label: 'Tarif max / heure (FCFA)', type: 'number', placeholder: 'Ex : 10 000' },
-    { key: 'disponibilite', label: 'Disponibilité', type: 'chips', options: [
-      { value: '', label: 'Toutes' },
-      { value: 'Disponible maintenant', label: 'Dispo maintenant' },
-      { value: '7j/7', label: '7j/7' },
-      { value: 'Sur rendez-vous', label: 'Sur RDV' },
-    ]},
     { key: 'badge', label: 'Badge', type: 'radio', options: [
       { value: '', label: 'Tous' },
       { value: 'bronze', label: '🔓 Bronze' },
-      { value: 'argent', label: '🥈 Certifié Argent' },
-      { value: 'or', label: '🥇 Certifié Or' },
+      { value: 'argent', label: '🥈 Argent' },
+      { value: 'or', label: '🥇 Or' },
     ]},
   ],
 }
@@ -444,7 +440,13 @@ function AnnoncesContenu() {
   // Effacer les filtres secondaires (garde la catégorie)
   const effacerFiltres = () => setFiltres({ ...FILTRES_VIDES, type: filtres.type })
 
-  const champsActifs = CHAMPS_FILTRES[filtres.type] || CHAMPS_FILTRES['']
+  const champsActifs =
+    (filtres.type && CHAMPS_FILTRES[filtres.type]) ||
+    (['service', 'artisan'].includes(filtres.type) ? CHAMPS_FILTRES.prestations : CHAMPS_FILTRES[''])
+
+  const ongletCategorieActif = (catId) =>
+    filtres.type === catId ||
+    (catId === 'prestations' && ['service', 'artisan'].includes(filtres.type))
 
   const nbFiltresActifs = Object.entries(filtres)
     .filter(([k, v]) => k !== 'type' && v)
@@ -453,6 +455,7 @@ function AnnoncesContenu() {
   const TITRES = {
     location: 'Logements à louer',
     vente: 'Biens à vendre',
+    prestations: 'Prestataires & artisans',
     service: 'Services à domicile',
     artisan: 'Artisans certifiés',
   }
@@ -511,7 +514,7 @@ function AnnoncesContenu() {
                 type="button"
                 onClick={() => changerCategorie(cat.id)}
                 className={`flex items-center gap-1.5 px-5 py-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-all flex-shrink-0 ${
-                  filtres.type === cat.id
+                  ongletCategorieActif(cat.id)
                     ? 'border-[#1B5E20] text-[#1B5E20]'
                     : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
                 }`}

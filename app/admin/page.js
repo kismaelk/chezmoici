@@ -26,6 +26,7 @@ const BADGE_LABEL = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or
 const BADGE_OPTIONS = ['bronze', 'argent', 'or']
 
 const STATUT_OPTIONS = [
+  { value: 'en_verification', label: '🔍 En vérification' },
   { value: 'actif',     label: '✅ Actif' },
   { value: 'pause',     label: '⏸️ En pause' },
   { value: 'suspendu',  label: '🚫 Suspendu' },
@@ -230,6 +231,7 @@ export default function Admin() {
 
   const stats = [
     { label: 'Annonces', valeur: annonces.length, emoji: '🏠' },
+    { label: 'À valider', valeur: annonces.filter(a => a.statut === 'en_verification').length, emoji: '🔍' },
     { label: 'Actives', valeur: annonces.filter(a => a.statut === 'actif').length, emoji: '✅' },
     { label: 'Utilisateurs', valeur: utilisateurs.length, emoji: '👤', needUsers: true },
     { label: 'Bannis', valeur: utilisateurs.filter(u => u.account_status === 'banned').length, emoji: '🚫', needUsers: true },
@@ -341,6 +343,7 @@ export default function Admin() {
                       <p className="font-bold text-gray-800 truncate">{a.titre}</p>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
                         a.statut === 'actif' ? 'bg-green-100 text-green-700' :
+                        a.statut === 'en_verification' ? 'bg-amber-100 text-amber-800' :
                         a.statut === 'suspendu' ? 'bg-red-100 text-red-700' :
                         'bg-gray-100 text-gray-600'
                       }`}>{a.statut}</span>

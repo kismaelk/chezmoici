@@ -9,6 +9,7 @@ import {
 } from '@/lib/firestoreApp'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
 
 const QUARTIERS = [
   'Cocody', 'Plateau', 'Marcory', 'Yopougon', 'Bingerville',
@@ -224,11 +225,14 @@ export default function Publier() {
     if (!titre) return setErreur('Le titre est obligatoire')
     if (!prix) return setErreur('Le prix est obligatoire')
     if (!quartier) return setErreur('Le quartier est obligatoire')
+    if (photosFichiers.length === 0) {
+      return setErreur('Au moins une photo réelle est obligatoire pour publier.')
+    }
 
     setChargement(true)
     setErreur('')
 
-    const urlsPhotos = photosFichiers.length > 0 ? await uploaderPhotos() : []
+    const urlsPhotos = await uploaderPhotos()
 
     const donnees = {
       utilisateur_id: utilisateur.uid,
@@ -238,7 +242,7 @@ export default function Publier() {
       prix: parseInt(prix, 10),
       quartier,
       photos: urlsPhotos,
-      statut: 'actif',
+      statut: 'en_verification',
       rue: rue || null,
       secteur: secteur || null,
       arrondissement: arrondissement || null,
@@ -273,13 +277,30 @@ export default function Publier() {
       if (disponibiliteService) donnees.disponibilite = disponibiliteService
     }
 
+    let annonceId
     try {
-      await createAnnonce(donnees)
+      annonceId = await createAnnonce(donnees)
     } catch (err) {
       console.error('Erreur publication:', err)
       setErreur('Erreur lors de la publication: ' + (err.message || 'Vérifiez votre connexion et réessayez.'))
       setChargement(false)
       return
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token && annonceId) {
+        await fetch('/api/notify-moderation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ annonceId }),
+        })
+      }
+    } catch (e) {
+      console.warn('[publier] notify-moderation', e)
     }
 
     setSucces(true)
@@ -288,11 +309,15 @@ export default function Publier() {
 
   if (succes)
     return (
-      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-4">
         <div className="bg-white rounded-xl p-10 text-center shadow-sm max-w-md">
-          <div className="text-6xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-[#1B5E20] mb-2">Annonce publiée !</h2>
-          <p className="text-gray-500">Redirection en cours...</p>
+          <div className="text-6xl mb-4">📋</div>
+          <h2 className="text-2xl font-bold text-[#1B5E20] mb-2">Annonce reçue</h2>
+          <p className="text-gray-600 text-sm leading-relaxed">
+            Notre équipe vérifie chaque annonce (délai habituel entre <strong>30 minutes et 24 heures</strong>).
+            Vous la verrez en ligne une fois le statut passé à « actif ». Suivez l&apos;état dans <strong>Mes annonces</strong>.
+          </p>
+          <p className="text-gray-400 text-xs mt-4">Redirection en cours...</p>
         </div>
       </div>
     )
@@ -316,6 +341,14 @@ export default function Publier() {
               complétez votre profil
             </Link>{' '}
             (nom + téléphone) si ce n&apos;est pas encore fait.
+          </p>
+        </div>
+
+        <div className="bg-[#E8F5E9] border border-[#1B5E20]/30 rounded-xl p-4 mb-6 flex items-start gap-3">
+          <span className="text-xl flex-shrink-0">🛡️</span>
+          <p className="text-sm text-gray-800">
+            <strong>Photo obligatoire</strong> pour toute annonce. Après envoi, vérification humaine sous{' '}
+            <strong>30 min à 24 h</strong> avant mise en ligne publique (tableau admin : passage au statut « actif »).
           </p>
         </div>
 
@@ -623,7 +656,7 @@ export default function Publier() {
             {/* 5 — PHOTOS */}
             <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="font-bold text-gray-800">5 — Photos (optionnel) ({photosFichiers.length}/10)</h2>
+                <h2 className="font-bold text-gray-800">5 — Photos obligatoires ({photosFichiers.length}/10)</h2>
                 {photosFichiers.length > 0 && photosFichiers.length < 10 && (
                   <label className="cursor-pointer bg-[#1B5E20] text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-green-800 transition-colors">
                     + Ajouter
@@ -631,15 +664,15 @@ export default function Publier() {
                   </label>
                 )}
               </div>
-              <p className="text-gray-400 text-xs mb-4">
-                Les photos augmentent les contacts, mais vous pouvez publier une annonce <span className="font-semibold text-gray-600">sans photo</span> (vente, location, service). La première image sera la couverture. Cliquez ✕ pour en retirer une.
+              <p className="text-gray-500 text-xs mb-4">
+                Au moins <strong>une photo</strong> est requise. La première image est la couverture. Formats JPG, PNG — max 10 fichiers.
               </p>
 
               {photosFichiers.length === 0 ? (
-                <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-[#1B5E20] transition-colors">
+                <label className="block border-2 border-dashed border-[#1B5E20]/40 rounded-xl p-6 text-center cursor-pointer hover:border-[#1B5E20] transition-colors bg-[#F1F8F4]">
                   <div className="text-3xl mb-2">📷</div>
-                  <div className="font-bold text-gray-700 text-sm">Ajouter des photos (recommandé)</div>
-                  <div className="text-gray-400 text-xs mt-1">JPG, PNG — max 10 · ou passez cette étape</div>
+                  <div className="font-bold text-gray-800 text-sm">Ajouter au moins une photo</div>
+                  <div className="text-gray-500 text-xs mt-1">JPG, PNG — max 10</div>
                   <input type="file" multiple accept="image/*" onChange={ajouterPhotos} className="hidden" />
                 </label>
               ) : (
@@ -683,8 +716,8 @@ export default function Publier() {
           {chargement ? 'Publication en cours...' : "Publier l'annonce"}
         </button>
 
-        <p className="text-center text-gray-400 text-sm mt-4">
-          Votre annonce sera visible immédiatement après publication.
+        <p className="text-center text-gray-500 text-sm mt-4">
+          Après validation (30 min – 24 h), votre annonce passera au statut actif et sera visible sur le site et la carte.
         </p>
       </div>
     </div>

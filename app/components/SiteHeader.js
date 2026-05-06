@@ -11,8 +11,7 @@ import Notifications from '@/app/components/Notifications'
 const LIENS = [
   { href: '/annonces?type=location', label: 'Louer' },
   { href: '/annonces?type=vente', label: 'Acheter' },
-  { href: '/services', label: 'Services' },
-  { href: '/artisans', label: 'Artisans' },
+  { href: '/annonces?type=prestations', label: 'Services & pros' },
   { href: '/packs', label: 'Packs' },
 ]
 

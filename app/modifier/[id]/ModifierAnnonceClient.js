@@ -415,6 +415,9 @@ export default function ModifierAnnonceClient() {
     if (!titre) return setErreur('Le titre est obligatoire')
     if (!prix) return setErreur('Le prix est obligatoire')
     if (!quartier) return setErreur('Le quartier est obligatoire')
+    if (photosExistantes.length + nouvellesFichiers.length === 0) {
+      return setErreur('Au moins une photo est obligatoire.')
+    }
 
     if (isDirty) {
       const ok = window.confirm(

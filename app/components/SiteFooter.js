@@ -47,13 +47,8 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/services" className="hover:text-white">
-                  Services
-                </Link>
-              </li>
-              <li>
-                <Link href="/artisans" className="hover:text-white">
-                  Artisans
+                <Link href="/annonces?type=prestations" className="hover:text-white">
+                  Services & artisans
                 </Link>
               </li>
               <li>

@@ -33,6 +33,12 @@ export default function MesAnnonces() {
   }
 
   const badgeLabel = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
+  const statutAnnonceLabel = {
+    actif: { text: 'En ligne', cls: 'bg-green-100 text-green-800' },
+    en_verification: { text: 'En vérification (30 min – 24 h)', cls: 'bg-amber-100 text-amber-900' },
+    pause: { text: 'En pause', cls: 'bg-slate-100 text-slate-700' },
+    suspendu: { text: 'Suspendu', cls: 'bg-red-100 text-red-800' },
+  }
 
   if (chargement) {
     return (
@@ -100,9 +106,18 @@ export default function MesAnnonces() {
                         <h3 className="text-lg font-bold text-gray-800">{annonce.titre}</h3>
                         <p className="text-sm text-gray-500">📍 {annonce.quartier}, Abidjan</p>
                       </div>
-                      <span className="inline-flex w-fit shrink-0 rounded-full bg-[#E8F5E9] px-3 py-1 text-sm font-bold text-[#1B5E20]">
-                        {badgeLabel[annonce.badge] || '🔓 Bronze'}
-                      </span>
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <span
+                          className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${
+                            statutAnnonceLabel[annonce.statut]?.cls || 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {statutAnnonceLabel[annonce.statut]?.text || annonce.statut || '—'}
+                        </span>
+                        <span className="inline-flex w-fit rounded-full bg-[#E8F5E9] px-3 py-1 text-xs font-bold text-[#1B5E20]">
+                          {badgeLabel[annonce.badge] || '🔓 Bronze'}
+                        </span>
+                      </div>
                     </div>
 
                     <p className="text-[#F9A825] font-bold text-xl mb-3">

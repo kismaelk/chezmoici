@@ -37,7 +37,7 @@ export default function TableauDeBord() {
 
   const menuParticulier = [
     { emoji: "🔍", titre: "Chercher un logement", desc: "Annonces location & vente", lien: "/annonces" },
-    { emoji: "🛠️", titre: "Services & artisans", desc: "Prestataires et artisans à Abidjan", lien: "/services" },
+    { emoji: "🛠️", titre: "Services & artisans", desc: "Prestataires et artisans à Abidjan", lien: "/annonces?type=prestations" },
     { emoji: "💬", titre: "Mes messages", desc: "Conversations avec les propriétaires", lien: "/messages" },
     { emoji: "❤️", titre: "Mes favoris", desc: "Annonces sauvegardées", lien: "/favoris" },
     { emoji: "📋", titre: "Mes demandes", desc: "Suivi de vos demandes", lien: "/demandes" },
