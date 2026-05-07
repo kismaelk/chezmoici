@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { observerConnexion, deconnecter } from '@/lib/auth'
 import { getProfilFirestore } from '@/lib/firestoreApp'
+import { isStaff } from '@/lib/staffRoles'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Notifications from '@/app/components/Notifications'
@@ -51,11 +52,12 @@ export default function SiteHeader({ variant = 'default' }) {
     { href: '/tableau-de-bord', label: 'Tableau', icon: '🏠' },
     { href: '/publier', label: 'Publier', icon: '➕' },
     { href: '/mes-annonces', label: 'Annonces', icon: '📋' },
+    { href: '/mes-avis-moderes', label: 'Avis modérés', icon: '🧾' },
     { href: '/favoris', label: 'Favoris', icon: '❤️' },
     { href: '/messages', label: 'Messages', icon: '💬' },
     { href: '/profil', label: 'Profil', icon: '👤' },
   ]
-  if (profil?.is_admin === true) {
+  if (user && isStaff(profil, user.email)) {
     accountLinks.splice(1, 0, { href: '/admin', label: 'Administration', icon: '🛡️' })
   }
 

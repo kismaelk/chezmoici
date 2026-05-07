@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchAnnoncesList } from '@/lib/firestoreApp'
+import { fetchAnnoncesList, fetchAvisStatsForAnnonces } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
 import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
@@ -15,6 +15,11 @@ function formaterPrix(p) {
     return s + (m >= 2 ? ' millions' : ' million') + ' FCFA'
   }
   return p.toLocaleString('fr-FR') + ' FCFA'
+}
+
+function renderStars(moyenne = 0) {
+  const n = Math.max(0, Math.min(5, Math.round(moyenne)))
+  return '★'.repeat(n) + '☆'.repeat(5 - n)
 }
 
 const TYPE_COLOR_HOME = {
@@ -40,9 +45,13 @@ function placeholderHome(annonce) {
   return '🏠'
 }
 
-function CarteAnnonce({ annonce }) {
+function CarteAnnonce({ annonce, avisStat }) {
   const badgeLabel = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
   const typeColor = TYPE_COLOR_HOME[annonce.type] || 'bg-gray-500'
+  const moyenneAvis = avisStat?.moyenne || 0
+  const totalAvis = avisStat?.total || 0
+  const nbVues = annonce.nb_vues || 0
+  const topNote = moyenneAvis >= 4.5 && totalAvis > 0
 
   return (
     <a
@@ -70,6 +79,11 @@ function CarteAnnonce({ annonce }) {
         <span className="absolute top-3 right-3 bg-white/90 backdrop-blur text-xs font-bold px-2.5 py-1 rounded-full shadow-md">
           {badgeLabel[annonce.badge] || badgeLabel.bronze}
         </span>
+        {topNote && (
+          <span className="absolute top-12 right-3 bg-fuchsia-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
+            Top noté
+          </span>
+        )}
 
         {/* Prix sur l'image */}
         <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -92,6 +106,10 @@ function CarteAnnonce({ annonce }) {
           {annonce.surface && (
             <span className="bg-gray-50 px-2 py-0.5 rounded-full">📐 {annonce.surface} m²</span>
           )}
+          <span className="bg-gray-50 px-2 py-0.5 rounded-full">👁️ {nbVues}</span>
+          <span className="bg-gray-50 px-2 py-0.5 rounded-full">
+            {totalAvis > 0 ? `${renderStars(moyenneAvis)} ${moyenneAvis.toFixed(1).replace('.', ',')} (${totalAvis})` : '☆☆☆☆☆ 0 avis'}
+          </span>
         </div>
       </div>
     </a>
@@ -100,6 +118,7 @@ function CarteAnnonce({ annonce }) {
 
 function GrilleAnnonces({ type, titre, sousTitre, href, limit = 6 }) {
   const [annonces, setAnnonces] = useState([])
+  const [avisStats, setAvisStats] = useState({})
   const [etat, setEtat] = useState('loading')
 
   useEffect(() => {
@@ -120,7 +139,10 @@ function GrilleAnnonces({ type, titre, sousTitre, href, limit = 6 }) {
         disponibilite: '',
       }
       const data = await fetchAnnoncesList(filtres, 'recent')
-      setAnnonces((data || []).slice(0, limit))
+      const list = (data || []).slice(0, limit)
+      const stats = await fetchAvisStatsForAnnonces(list.map((a) => a.id).filter(Boolean))
+      setAvisStats(stats)
+      setAnnonces(list)
       setEtat('done')
     }
     charger()
@@ -159,7 +181,7 @@ function GrilleAnnonces({ type, titre, sousTitre, href, limit = 6 }) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {annonces.map((a) => (
-          <CarteAnnonce key={a.id} annonce={a} />
+          <CarteAnnonce key={a.id} annonce={a} avisStat={avisStats[a.id]} />
         ))}
       </div>
     </section>

@@ -17,6 +17,8 @@ create table if not exists profiles (
   photo_url   text,
   badge       text default 'bronze',
   is_admin    boolean default false,
+  admin_role  text,
+  account_status text default 'en_attente',
   created_at  timestamptz default now(),
   adresse_publique text
 );
@@ -85,7 +87,23 @@ create table if not exists avis (
   auteur_id   uuid references profiles(id) on delete cascade,
   note        int check (note >= 1 and note <= 5),
   commentaire text,
-  created_at  timestamptz default now()
+  created_at  timestamptz default now(),
+  is_hidden   boolean default false,
+  hidden_at   timestamptz,
+  hidden_by   uuid references profiles(id) on delete set null,
+  hidden_reason text,
+  unique(annonce_id, auteur_id)
+);
+
+create table if not exists avis_moderation_logs (
+  id            uuid default gen_random_uuid() primary key,
+  avis_id        uuid references avis(id) on delete cascade,
+  annonce_id     uuid references annonces(id) on delete cascade,
+  owner_id       uuid references profiles(id) on delete set null,
+  moderator_id   uuid references profiles(id) on delete set null,
+  action         text not null,
+  reason         text,
+  created_at     timestamptz default now()
 );
 
 create table if not exists messages_contact (
@@ -159,6 +177,7 @@ alter table favoris           enable row level security;
 alter table messages          enable row level security;
 alter table notifications     enable row level security;
 alter table avis              enable row level security;
+alter table avis_moderation_logs enable row level security;
 alter table messages_contact  enable row level security;
 alter table demandes_badge    enable row level security;
 alter table signalements      enable row level security;
@@ -206,10 +225,48 @@ create policy "notifications: modification par leur destinataire"
   on notifications for update using (auth.uid() = utilisateur_id);
 
 -- Avis
-create policy "avis: lecture publique"
-  on avis for select using (true);
-create policy "avis: création par utilisateur connecté"
-  on avis for insert with check (auth.uid() = auteur_id);
+create policy "avis: lecture contrôlée"
+  on avis for select using (
+    is_hidden = false
+    or auth.uid() = auteur_id
+    or exists (select 1 from profiles where id = auth.uid() and is_admin = true)
+    or exists (
+      select 1 from annonces a
+      where a.id = avis.annonce_id
+        and a.utilisateur_id = auth.uid()
+    )
+  );
+create policy "avis: création après contact qualifié"
+  on avis for insert
+  with check (
+    auth.uid() = auteur_id
+    and exists (
+      select 1
+      from messages m
+      join annonces a on a.id = avis.annonce_id
+      where m.annonce_id = avis.annonce_id
+        and (
+          (m.sender_id = avis.auteur_id and m.receiver_id = a.utilisateur_id)
+          or
+          (m.sender_id = a.utilisateur_id and m.receiver_id = avis.auteur_id)
+        )
+        and m.created_at <= now() - interval '2 hours'
+    )
+  );
+create policy "avis: modification par auteur"
+  on avis for update using (auth.uid() = auteur_id);
+create policy "avis: moderation admin"
+  on avis for update
+  using (exists (select 1 from profiles where id = auth.uid() and is_admin = true));
+create policy "avis logs: lecture admin"
+  on avis_moderation_logs for select
+  using (exists (select 1 from profiles where id = auth.uid() and is_admin = true));
+create policy "avis logs: insert admin"
+  on avis_moderation_logs for insert
+  with check (exists (select 1 from profiles where id = auth.uid() and is_admin = true));
+create policy "avis logs: lecture propriétaire"
+  on avis_moderation_logs for select
+  using (auth.uid() = owner_id);
 
 -- Contact (public)
 create policy "contact: création publique"
@@ -235,6 +292,24 @@ create policy "signalements: lecture admin"
 
 alter table demandes_badge add column if not exists nom text;
 alter table demandes_badge add column if not exists telephone text;
+alter table avis add column if not exists is_hidden boolean default false;
+alter table avis add column if not exists hidden_at timestamptz;
+alter table avis add column if not exists hidden_by uuid references profiles(id) on delete set null;
+alter table avis add column if not exists hidden_reason text;
+create table if not exists avis_moderation_logs (
+  id            uuid default gen_random_uuid() primary key,
+  avis_id        uuid references avis(id) on delete cascade,
+  annonce_id     uuid references annonces(id) on delete cascade,
+  owner_id       uuid references profiles(id) on delete set null,
+  moderator_id   uuid references profiles(id) on delete set null,
+  action         text not null,
+  reason         text,
+  created_at     timestamptz default now()
+);
+
+-- Rôle staff : super_admin | moderator (contrainte optionnelle en prod via migration)
+alter table profiles add column if not exists admin_role text;
+alter table profiles add column if not exists account_status text default 'en_attente';
 
 -- Localisation précise des annonces
 alter table annonces add column if not exists rue              text;

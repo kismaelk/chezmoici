@@ -10,7 +10,8 @@ import {
   addFavori,
   removeFavori,
   fetchAvisForAnnonce,
-  addAvis,
+  upsertAvis,
+  fetchPremierContactAvis,
   sendMessageFirestore,
   addNotification,
   addSignalement,
@@ -165,6 +166,8 @@ export default function DetailAnnonceClient() {
   const [noteAvis, setNoteAvis] = useState(0)
   const [commentaireAvis, setCommentaireAvis] = useState('')
   const [avisSoumis, setAvisSoumis] = useState(false)
+  const [premierContactAt, setPremierContactAt] = useState(null)
+  const [erreurAvis, setErreurAvis] = useState('')
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState(null)
   const [modalSignalement, setModalSignalement] = useState(false)
@@ -319,6 +322,16 @@ export default function DetailAnnonceClient() {
   const estProprietaire =
     utilisateur && annonce && utilisateur.uid === annonce.utilisateur_id
   const hasWhatsappContact = Boolean((proprietaire?.telephone || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '').replace(/[^\d]/g, ''))
+  const avisUtilisateur = utilisateur ? avis.find((a) => a.auteur_id === utilisateur.uid) : null
+  const dejaNote = Boolean(avisUtilisateur)
+  const DELAI_AVIS_MS = 2 * 60 * 60 * 1000
+  const noteDisponibleAt = premierContactAt
+    ? new Date(new Date(premierContactAt).getTime() + DELAI_AVIS_MS)
+    : null
+  const contactQualifie = Boolean(
+    premierContactAt && Date.now() - new Date(premierContactAt).getTime() >= DELAI_AVIS_MS
+  )
+  const peutEnvoyerAvis = Boolean(noteAvis && utilisateur && annonce?.id && (contactQualifie || dejaNote))
 
   const soumettreSignalement = async () => {
     if (!utilisateur) {
@@ -346,22 +359,57 @@ export default function DetailAnnonceClient() {
   }
 
   const soumettreAvis = async () => {
-    if (!noteAvis || !utilisateur || !annonce?.id) return
+    if (!peutEnvoyerAvis) {
+      setErreurAvis('Vous ne pouvez pas encore publier cet avis.')
+      return
+    }
 
     try {
-      await addAvis({
+      await upsertAvis({
         annonce_id: annonce.id,
         auteur_id: utilisateur.uid,
         note: noteAvis,
         commentaire: commentaireAvis,
       })
       setAvisSoumis(true)
+      setErreurAvis('')
       const liste = await fetchAvisForAnnonce(annonceId)
       setAvis(liste)
-    } catch {
-      /* ignore */
+    } catch (e) {
+      const message = String(e?.message || '')
+      if (message.toLowerCase().includes('policy') || message.toLowerCase().includes('violates')) {
+        setErreurAvis('Avis refusé: contactez d’abord le propriétaire puis réessayez après le délai.')
+      } else {
+        setErreurAvis('Impossible de publier l’avis pour le moment.')
+      }
     }
   }
+
+  useEffect(() => {
+    if (!utilisateur?.uid || !annonce?.id || !annonce?.utilisateur_id || estProprietaire) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const firstAt = await fetchPremierContactAvis({
+          annonceId: annonce.id,
+          auteurId: utilisateur.uid,
+          proprietaireId: annonce.utilisateur_id,
+        })
+        if (!cancelled) setPremierContactAt(firstAt)
+      } catch {
+        if (!cancelled) setPremierContactAt(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [utilisateur?.uid, annonce?.id, annonce?.utilisateur_id, estProprietaire])
+
+  useEffect(() => {
+    if (!avisUtilisateur) return
+    setNoteAvis(avisUtilisateur.note || 0)
+    setCommentaireAvis(avisUtilisateur.commentaire || '')
+  }, [avisUtilisateur])
 
   const badgeInfo = {
     bronze: { label: '🔓 Bronze', desc: 'Identité vérifiée en ligne', couleur: 'bg-gray-100 text-gray-700' },
@@ -662,14 +710,27 @@ export default function DetailAnnonceClient() {
               {utilisateur && utilisateur.uid !== annonce.utilisateur_id && (
                 <div className="border border-gray-200 rounded-xl p-4 mb-6">
                   <p className="font-bold text-sm text-gray-700 mb-3">
-                    Laisser un avis
+                    {dejaNote ? 'Modifier mon avis' : 'Laisser un avis'}
                   </p>
+                  {!dejaNote && !contactQualifie && (
+                    <p className="mb-3 text-xs font-semibold text-amber-700">
+                      {noteDisponibleAt
+                        ? `Vous pourrez noter à partir de ${noteDisponibleAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}.`
+                        : 'Vous pourrez noter après un premier contact confirmé avec le propriétaire.'}
+                    </p>
+                  )}
+                  {dejaNote && avisSoumis && (
+                    <p className="mb-3 text-xs font-semibold text-emerald-700">
+                      Avis mis à jour.
+                    </p>
+                  )}
 
                   {/* Étoiles */}
                   <div className="flex gap-1 mb-3">
                     {[1, 2, 3, 4, 5].map((etoile) => (
                       <button
                         key={etoile}
+                        type="button"
                         onClick={() => setNoteAvis(etoile)}
                         className={`text-2xl transition-transform hover:scale-110 ${
                           etoile <= noteAvis ? 'opacity-100' : 'opacity-30'
@@ -689,11 +750,14 @@ export default function DetailAnnonceClient() {
                   />
                   <button
                     onClick={soumettreAvis}
-                    disabled={!noteAvis || avisSoumis}
+                    disabled={!peutEnvoyerAvis}
                     className="bg-[#1B5E20] text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-green-800 disabled:opacity-50"
                   >
-                    {avisSoumis ? '✅ Avis publié !' : 'Publier mon avis'}
+                    {dejaNote ? 'Mettre à jour mon avis' : 'Publier mon avis'}
                   </button>
+                  {erreurAvis && (
+                    <p className="mt-2 text-xs font-semibold text-red-600">{erreurAvis}</p>
+                  )}
                 </div>
               )}
 

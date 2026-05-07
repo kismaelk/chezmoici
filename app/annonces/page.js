@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
-import { fetchAnnoncesList } from '@/lib/firestoreApp'
+import { fetchAnnoncesList, fetchAvisStatsForAnnonces } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
 import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
@@ -230,6 +230,11 @@ function formaterPrix(p) {
   return p.toLocaleString('fr-FR') + ' FCFA'
 }
 
+function renderStars(moyenne = 0) {
+  const n = Math.max(0, Math.min(5, Math.round(moyenne)))
+  return '★'.repeat(n) + '☆'.repeat(5 - n)
+}
+
 const TYPE_COLOR = {
   location: 'bg-emerald-500',
   vente:    'bg-blue-500',
@@ -259,9 +264,13 @@ const BADGE_STYLE = {
   or:     { label: '🥇 Or',     cls: 'bg-yellow-50 text-yellow-700' },
 }
 
-function CarteAnnonce({ annonce, vue }) {
+function CarteAnnonce({ annonce, vue, avisStat }) {
   const badge = BADGE_STYLE[annonce.badge] || BADGE_STYLE.bronze
   const typeColor = TYPE_COLOR[annonce.type] || 'bg-gray-500'
+  const nbVues = annonce.nb_vues || 0
+  const moyenneAvis = avisStat?.moyenne || 0
+  const totalAvis = avisStat?.total || 0
+  const topNote = moyenneAvis >= 4.5 && totalAvis > 0
 
   if (vue === 'liste') {
     return (
@@ -286,6 +295,11 @@ function CarteAnnonce({ annonce, vue }) {
           <span className={`absolute top-3 left-3 ${typeColor} text-white text-xs px-2.5 py-1 rounded-full font-bold capitalize shadow-sm`}>
             {annonce.type}
           </span>
+          {topNote && (
+            <span className="absolute top-3 right-3 bg-fuchsia-600 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-sm">
+              Top noté
+            </span>
+          )}
         </div>
         <div className="p-5 flex-1 flex flex-col">
           <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -303,6 +317,10 @@ function CarteAnnonce({ annonce, vue }) {
             {annonce.meuble            && <span className="flex items-center gap-1">🛋️ Meublé</span>}
             {annonce.type_service      && <span className="flex items-center gap-1">🔧 {annonce.type_service}</span>}
             {annonce.disponibilite     && <span className="flex items-center gap-1">🕐 {annonce.disponibilite}</span>}
+            <span className="flex items-center gap-1">👁️ {nbVues} clics</span>
+            <span className="flex items-center gap-1">
+              {totalAvis > 0 ? `${renderStars(moyenneAvis)} ${moyenneAvis.toFixed(1).replace('.', ',')} (${totalAvis})` : '☆☆☆☆☆ 0 avis'}
+            </span>
           </div>
           <div className="flex items-end justify-between mt-auto pt-4">
             <p className="text-[#1B5E20] font-extrabold text-xl">
@@ -353,6 +371,11 @@ function CarteAnnonce({ annonce, vue }) {
         <span className={`absolute top-3 right-3 text-xs px-2.5 py-1 rounded-full font-bold shadow-md backdrop-blur-sm ${badge.cls}`}>
           {badge.label}
         </span>
+        {topNote && (
+          <span className="absolute top-11 right-3 bg-fuchsia-600 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-md">
+            Top noté
+          </span>
+        )}
 
         {/* Prix + localisation sur l'image */}
         <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -375,6 +398,10 @@ function CarteAnnonce({ annonce, vue }) {
           {annonce.meuble            && <span className="bg-gray-50 px-2 py-0.5 rounded-full">🛋️ Meublé</span>}
           {annonce.type_service      && <span className="bg-gray-50 px-2 py-0.5 rounded-full">{annonce.type_service}</span>}
           {annonce.disponibilite     && <span className="bg-gray-50 px-2 py-0.5 rounded-full">🕐 {annonce.disponibilite}</span>}
+          <span className="bg-gray-50 px-2 py-0.5 rounded-full">👁️ {nbVues} clics</span>
+          <span className="bg-gray-50 px-2 py-0.5 rounded-full">
+            {totalAvis > 0 ? `⭐ ${moyenneAvis.toFixed(1).replace('.', ',')} (${totalAvis})` : '☆☆☆☆☆'}
+          </span>
         </div>
       </div>
     </a>
@@ -389,6 +416,7 @@ function AnnoncesContenu() {
   const [vue, setVue] = useState('grille')
   const [tri, setTri] = useState('recent')
   const [filtresMobile, setFiltresMobile] = useState(false)
+  const [avisStats, setAvisStats] = useState({})
 
   const [filtres, setFiltres] = useState(() => ({
     ...FILTRES_VIDES,
@@ -420,11 +448,24 @@ function AnnoncesContenu() {
     async function charger() {
       setChargement(true)
       try {
-        const data = await fetchAnnoncesList(filtres, tri)
-        setAnnonces(data || [])
+        const data = await fetchAnnoncesList(filtres, tri === 'mieuxNotes' ? 'recent' : tri)
+        const ids = (data || []).map((a) => a.id).filter(Boolean)
+        const stats = await fetchAvisStatsForAnnonces(ids)
+        const sorted = tri === 'mieuxNotes'
+          ? [...(data || [])].sort((a, b) => {
+              const sa = stats[a.id] || { moyenne: 0, total: 0 }
+              const sb = stats[b.id] || { moyenne: 0, total: 0 }
+              if (sb.moyenne !== sa.moyenne) return sb.moyenne - sa.moyenne
+              if (sb.total !== sa.total) return sb.total - sa.total
+              return (b.nb_vues || 0) - (a.nb_vues || 0)
+            })
+          : (data || [])
+        setAnnonces(sorted)
+        setAvisStats(stats)
       } catch (e) {
         console.error(e)
         setAnnonces([])
+        setAvisStats({})
       }
       setChargement(false)
     }
@@ -598,6 +639,7 @@ function AnnoncesContenu() {
                 <option value="prixCroissant">Prix ↑</option>
                 <option value="prixDecroissant">Prix ↓</option>
                 <option value="populaire">Populaires</option>
+                <option value="mieuxNotes">Mieux notées</option>
               </select>
 
               {/* Vue grille/liste */}
@@ -659,11 +701,15 @@ function AnnoncesContenu() {
               </div>
             ) : vue === 'grille' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {annonces.map(a => <CarteAnnonce key={a.id} annonce={a} vue="grille" />)}
+                {annonces.map((a) => (
+                  <CarteAnnonce key={a.id} annonce={a} avisStat={avisStats[a.id]} vue="grille" />
+                ))}
               </div>
             ) : (
               <div className="space-y-3">
-                {annonces.map(a => <CarteAnnonce key={a.id} annonce={a} vue="liste" />)}
+                {annonces.map((a) => (
+                  <CarteAnnonce key={a.id} annonce={a} avisStat={avisStats[a.id]} vue="liste" />
+                ))}
               </div>
             )}
           </div>

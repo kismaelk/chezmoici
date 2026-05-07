@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
 import { point as turfPoint, polygon as turfPolygon } from '@turf/helpers'
-import { fetchAnnoncesList } from '@/lib/firestoreApp'
+import { fetchAnnoncesList, fetchAvisStatsForAnnonces } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
@@ -18,6 +18,14 @@ function formaterPrix(p) {
     return s + (m >= 2 ? ' millions' : ' million') + ' FCFA'
   }
   return p.toLocaleString('fr-FR') + ' FCFA'
+}
+
+function formaterNoteCourt(stat) {
+  if (!stat || !stat.total) return '☆☆☆☆☆'
+  return `⭐ ${stat.moyenne.toFixed(1).replace('.', ',')} (${stat.total})`
+}
+function estTopNote(stat) {
+  return Boolean(stat && stat.total > 0 && stat.moyenne >= 4.5)
 }
 
 /** Couleurs d’origine (goutte sur la carte, comme sur ta capture) */
@@ -194,6 +202,7 @@ function CarteGoogleMaps() {
   const drawnPolygonRef = useRef(null)
 
   const [annonces, setAnnonces] = useState([])
+  const [avisStats, setAvisStats] = useState({})
   const [selectionne, setSelectionne] = useState(null)
   const selectionneRef = useRef(null)
   const [chargement, setChargement] = useState(true)
@@ -201,6 +210,7 @@ function CarteGoogleMaps() {
   const [erreur, setErreur] = useState('')
   const [showListMobile, setShowListMobile] = useState(false)
   const [filtresVisibles, setFiltresVisibles] = useState(false)
+  const [triCarte, setTriCarte] = useState('recent')
   /** Anneau fermé GeoJSON [lng,lat][] pour filtre Turf, ou null */
   const [zoneRing, setZoneRing] = useState(null)
   const [dessinZoneActif, setDessinZoneActif] = useState(false)
@@ -263,9 +273,13 @@ function CarteGoogleMaps() {
       setChargement(true)
       try {
         const data = await fetchAnnoncesList(filtresURL, 'recent')
-        setAnnonces((data || []).slice(0, 400))
+        const list = (data || []).slice(0, 400)
+        setAnnonces(list)
+        const stats = await fetchAvisStatsForAnnonces(list.map((a) => a.id).filter(Boolean))
+        setAvisStats(stats)
       } catch {
         setAnnonces([])
+        setAvisStats({})
       }
       setChargement(false)
     }
@@ -293,7 +307,7 @@ function CarteGoogleMaps() {
     })
   }, [annonces, filtresCarte])
 
-  const annoncesAffichees = useMemo(() => {
+  const annoncesAfficheesBrut = useMemo(() => {
     if (!zoneRing || zoneRing.length < 4) return annoncesFiltrees
     try {
       const poly = turfPolygon([zoneRing])
@@ -306,6 +320,23 @@ function CarteGoogleMaps() {
       return annoncesFiltrees
     }
   }, [annoncesFiltrees, zoneRing])
+
+  const annoncesAffichees = useMemo(() => {
+    const list = [...annoncesAfficheesBrut]
+    if (triCarte === 'plus_vus') {
+      return list.sort((a, b) => (b.nb_vues || 0) - (a.nb_vues || 0))
+    }
+    if (triCarte === 'mieux_notes') {
+      return list.sort((a, b) => {
+        const sa = avisStats[a.id] || { moyenne: 0, total: 0 }
+        const sb = avisStats[b.id] || { moyenne: 0, total: 0 }
+        if (sb.moyenne !== sa.moyenne) return sb.moyenne - sa.moyenne
+        if (sb.total !== sa.total) return sb.total - sa.total
+        return (b.nb_vues || 0) - (a.nb_vues || 0)
+      })
+    }
+    return list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+  }, [annoncesAfficheesBrut, triCarte, avisStats])
 
   useEffect(() => { selectionneRef.current = selectionne }, [selectionne])
 
@@ -675,7 +706,7 @@ function CarteGoogleMaps() {
           <span className="text-[10px] text-slate-400 truncate">Chez Moi CI · Google Maps</span>
         </div>
 
-        <div className="flex flex-1 flex-wrap items-center justify-center gap-1 sm:px-2">
+          <div className="flex flex-1 flex-wrap items-center justify-center gap-1 sm:px-2">
           {FILTRES_TYPE_RAPIDES.map((f) => {
             const actif = (filtresURL.type || '') === f.id
             return (
@@ -693,6 +724,15 @@ function CarteGoogleMaps() {
               </button>
             )
           })}
+            <select
+              value={triCarte}
+              onChange={(e) => setTriCarte(e.target.value)}
+              className="rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+            >
+              <option value="recent">Récents</option>
+              <option value="plus_vus">Plus vus</option>
+              <option value="mieux_notes">Mieux notés</option>
+            </select>
         </div>
 
         <div className="flex flex-shrink-0 items-center justify-end gap-2">
@@ -781,6 +821,12 @@ function CarteGoogleMaps() {
                           {annonce.quartier}
                           {estPrestation && annonce.type_service ? ` · ${annonce.type_service}` : ''}
                         </p>
+                        <p className={`truncate text-slate-400 ${estPrestation ? 'mt-0 text-[10px]' : 'mt-0.5 text-[11px]'}`}>
+                          👁️ {annonce.nb_vues || 0} · {formaterNoteCourt(avisStats[annonce.id])}
+                        </p>
+                        {estTopNote(avisStats[annonce.id]) && (
+                          <p className="mt-0.5 text-[10px] font-bold text-fuchsia-700">🏅 Top noté</p>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -915,6 +961,12 @@ function CarteGoogleMaps() {
                   </p>
                   <div className="mt-2 flex items-center justify-between gap-2">
                     <span className="text-[11px] text-gray-500">{badgeLabel[selectionne.badge] || '🔓 Bronze'}</span>
+                    <span className="text-[11px] text-gray-500">👁️ {selectionne.nb_vues || 0} · {formaterNoteCourt(avisStats[selectionne.id])}</span>
+                  </div>
+                  {estTopNote(avisStats[selectionne.id]) && (
+                    <p className="mt-1 text-[11px] font-bold text-fuchsia-700">🏅 Top noté</p>
+                  )}
+                  <div className="mt-2 flex items-center justify-end gap-2">
                     <Link href={`/annonces/${selectionne.id}`}
                       className="rounded-lg bg-[#1B5E20] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#2E7D32]">
                       Détails →
