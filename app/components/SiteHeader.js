@@ -13,6 +13,7 @@ const LIENS = [
   { href: '/annonces?type=location', label: 'Louer' },
   { href: '/annonces?type=vente', label: 'Acheter' },
   { href: '/annonces?type=prestations', label: 'Services & pros' },
+  { href: '/guide', label: 'Guide' },
   { href: '/packs', label: 'Packs' },
 ]
 
@@ -226,6 +227,12 @@ export default function SiteHeader({ variant = 'default' }) {
             className="block px-3 py-2 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20] rounded-lg text-sm font-medium"
           >
             Estimation de bien
+          </a>
+          <a
+            href="/guide"
+            className="block px-3 py-2 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20] rounded-lg text-sm font-medium"
+          >
+            Guide achat & financement
           </a>
           {!user && (
             <a

@@ -18,6 +18,7 @@ const ROUTES = [
   '/demandes',
   '/estimation',
   '/favoris',
+  '/guide',
   '/inscription',
   '/messages',
   '/mes-annonces',

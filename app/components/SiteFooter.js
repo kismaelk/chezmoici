@@ -73,6 +73,11 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/guide" className="hover:text-white">
+                  Guide achat & financement
+                </Link>
+              </li>
+              <li>
                 <Link href="/packs" className="hover:text-white">
                   Packs accompagnement
                 </Link>

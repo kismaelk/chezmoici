@@ -55,8 +55,14 @@ export default function CalculateurCredit() {
           Calculateur de prêt immobilier
         </h1>
         <p className="text-green-100 mt-2 max-w-xl mx-auto">
-          Simulez votre mensualité en 30 secondes. Taux moyens des banques CI
-          (SGBCI, SIB, BICICI) en 2026.
+          Simulez votre mensualité en 30 secondes. Les taux finaux dépendent de
+          votre banque et de votre profil.
+        </p>
+        <p className="text-green-200 text-xs mt-3 max-w-2xl mx-auto">
+          Cadre de référence BCEAO et parcours complet disponibles dans notre{' '}
+          <a href="/guide" className="underline font-bold">
+            guide achat & financement
+          </a>.
         </p>
       </section>
 
@@ -163,8 +169,8 @@ export default function CalculateurCredit() {
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
-                💡 Taux moyens banques CI en 2026 : 8,5 % à 11 %. L’assurance
-                décès-invalidité est souvent obligatoire (~0,3 % annuel).
+                💡 Comparez toujours plusieurs offres (taux, assurance, frais, coût
+                total). Les plafonds et règles de crédit sont encadrés au niveau UMOA/BCEAO.
               </div>
             </div>
           </div>
@@ -225,8 +231,12 @@ export default function CalculateurCredit() {
         <div className="mt-8 bg-white rounded-xl p-5 border border-gray-100 text-xs text-gray-500">
           <strong className="text-gray-700">Avertissement :</strong> Les
           résultats sont indicatifs et ne constituent pas une offre de prêt.
-          Les conditions finales dépendent de votre banque (SGBCI, SIB, BICICI,
-          NSIA, etc.), de votre profil et des frais de notaire (~7 % du prix).
+          Les conditions finales dépendent de votre banque, de votre profil et des
+          frais de formalisation. Voir le{' '}
+          <a href="/guide" className="underline">
+            guide achat & financement
+          </a>{' '}
+          pour les sources et étapes.
         </div>
       </section>
 

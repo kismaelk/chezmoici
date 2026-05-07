@@ -92,11 +92,18 @@ export default function Estimation() {
           📊 Estimation gratuite
         </span>
         <h1 className="text-white text-3xl md:text-4xl font-bold">
-          Combien vaut votre bien à Abidjan ?
+          Combien vaut votre bien en Côte d’Ivoire ?
         </h1>
         <p className="text-green-100 mt-2 max-w-xl mx-auto">
           Fourchette de prix basée sur le marché réel de Chez Moi CI et les
           moyennes des quartiers.
+        </p>
+        <p className="text-green-200 text-xs mt-3 max-w-2xl mx-auto">
+          Référence méthode: consultez le{' '}
+          <a href="/guide" className="underline font-bold">
+            guide achat & financement
+          </a>{' '}
+          pour les vérifications juridiques et le parcours de financement.
         </p>
       </section>
 
@@ -278,7 +285,8 @@ export default function Estimation() {
           estimation est purement indicative et basée sur les données publiques
           de la plateforme et des moyennes par quartier. Pour une estimation
           précise, demandez un passage d’agent Chez Moi CI (Badge Or inclus une
-          évaluation certifiée).
+          évaluation certifiée). Les formalités d’achat/financement doivent être
+          validées via notre <a href="/guide" className="underline">guide interne</a> et les sources officielles.
         </div>
       </section>
 

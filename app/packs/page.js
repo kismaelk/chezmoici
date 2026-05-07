@@ -102,7 +102,14 @@ export default function Packs() {
         <p className="text-green-100 max-w-2xl mx-auto">
           Location, achat, investissement diaspora, certification Services & Pro —
           4 packs conçus pour sécuriser chaque étape de votre projet
-          à Abidjan.
+          en Côte d&apos;Ivoire.
+        </p>
+        <p className="text-green-200 text-xs mt-3 max-w-2xl mx-auto">
+          Nos missions s’alignent sur le parcours décrit dans le{' '}
+          <a href="/guide" className="underline font-bold">
+            guide achat & financement
+          </a>{' '}
+          (vérifications foncières, financement, notaire).
         </p>
       </section>
 
