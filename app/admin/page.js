@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { observerConnexion } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
 import {
   getProfilFirestore,
   fetchAllAnnoncesAdmin,
@@ -21,9 +22,7 @@ import {
 import { useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
-import { adminEmailFallback, resolveStaffRole } from '@/lib/staffRoles'
-
-const ADMIN_EMAIL = adminEmailFallback()
+import { resolveStaffRole } from '@/lib/staffRoles'
 
 const BADGE_LABEL = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
 const BADGE_OPTIONS = ['bronze', 'argent', 'or']
@@ -87,8 +86,41 @@ export default function Admin() {
   const [annonceModifs, setAnnonceModifs] = useState({})
   const [sauvegardeProfilId, setSauvegardeProfilId] = useState(null)
   const [sauvegardeAnnonceId, setSauvegardeAnnonceId] = useState(null)
+  const [toasts, setToasts] = useState([])
 
   const router = useRouter()
+
+  const showToast = useCallback((type, msg) => {
+    const id =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`
+    setToasts((t) => [...t, { id, type, msg }])
+    setTimeout(() => {
+      setToasts((t) => t.filter((x) => x.id !== id))
+    }, 5200)
+  }, [])
+
+  const notifierEquipeEvent = useCallback(async (event, payload) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      const r = await fetch('/api/notify-admin-action', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ event, ...payload }),
+      })
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}))
+        console.warn('[admin] notify-admin-action', r.status, j)
+      }
+    } catch (e) {
+      console.warn('[admin] notify-admin-action', e)
+    }
+  }, [])
   const estSuper = roleStaff === 'super_admin'
   const estModerateur = roleStaff === 'moderator'
 
@@ -152,8 +184,9 @@ export default function Admin() {
     try {
       await deleteAnnonce(id)
     } catch (e) {
-      return alert('Erreur : ' + (e?.message || e))
+      return showToast('error', 'Erreur : ' + (e?.message || e))
     }
+    showToast('success', 'Annonce supprimée.')
     setAnnonces((prev) => prev.filter((a) => a.id !== id))
     setConfirmAction(null)
   }
@@ -165,8 +198,12 @@ export default function Admin() {
     try {
       await updateProfileField(userId, { account_status: nouvelleValeur })
     } catch (e) {
-      return alert('Erreur : ' + (e?.message || e))
+      return showToast('error', 'Erreur : ' + (e?.message || e))
     }
+    if (nouvelleValeur === 'active' && statutActuel !== 'active') {
+      void notifierEquipeEvent('compte_verifie', { cibleUserId: userId })
+    }
+    showToast('success', nouvelleValeur === 'banned' ? 'Utilisateur banni.' : 'Statut du compte mis à jour.')
     setUtilisateurs((prev) =>
       prev.map((u) =>
         u.id === userId ? { ...u, account_status: nouvelleValeur } : u
@@ -205,7 +242,7 @@ export default function Admin() {
   const toggleMasquageAvis = async (avisItem, raisonForcee = null) => {
     const masque = Boolean(avisItem.is_hidden)
     const raison = !masque ? (raisonForcee || '').trim() : null
-    if (!masque && !raison) return alert('Motif requis')
+    if (!masque && !raison) return showToast('error', 'Motif requis')
     try {
       await updateAvisAdmin(avisItem.id, {
         is_hidden: !masque,
@@ -231,8 +268,9 @@ export default function Admin() {
         reason: masque ? null : raison,
       })
     } catch (e) {
-      return alert('Erreur : ' + (e?.message || e))
+      return showToast('error', 'Erreur : ' + (e?.message || e))
     }
+    showToast('success', masque ? 'Avis à nouveau visible.' : 'Avis masqué.')
     setAvisList((prev) =>
       prev.map((a) =>
         a.id === avisItem.id
@@ -256,7 +294,7 @@ export default function Admin() {
   const confirmerMasquageAvis = async () => {
     if (!avisMasquageModal) return
     const raison = motifMasquage === 'autre' ? motifAutre.trim() : motifMasquage
-    if (!raison) return alert('Veuillez saisir un motif')
+    if (!raison) return showToast('error', 'Veuillez saisir un motif')
     await toggleMasquageAvis(avisMasquageModal, raison)
   }
 
@@ -295,8 +333,13 @@ export default function Admin() {
       await updateAnnonce(a.id, payload)
     } catch (e) {
       setSauvegardeAnnonceId(null)
-      return alert('Erreur : ' + (e?.message || e))
+      return showToast('error', 'Erreur : ' + (e?.message || e))
     }
+    const prevStatut = a.statut || 'actif'
+    if (payload.statut === 'actif' && prevStatut !== 'actif') {
+      void notifierEquipeEvent('annonce_validee', { annonceId: a.id })
+    }
+    showToast('success', 'Annonce enregistrée.')
     setAnnonces((prev) => prev.map((x) => (x.id === a.id ? { ...x, ...payload } : x)))
     setAnnonceModifs((prev) => {
       const next = { ...prev }
@@ -357,8 +400,13 @@ export default function Admin() {
       await updateProfileField(u.id, payload)
     } catch (e) {
       setSauvegardeProfilId(null)
-      return alert('Erreur : ' + (e?.message || e))
+      return showToast('error', 'Erreur : ' + (e?.message || e))
     }
+    const prevCompte = u.account_status || 'en_attente'
+    if (payload.account_status === 'active' && prevCompte !== 'active') {
+      void notifierEquipeEvent('compte_verifie', { cibleUserId: u.id })
+    }
+    showToast('success', 'Profil enregistré.')
     setUtilisateurs((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...payload } : x)))
     setProfilModifs((prev) => {
       const next = { ...prev }
@@ -1034,6 +1082,25 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      <div
+        className="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 max-w-[min(100vw-2rem,22rem)] pointer-events-none"
+        aria-live="polite"
+      >
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`pointer-events-auto rounded-xl px-4 py-3 text-sm font-medium shadow-lg border ${
+              t.type === 'error'
+                ? 'bg-red-50 text-red-900 border-red-200'
+                : 'bg-[#E8F5E9] text-[#1B5E20] border-green-200'
+            }`}
+            role="status"
+          >
+            {t.msg}
+          </div>
+        ))}
+      </div>
 
       <SiteFooter />
     </div>
