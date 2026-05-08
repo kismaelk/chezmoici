@@ -165,16 +165,16 @@ function GrilleAnnonces({ type, titre, sousTitre, href, limit = 6 }) {
 
   return (
     <section className="px-4 py-10 max-w-7xl mx-auto">
-      <div className="flex justify-between items-end mb-6">
-        <div>
-          <h3 className="text-2xl font-bold text-gray-800">{titre}</h3>
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-end mb-6 min-w-0">
+        <div className="min-w-0">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">{titre}</h3>
           {sousTitre && (
-            <p className="text-gray-500 text-sm mt-1">{sousTitre}</p>
+            <p className="text-gray-500 text-sm mt-1 text-balance">{sousTitre}</p>
           )}
         </div>
         <a
           href={href}
-          className="hidden sm:inline-flex items-center gap-1 text-[#1B5E20] font-bold text-sm bg-[#E8F5E9] hover:bg-[#1B5E20] hover:text-white px-4 py-2 rounded-full transition-all"
+          className="inline-flex sm:shrink-0 items-center justify-center gap-1 text-[#1B5E20] font-bold text-sm bg-[#E8F5E9] hover:bg-[#1B5E20] hover:text-white px-4 py-2 rounded-full transition-all w-fit max-w-full"
         >
           Voir tout →
         </a>
@@ -217,18 +217,18 @@ export default function Accueil() {
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#F9A825]/10 rounded-full translate-y-1/2 -translate-x-1/4" />
         <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-white/5 rounded-full" />
 
-        <div className="relative max-w-6xl mx-auto px-4 py-14 md:py-20 text-center">
+        <div className="relative w-full max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-12 sm:py-14 md:py-20 text-center min-w-0">
           {/* Pill badge */}
-          <div className="inline-flex items-center gap-2 bg-white/15 text-white text-xs font-bold px-4 py-2 rounded-full border border-white/20 mb-6 backdrop-blur-sm">
-            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            <span>🇨🇮 Immobilier & prestataires — vérification terrain & accompagnement</span>
+          <div className="inline-flex max-w-full min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 bg-white/15 text-white text-[10px] sm:text-xs font-bold px-3 sm:px-4 py-2 rounded-full border border-white/20 mb-5 sm:mb-6 backdrop-blur-sm text-balance">
+            <span className="w-2 h-2 shrink-0 bg-emerald-400 rounded-full animate-pulse" />
+            <span className="text-center leading-snug">🇨🇮 Immobilier & prestataires — vérification terrain & accompagnement</span>
           </div>
 
-          <h1 className="text-white font-black mb-4 leading-none tracking-tight">
-            <span className="block text-4xl md:text-6xl">Trouve ton</span>
-            <span className="block text-4xl md:text-6xl text-[#F9A825]">chez-toi. 🏠</span>
+          <h1 className="text-white font-black mb-4 leading-tight tracking-tight break-words px-0.5">
+            <span className="block text-3xl sm:text-4xl md:text-6xl">Trouve ton</span>
+            <span className="block text-3xl sm:text-4xl md:text-6xl text-[#F9A825]">chez-toi. 🏠</span>
           </h1>
-          <p className="text-green-100/80 text-base md:text-lg mb-8 max-w-xl mx-auto leading-relaxed">
+          <p className="text-green-100/80 text-sm sm:text-base md:text-lg mb-8 max-w-xl mx-auto leading-relaxed px-1 text-balance">
             Louer, acheter ou faire appel à des pros : une équipe peut vous accompagner pour sécuriser
             la visite, le bail ou l&apos;intervention.
           </p>
@@ -248,9 +248,9 @@ export default function Accueil() {
           </div>
 
           {/* BARRE DE RECHERCHE — glassmorphism */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl max-w-4xl mx-auto p-3">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-4xl mx-auto p-2 sm:p-3 min-w-0 box-border overflow-hidden">
             {/* Onglets type */}
-            <div className="flex gap-1 p-1 mb-3 bg-gray-100 rounded-xl w-fit mx-auto flex-wrap justify-center">
+            <div className="flex w-full max-w-full min-w-0 gap-1 p-1 mb-3 bg-gray-100 rounded-xl mx-auto flex-wrap justify-center">
               {[
                 { id: 'location', label: '🔑 Louer' },
                 { id: 'vente', label: '🏠 Acheter' },
@@ -260,22 +260,22 @@ export default function Accueil() {
                   key={m.id}
                   type="button"
                   onClick={() => setMode(m.id)}
-                  className={`px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-all ${
+                  className={`px-2 sm:px-4 py-2 rounded-lg text-[11px] sm:text-xs md:text-sm font-bold transition-all min-w-0 flex-1 sm:flex-none max-w-full ${
                     mode === m.id
-                      ? 'bg-[#1B5E20] text-white shadow-md scale-[1.02]'
+                      ? 'bg-[#1B5E20] text-white shadow-md sm:scale-[1.02]'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-white'
                   }`}
                 >
-                  {m.label}
+                  <span className="block text-center leading-tight break-words sm:whitespace-nowrap">{m.label}</span>
                 </button>
               ))}
             </div>
 
             <div
-              className={`grid grid-cols-1 gap-2 ${
+              className={`grid grid-cols-1 gap-2 min-w-0 ${
                 mode === 'prestations'
-                  ? 'md:grid-cols-[1fr_1fr_1fr_auto]'
-                  : 'md:grid-cols-[1fr_1fr_1fr_1fr_auto]'
+                  ? 'sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]'
+                  : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]'
               }`}
             >
               <select
@@ -284,7 +284,7 @@ export default function Accueil() {
                   setVille(e.target.value)
                   setQuartier('')
                 }}
-                className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
+                className="min-w-0 w-full border border-gray-200 rounded-xl px-3 sm:px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
               >
                 <option value="">🏙️ Ville</option>
                 {VILLES_OPTIONS.map((v) => (
@@ -294,7 +294,7 @@ export default function Accueil() {
               <select
                 value={quartier}
                 onChange={(e) => setQuartier(e.target.value)}
-                className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
+                className="min-w-0 w-full border border-gray-200 rounded-xl px-3 sm:px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
               >
                 <option value="">📍 Commune / Quartier</option>
                 {getCommunesParVille(ville).map((q) => (
@@ -305,7 +305,7 @@ export default function Accueil() {
                 <select
                   value={nbPieces}
                   onChange={(e) => setNbPieces(e.target.value)}
-                  className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
+                  className="min-w-0 w-full border border-gray-200 rounded-xl px-3 sm:px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
                 >
                   <option value="">🛏️ Pièces</option>
                   <option value="1">Studio / 1 pièce</option>
@@ -320,12 +320,16 @@ export default function Accueil() {
                 placeholder="💰 Budget max (FCFA)"
                 value={prixMax}
                 onChange={(e) => setPrixMax(e.target.value)}
-                className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
+                className="min-w-0 w-full border border-gray-200 rounded-xl px-3 sm:px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20]/20 bg-white"
               />
               <button
                 type="button"
                 onClick={rechercher}
-                className="bg-gradient-to-r from-[#F9A825] to-[#f59f00] text-white px-6 py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                className={`min-w-0 bg-gradient-to-r from-[#F9A825] to-[#f59f00] text-white px-4 sm:px-6 py-3 rounded-xl font-bold text-sm hover:shadow-lg sm:hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+                  mode === 'prestations'
+                    ? 'w-full xl:w-auto xl:min-w-[9.5rem] xl:shrink-0'
+                    : 'w-full sm:col-span-2 lg:col-span-3 xl:col-span-1 xl:w-auto xl:min-w-[9.5rem] xl:shrink-0'
+                }`}
               >
                 🔍 Rechercher
               </button>
@@ -333,13 +337,13 @@ export default function Accueil() {
 
             {/* Tags tendances (logement) */}
             {mode !== 'prestations' && (
-              <div className="flex flex-wrap gap-2 mt-3 px-1 items-center">
-                <span className="text-xs text-gray-400 font-medium">Tendances :</span>
+              <div className="flex flex-wrap gap-2 mt-3 px-0.5 items-center justify-center sm:justify-start">
+                <span className="text-xs text-gray-400 font-medium w-full sm:w-auto text-center sm:text-left">Tendances :</span>
                 {['Cocody 3 pièces', 'Plateau bureaux', 'Marcory villa', 'Yopougon studio'].map((t) => (
                   <a
                     key={t}
                     href={`/annonces?quartier=${t.split(' ')[0]}`}
-                    className="text-xs text-[#1B5E20] font-semibold bg-[#E8F5E9] hover:bg-[#1B5E20] hover:text-white px-3 py-1 rounded-full transition-all"
+                    className="text-xs text-[#1B5E20] font-semibold bg-[#E8F5E9] hover:bg-[#1B5E20] hover:text-white px-2.5 sm:px-3 py-1 rounded-full transition-all text-center"
                   >
                     {t}
                   </a>

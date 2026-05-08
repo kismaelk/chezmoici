@@ -307,9 +307,18 @@ create table if not exists avis_moderation_logs (
   created_at     timestamptz default now()
 );
 
--- Rôle staff : super_admin | moderator (contrainte optionnelle en prod via migration)
+-- Rôles staff : super_admin | admin | moderator | annonce_manager (voir migrations)
 alter table profiles add column if not exists admin_role text;
 alter table profiles add column if not exists account_status text default 'en_attente';
+alter table profiles add column if not exists account_suspended_until timestamptz;
+
+create table if not exists site_feature_flags (
+  key text primary key,
+  value_boolean boolean not null default true,
+  updated_at timestamptz default now(),
+  updated_by uuid references profiles(id) on delete set null
+);
+alter table site_feature_flags enable row level security;
 
 -- Localisation précise des annonces
 alter table annonces add column if not exists rue              text;

@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SiteHeader from '@/app/components/SiteHeader'
+import { libelleFinSuspension } from '@/lib/accountSuspension'
+import { ErreurCompteSuspendu } from '@/lib/auth'
 
 function destinationApresConnexion() {
   if (typeof window === 'undefined') return '/tableau-de-bord'
@@ -29,6 +31,15 @@ export default function Connexion() {
   const [erreur, setErreur] = useState('')
   const router = useRouter()
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (new URLSearchParams(window.location.search).get('suspendu') === '1') {
+      setErreur(
+        'Votre compte est temporairement suspendu. Réessayez après la date indiquée par l’équipe ou contactez le support.'
+      )
+    }
+  }, [])
+
   const connecter = async () => {
     if (!email || !motDePasse) return setErreur('Remplissez tous les champs')
     setChargement(true)
@@ -37,8 +48,14 @@ export default function Connexion() {
       await connecterAvecEmail(email, motDePasse)
       router.push(destinationApresConnexion())
       router.refresh()
-    } catch {
-      setErreur('Courriel ou mot de passe incorrect')
+    } catch (err) {
+      if (err instanceof ErreurCompteSuspendu) {
+        setErreur(
+          `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+        )
+      } else {
+        setErreur('Courriel ou mot de passe incorrect')
+      }
       setChargement(false)
     }
   }
@@ -92,7 +109,13 @@ export default function Connexion() {
       router.push(destinationApresConnexion())
       router.refresh()
     } catch (err) {
-      setErreur('Code SMS invalide : ' + err.message)
+      if (err instanceof ErreurCompteSuspendu) {
+        setErreur(
+          `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+        )
+      } else {
+        setErreur('Code SMS invalide : ' + err.message)
+      }
       setChargement(false)
     }
   }

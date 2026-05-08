@@ -30,21 +30,89 @@ Les fichiers sont dans le dépôt : `supabase/migrations/`.
 | 6 | `20260507030000_review_hide_reason.sql` | Motif de masquage |
 | 7 | `20260507040000_review_moderation_logs_and_visibility.sql` | Table `avis_moderation_logs`, visibilité |
 | 8 | `20260508000000_profiles_account_status.sql` | **`account_status` sur `profiles`** (indispensable pour l’admin utilisateurs) |
+| 9 | `20260509000000_staff_roles_feature_flags.sql` | Rôles `admin` / `annonce_manager`, `account_suspended_until`, table `site_feature_flags` |
+| 10 | `20260509000001_annonce_manager_rls_restrict.sql` | RLS : le rôle gestionnaire d’annonces ne modifie pas profils / avis / signalements |
+| 11 | `20260509000002_suspended_users_rls_no_write.sql` | Fonction `jwt_user_not_suspended()` : **aucune écriture** (tables + storage) tant que `account_suspended_until` est dans le futur |
 
 Si une migration a déjà été appliquée (message du type « already exists »), ignorer ou adapter ; l’important est que le schéma final corresponde à `supabase/schema.sql`.
+
+### Option : Supabase CLI (même ordre)
+
+Depuis la racine du dépôt, avec le projet lié (`npx supabase link --project-ref <ref>` si besoin) :
+
+```bash
+npx supabase db push
+```
+
+Cela applique les migrations locales non encore enregistrées sur le projet distant. Sinon, exécuter les fichiers **un par un** dans le SQL Editor comme ci-dessus.
+
+---
+
+## Vercel — variable `SUPABASE_SERVICE_ROLE_KEY`
+
+1. Dashboard Supabase → **Project Settings** → **API** → copier la **service_role** secret (ne jamais la préfixer par `NEXT_PUBLIC_`).
+2. Vercel → projet → **Settings** → **Environment Variables** → ajouter `SUPABASE_SERVICE_ROLE_KEY` pour **Production** (et Preview si vous testez les routes admin dessus).
+3. Redéployer. Sans cette clé, `POST /api/admin/user-auth` (confirmation e-mail, envoi reset mot de passe) échoue côté serveur.
+
+---
+
+## Rôles staff dans `profiles`
+
+À faire dans le **SQL Editor** ou via l’onglet **Utilisateurs** du portail (selon vos droits). Exemples SQL (remplacer l’UUID par celui du compte) :
+
+```sql
+-- Super admin (héritage : is_admin + pas de rôle restreint)
+update public.profiles
+set is_admin = true, admin_role = 'super_admin'
+where id = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+
+-- Admin
+update public.profiles
+set is_admin = true, admin_role = 'admin'
+where id = '...';
+
+-- Modérateur
+update public.profiles
+set is_admin = true, admin_role = 'moderator'
+where id = '...';
+
+-- Gestionnaire d’annonces uniquement
+update public.profiles
+set is_admin = true, admin_role = 'annonce_manager'
+where id = '...';
+```
+
+Vérifier chaque rôle en se connectant avec le compte concerné et en ouvrant `/admin-portail` : les onglets visibles doivent correspondre à `lib/staffRoles.js`.
+
+---
+
+## Suspension de compte (`account_suspended_until`)
+
+Si cette colonne est renseignée avec une **date/heure future**, l’utilisateur ne peut plus rester connecté :
+
+- refus à la connexion (e-mail / mot de passe, SMS) ;
+- refus après OAuth (`/auth/callback`) ;
+- déconnexion automatique si la suspension est ajoutée pendant une session active (`AccountSuspensionListener` dans le layout).
+
+Message sur `/connexion?suspendu=1` ou erreur explicite sur le formulaire.
+
+Côté base, après la migration **11**, un JWT valide mais **profil suspendu** ne peut plus **insérer / mettre à jour / supprimer** (y compris storage `avatars` et `annonces`), ni agir en staff tant que la suspension est active. Les **lectures** restent possibles selon les policies existantes (ex. annonces publiques).
 
 ---
 
 ## Qui a accès super admin / modérateur ?
 
-- **Super admin (accès complet `/admin`)**  
-  - Compte dont l’e-mail = `NEXT_PUBLIC_ADMIN_EMAIL_FALLBACK` (secours), **ou**  
-  - Ligne `profiles` avec `is_admin = true` et (`admin_role` absent ou `admin_role = 'super_admin'`).
+- **Super admin (contrôle total, `/admin-portail`)**  
+  - E-mail = `NEXT_PUBLIC_ADMIN_EMAIL_FALLBACK` (secours), **ou**  
+  - `is_admin = true` et (`admin_role` absent / `super_admin`).
 
-- **Modérateur (validation annonces uniquement dans l’UI)**  
-  - `is_admin = true` et `admin_role = 'moderator'`.
+- **Administrateur** — `admin_role = 'admin'` : annonces, utilisateurs, signalements, badges, reset MDP ; pas les flags produit ni confirmation e-mail forcée.
 
-La logique est dans `lib/staffRoles.js`. En production, définir `NEXT_PUBLIC_ADMIN_EMAIL_FALLBACK` et les rôles en base pour les comptes concernés (voir onglet **Utilisateurs** une fois les migrations passées).
+- **Modérateur** — `moderator` : avis, signalements, annonces (sans suppression ni badge selon matrice).
+
+- **Gestionnaire d’annonces** — `annonce_manager` : annonces uniquement (médias, champs, statut, badge) ; **pas** les profils utilisateurs (RLS).
+
+La logique est dans `lib/staffRoles.js`. En production : définir `NEXT_PUBLIC_ADMIN_EMAIL_FALLBACK`, les rôles en base (onglet **Utilisateurs**), et **`SUPABASE_SERVICE_ROLE_KEY`** sur le serveur (Vercel) pour les actions Auth (confirmation e-mail, lien reset mot de passe).
 
 ---
 

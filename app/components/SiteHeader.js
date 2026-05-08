@@ -59,27 +59,27 @@ export default function SiteHeader({ variant = 'default' }) {
     { href: '/profil', label: 'Profil', icon: '👤' },
   ]
   if (user && isStaff(profil, user.email)) {
-    accountLinks.splice(1, 0, { href: '/admin', label: 'Administration', icon: '🛡️' })
+    accountLinks.splice(1, 0, { href: '/admin-portail', label: 'Administration', icon: '🛡️' })
   }
 
   return (
-    <header className="sticky top-0 z-[1000] border-b border-emerald-100 bg-white/95 backdrop-blur shadow-md">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 px-3 sm:px-4 md:px-6 h-16 min-w-0">
-        <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+    <header className="sticky top-0 z-[1000] border-b border-emerald-100 bg-white/95 backdrop-blur shadow-md min-w-0 overflow-x-clip">
+      <div className="max-w-7xl mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2 gap-y-1.5 px-2 sm:px-4 md:px-6 min-h-16 py-2 sm:py-0 sm:h-16 min-w-0">
+        <Link href="/" className="flex items-center gap-2 shrink-0 min-w-0 max-w-[55%] sm:max-w-none">
           <div className="w-9 h-9 rounded-lg bg-[color:var(--chez-green,#1B5E20)] text-white flex items-center justify-center font-bold text-lg shadow-sm">
             CI
           </div>
-          <div className="hidden sm:block">
-            <div className="font-bold text-[color:var(--chez-green,#1B5E20)] leading-tight">
+          <div className="hidden sm:block min-w-0">
+            <div className="font-bold text-[color:var(--chez-green,#1B5E20)] leading-tight truncate">
               Chez Moi CI
             </div>
-            <div className="text-[10px] text-gray-400 leading-tight -mt-0.5">
+            <div className="text-[10px] text-gray-400 leading-tight -mt-0.5 line-clamp-2 sm:line-clamp-1">
               Immobilier de confiance · Côte d&apos;Ivoire
             </div>
           </div>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-1">
+        <nav className="hidden lg:flex items-center gap-1 shrink-0 min-w-0">
           {LIENS.map((l) => (
             <a
               key={l.href}
@@ -91,17 +91,17 @@ export default function SiteHeader({ variant = 'default' }) {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-1 sm:flex-none flex-wrap items-center justify-end gap-1 sm:gap-2 min-w-0 basis-full sm:basis-auto">
           <a
             href="/carte"
-            className="inline-flex items-center gap-1.5 border border-[color:var(--chez-green,#1B5E20)]/25 text-[color:var(--chez-green,#1B5E20)] px-3 py-2 rounded-lg text-sm font-bold hover:bg-emerald-50 transition-colors"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 shrink-0 border border-[color:var(--chez-green,#1B5E20)]/25 text-[color:var(--chez-green,#1B5E20)] px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-emerald-50 transition-colors"
           >
             <span aria-hidden>🗺️</span>
             <span className="hidden sm:inline">Carte</span>
           </a>
           <a
             href="/publier"
-            className="hidden md:inline-flex items-center gap-1 bg-[#F9A825] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-yellow-600"
+            className="hidden md:inline-flex items-center gap-1 bg-[#F9A825] text-white px-2.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-yellow-600 whitespace-nowrap shrink-0"
           >
             <span className="text-base leading-none">+</span> Publier
           </a>
@@ -181,7 +181,7 @@ export default function SiteHeader({ variant = 'default' }) {
               </a>
               <a
                 href="/inscription"
-                className="inline-flex bg-[#1B5E20] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-800"
+                className="inline-flex items-center justify-center bg-[#1B5E20] text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-green-800 whitespace-nowrap shrink-0"
               >
                 S&apos;inscrire
               </a>
@@ -190,7 +190,7 @@ export default function SiteHeader({ variant = 'default' }) {
 
           <button
             type="button"
-            className="lg:hidden ml-1 text-gray-600 p-2 rounded-lg hover:bg-gray-100"
+            className="lg:hidden shrink-0 text-gray-600 p-2 rounded-lg hover:bg-gray-100"
             onClick={() => setMenuMobile((v) => !v)}
             aria-label="Menu"
           >

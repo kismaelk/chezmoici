@@ -63,7 +63,7 @@ export async function POST(request) {
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
     (typeof request.headers.get === 'function' && request.headers.get('origin')) ||
     'https://www.chezmoici.com'
-  const adminUrl = `${siteBase}/admin`
+  const adminUrl = `${siteBase}/admin-portail`
 
   const text = [
     '🔍 *Nouvelle annonce à modérer* — Chez Moi CI',

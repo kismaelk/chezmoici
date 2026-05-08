@@ -1,5 +1,6 @@
 import './globals.css'
 import BackToTopButton from '@/app/components/BackToTopButton'
+import AccountSuspensionListener from '@/app/components/AccountSuspensionListener'
 
 export const metadata = {
   title: 'Chez Moi CI — Immobilier de confiance à Abidjan',
@@ -60,6 +61,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <body className="font-sans antialiased" style={{ fontFamily: 'Arial, sans-serif' }}>
+        <AccountSuspensionListener />
         {children}
         <BackToTopButton />
       </body>
