@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import { mettreAJourMotDePasse } from '@/lib/auth'
+import { estErreurRefreshTokenInvalide, mettreAJourMotDePasse } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
@@ -20,8 +20,11 @@ function NouveauMotDePasseContenu() {
 
   useEffect(() => {
     // Supabase envoie le token dans le hash (#access_token=...&type=recovery)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error && estErreurRefreshTokenInvalide(error)) {
+        await supabase.auth.signOut()
+        setErreur('Session expirée. Ouvrez à nouveau le lien reçu par courriel.')
+      } else if (session) {
         setSessionPrete(true)
       } else {
         setErreur('Lien invalide ou expiré. Demandez un nouveau courriel.')

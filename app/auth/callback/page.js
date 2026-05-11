@@ -3,12 +3,18 @@ import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { estCompteSuspenduJusqua } from '@/lib/accountSuspension'
+import { estErreurRefreshTokenInvalide } from '@/lib/auth'
 
 export default function AuthCallback() {
   const router = useRouter()
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error && estErreurRefreshTokenInvalide(error)) {
+        await supabase.auth.signOut()
+        router.replace('/connexion')
+        return
+      }
       if (!session?.user) {
         router.replace('/connexion')
         return

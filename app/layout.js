@@ -1,5 +1,6 @@
 import './globals.css'
 import BackToTopButton from '@/app/components/BackToTopButton'
+import AuthStaleSessionCleaner from '@/app/components/AuthStaleSessionCleaner'
 import AccountSuspensionListener from '@/app/components/AccountSuspensionListener'
 
 export const metadata = {
@@ -61,6 +62,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <body className="font-sans antialiased" style={{ fontFamily: 'Arial, sans-serif' }}>
+        <AuthStaleSessionCleaner />
         <AccountSuspensionListener />
         {children}
         <BackToTopButton />
