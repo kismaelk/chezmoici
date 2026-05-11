@@ -2,13 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  inscrireAvecEmail,
-  connecterAvecGoogle,
-  connecterAvecFacebook,
-  envoyerCodeConnexionSMS,
-  verifierCodeConnexionSMS,
-} from '@/lib/auth'
+import { inscrireAvecEmail } from '@/lib/auth'
 import { getProfilByTelephone } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
@@ -33,8 +27,6 @@ export default function Inscription() {
   const [numeroCni, setNumeroCni] = useState('')
   const [objectifPrincipal, setObjectifPrincipal] = useState('')
   const [motDePasse, setMotDePasse] = useState('')
-  const [codeSMS, setCodeSMS] = useState('')
-  const [codeEnvoye, setCodeEnvoye] = useState(false)
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState('')
   const router = useRouter()
@@ -102,57 +94,6 @@ export default function Inscription() {
     }
   }
 
-  const inscrireGoogle = async () => {
-    setChargement(true)
-    setErreur('')
-    try {
-      await connecterAvecGoogle()
-      router.push('/tableau-de-bord')
-    } catch (err) {
-      setErreur('Erreur Google : ' + err.message)
-      setChargement(false)
-    }
-  }
-
-  const inscrireFacebook = async () => {
-    setChargement(true)
-    setErreur('')
-    try {
-      await connecterAvecFacebook()
-      router.push('/tableau-de-bord')
-    } catch (err) {
-      setErreur('Erreur Facebook : ' + err.message)
-      setChargement(false)
-    }
-  }
-
-  const envoyerSMS = async () => {
-    if (!telephone.trim()) return setErreur('Entrez votre numéro de téléphone au format +225...')
-    setChargement(true)
-    setErreur('')
-    try {
-      await envoyerCodeConnexionSMS(telephone.trim())
-      setCodeEnvoye(true)
-    } catch (err) {
-      setErreur('Erreur SMS : ' + err.message)
-    } finally {
-      setChargement(false)
-    }
-  }
-
-  const verifierSMS = async () => {
-    if (!telephone.trim() || !codeSMS.trim()) return setErreur('Entrez numéro et code SMS')
-    setChargement(true)
-    setErreur('')
-    try {
-      await verifierCodeConnexionSMS(telephone.trim(), codeSMS.trim())
-      router.push('/tableau-de-bord')
-    } catch (err) {
-      setErreur('Code invalide : ' + err.message)
-      setChargement(false)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
       <SiteHeader />
@@ -164,32 +105,6 @@ export default function Inscription() {
           <span className="font-semibold text-[#1B5E20]">*</span> champ obligatoire ·{' '}
           <span className="text-gray-500">(optionnel)</span> vous pouvez laisser vide
         </p>
-
-        <button
-          type="button"
-          onClick={inscrireGoogle}
-          disabled={chargement}
-          className="w-full border-2 border-gray-200 bg-white text-gray-700 py-3 rounded-xl font-bold mb-6 hover:bg-gray-50 flex items-center justify-center gap-3"
-        >
-          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" width={20} height={20} />
-          Continuer avec Google
-        </button>
-
-        <button
-          type="button"
-          onClick={inscrireFacebook}
-          disabled={chargement}
-          className="w-full border-2 border-blue-200 bg-blue-50 text-blue-700 py-3 rounded-xl font-bold mb-6 hover:bg-blue-100 flex items-center justify-center gap-3"
-        >
-          <span className="text-lg font-black">f</span>
-          Continuer avec Facebook
-        </button>
-
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-gray-400 text-sm">ou avec courriel / SMS</span>
-          <div className="flex-1 h-px bg-gray-200" />
-        </div>
 
         <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
           <h2 className="font-bold text-gray-800 mb-1">Type de compte *</h2>
@@ -272,37 +187,6 @@ export default function Inscription() {
                 autoComplete="tel"
                 className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] text-sm"
               />
-            </div>
-
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="mb-2 text-xs font-semibold text-gray-700">Créer / connecter via SMS</p>
-              {codeEnvoye && (
-                <input
-                  type="text"
-                  placeholder="Code reçu par SMS"
-                  value={codeSMS}
-                  onChange={(e) => setCodeSMS(e.target.value)}
-                  className="mb-2 w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#1B5E20] text-sm bg-white"
-                />
-              )}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={envoyerSMS}
-                  disabled={chargement}
-                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100"
-                >
-                  Envoyer code
-                </button>
-                <button
-                  type="button"
-                  onClick={verifierSMS}
-                  disabled={chargement || !codeEnvoye}
-                  className="flex-1 bg-[#1B5E20] text-white py-2 rounded-lg text-sm font-semibold hover:bg-green-800 disabled:opacity-50"
-                >
-                  Vérifier
-                </button>
-              </div>
             </div>
 
             <div>

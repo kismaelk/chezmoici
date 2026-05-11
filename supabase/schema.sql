@@ -112,7 +112,11 @@ create table if not exists messages_contact (
   email       text,
   sujet       text,
   message     text not null,
-  created_at  timestamptz default now()
+  created_at  timestamptz default now(),
+  statut      text default 'nouveau',
+  note_interne text,
+  traite_le   timestamptz,
+  traite_par  uuid references profiles(id) on delete set null
 );
 
 create table if not exists demandes_badge (

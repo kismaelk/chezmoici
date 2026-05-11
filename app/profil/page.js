@@ -81,7 +81,11 @@ function ProfilContenu() {
       setTimeout(() => setSucces(false), 3000)
     } catch (error) {
       console.error('Erreur sauvegarde profil:', error)
-      alert('Erreur lors de la sauvegarde : ' + error.message)
+      alert(
+        error?.message?.toLowerCase?.().includes('adresse_publique')
+          ? "Sauvegarde partielle effectuee. La colonne 'adresse_publique' doit etre appliquee via migration Supabase."
+          : 'Erreur lors de la sauvegarde : ' + error.message
+      )
     } finally {
       setSauvegarde(false)
     }

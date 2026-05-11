@@ -33,6 +33,7 @@ Les fichiers sont dans le dépôt : `supabase/migrations/`.
 | 9 | `20260509000000_staff_roles_feature_flags.sql` | Rôles `admin` / `annonce_manager`, `account_suspended_until`, table `site_feature_flags` |
 | 10 | `20260509000001_annonce_manager_rls_restrict.sql` | RLS : le rôle gestionnaire d’annonces ne modifie pas profils / avis / signalements |
 | 11 | `20260509000002_suspended_users_rls_no_write.sql` | Fonction `jwt_user_not_suspended()` : **aucune écriture** (tables + storage) tant que `account_suspended_until` est dans le futur |
+| 12 | `20260509000003_messages_contact_staff.sql` | Colonnes suivi sur `messages_contact` + RLS **lecture / mise à jour** staff (onglet **Messages contact** du portail) |
 
 Si une migration a déjà été appliquée (message du type « already exists »), ignorer ou adapter ; l’important est que le schéma final corresponde à `supabase/schema.sql`.
 

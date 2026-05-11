@@ -20,6 +20,8 @@ import {
   fetchAvisModerationLogsAdmin,
   fetchFeatureFlagsAdmin,
   updateFeatureFlagAdmin,
+  fetchContactMessagesAdmin,
+  updateContactMessageAdmin,
 } from '@/lib/firestoreApp'
 import { useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
@@ -58,6 +60,12 @@ const STATUT_DEMANDE_BADGE_OPTIONS = [
   { value: 'refuse', label: '❌ Refusé' },
 ]
 
+const STATUT_CONTACT_OPTIONS = [
+  { value: 'nouveau', label: '📥 Nouveau' },
+  { value: 'en_cours', label: '🔄 En cours' },
+  { value: 'traite', label: '✅ Traité' },
+]
+
 const ONGLETS = [
   { id: 'annonces', label: '🏠 Annonces' },
   { id: 'avis', label: '⭐ Avis' },
@@ -65,6 +73,7 @@ const ONGLETS = [
   { id: 'utilisateurs', label: '👤 Utilisateurs' },
   { id: 'signalements', label: '🚩 Signalements' },
   { id: 'demandes_badge', label: '🏅 Badges' },
+  { id: 'messagerie_contact', label: '📩 Messages contact' },
   { id: 'feature_flags', label: '⚙️ Fonctionnalités' },
 ]
 
@@ -91,6 +100,8 @@ export default function AdminPortail() {
   const [sauvegardeAnnonceId, setSauvegardeAnnonceId] = useState(null)
   const [toasts, setToasts] = useState([])
   const [featureFlags, setFeatureFlags] = useState([])
+  const [messagesContact, setMessagesContact] = useState([])
+  const [notesBrouillonContact, setNotesBrouillonContact] = useState({})
   const [annonceDetailModal, setAnnonceDetailModal] = useState(null)
 
   const router = useRouter()
@@ -144,6 +155,8 @@ export default function AdminPortail() {
           return permissions.voirOngletSignalements
         case 'demandes_badge':
           return permissions.voirOngletBadges
+        case 'messagerie_contact':
+          return permissions.voirOngletMessagerieContact
         case 'feature_flags':
           return permissions.voirOngletFeatureFlags
         default:
@@ -186,6 +199,17 @@ export default function AdminPortail() {
   }, [roleStaff, onglet, ongletsVisibles])
 
   useEffect(() => {
+    if (chargement || !permissions.voirOngletMessagerieContact) return
+    ;(async () => {
+      try {
+        setMessagesContact(await fetchContactMessagesAdmin())
+      } catch (e) {
+        console.warn('[admin] messages contact', e)
+      }
+    })()
+  }, [chargement, permissions.voirOngletMessagerieContact])
+
+  useEffect(() => {
     if (chargement) return
     ;(async () => {
       if (onglet === 'annonces') {
@@ -209,6 +233,12 @@ export default function AdminPortail() {
         setSignalements(await fetchAllSignalementsAdmin())
       } else if (onglet === 'demandes_badge') {
         setDemandesBadge(await fetchAllDemandesBadgeAdmin())
+      } else if (onglet === 'messagerie_contact') {
+        try {
+          setMessagesContact(await fetchContactMessagesAdmin())
+        } catch (e) {
+          showToast('error', e?.message || 'Impossible de charger les messages.')
+        }
       } else if (onglet === 'feature_flags') {
         setFeatureFlags(await fetchFeatureFlagsAdmin())
       }
@@ -317,6 +347,43 @@ export default function AdminPortail() {
     setDemandesBadge((prev) =>
       prev.map((d) => (d.id === id ? { ...d, statut } : d))
     )
+  }
+
+  const changerStatutMessageContact = async (id, statut) => {
+    const fields =
+      statut === 'traite'
+        ? { statut, traite_le: new Date().toISOString(), traite_par: adminUid }
+        : { statut, traite_le: null, traite_par: null }
+    try {
+      await updateContactMessageAdmin(id, fields)
+    } catch (e) {
+      return showToast('error', e?.message || e)
+    }
+    setMessagesContact((prev) => prev.map((x) => (x.id === id ? { ...x, ...fields } : x)))
+  }
+
+  const sauverNoteContact = async (id) => {
+    const m = messagesContact.find((x) => x.id === id)
+    const text =
+      notesBrouillonContact[id] !== undefined
+        ? notesBrouillonContact[id]
+        : (m?.note_interne ?? '')
+    try {
+      await updateContactMessageAdmin(id, { note_interne: text.trim() ? text.trim() : null })
+    } catch (e) {
+      return showToast('error', e?.message || e)
+    }
+    setMessagesContact((prev) =>
+      prev.map((x) =>
+        x.id === id ? { ...x, note_interne: text.trim() ? text.trim() : null } : x
+      )
+    )
+    setNotesBrouillonContact((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    showToast('success', 'Note interne enregistrée.')
   }
 
   const toggleMasquageAvis = async (avisItem, raisonForcee = null) => {
@@ -619,6 +686,18 @@ export default function AdminPortail() {
     return (f.key && f.key.toLowerCase().includes(recherche.toLowerCase()))
   })
 
+  const messagesContactFiltres = messagesContact.filter((m) => {
+    if (!recherche) return true
+    const q = recherche.toLowerCase()
+    return (
+      (m.nom && m.nom.toLowerCase().includes(q)) ||
+      (m.email && m.email.toLowerCase().includes(q)) ||
+      (m.sujet && m.sujet.toLowerCase().includes(q)) ||
+      (m.message && m.message.toLowerCase().includes(q)) ||
+      (m.note_interne && m.note_interne.toLowerCase().includes(q))
+    )
+  })
+
   const showRoleCol =
     permissions.utilisateursAssignSuper ||
     permissions.utilisateursAssignAdmin ||
@@ -626,11 +705,24 @@ export default function AdminPortail() {
 
   // ── Stats ────────────────────────────────────────────────────────────────────
 
+  const statsNouveauxContact = messagesContact.filter(
+    (m) => !m.statut || m.statut === 'nouveau'
+  ).length
+
   const stats = !permissions.voirOngletUtilisateurs
     ? [
         { label: 'Annonces', valeur: annonces.length, emoji: '🏠' },
         { label: 'À valider', valeur: annonces.filter((a) => a.statut === 'en_verification').length, emoji: '🔍' },
         { label: 'Actives', valeur: annonces.filter((a) => a.statut === 'actif').length, emoji: '✅' },
+        ...(permissions.voirOngletMessagerieContact
+          ? [
+              {
+                label: 'Msg. contact (nouveaux)',
+                valeur: statsNouveauxContact,
+                emoji: '📩',
+              },
+            ]
+          : []),
       ]
     : [
         { label: 'Annonces', valeur: annonces.length, emoji: '🏠' },
@@ -638,6 +730,15 @@ export default function AdminPortail() {
         { label: 'Actives', valeur: annonces.filter((a) => a.statut === 'actif').length, emoji: '✅' },
         { label: 'Utilisateurs', valeur: utilisateurs.length, emoji: '👤', needUsers: true },
         { label: 'Bannis', valeur: utilisateurs.filter((u) => u.account_status === 'banned').length, emoji: '🚫', needUsers: true },
+        ...(permissions.voirOngletMessagerieContact
+          ? [
+              {
+                label: 'Msg. contact (nouveaux)',
+                valeur: statsNouveauxContact,
+                emoji: '📩',
+              },
+            ]
+          : []),
         { label: 'Badges Or', valeur: annonces.filter((a) => a.badge === 'or').length, emoji: '🥇' },
       ]
 
@@ -731,6 +832,8 @@ export default function AdminPortail() {
                   ? 'Rechercher un utilisateur…'
                   : onglet === 'signalements'
                     ? 'Motif, annonce, signalant…'
+                    : onglet === 'messagerie_contact'
+                      ? 'Nom, e-mail, sujet, message…'
                     : onglet === 'feature_flags'
                       ? 'Clé de paramètre…'
                       : 'Nom, téléphone, niveau, annonce…'
@@ -967,6 +1070,131 @@ export default function AdminPortail() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {onglet === 'messagerie_contact' && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+              Messages issus du formulaire <strong>/contact</strong> (support, partenariats,{' '}
+              <strong>candidatures</strong> depuis /carriere). Pour répondre, utilisez votre client mail
+              (bouton ci-dessous) ou copiez l’adresse. Les <strong>notifications</strong> in-app
+              (cloche utilisateur) restent dans la table <code className="text-xs bg-white px-1 rounded">notifications</code>{' '}
+              — elles ne sont pas listées ici.
+            </p>
+            {messagesContactFiltres.length === 0 && (
+              <div className="bg-white rounded-xl p-8 text-center text-gray-400 border border-gray-100">
+                Aucun message pour l’instant.
+              </div>
+            )}
+            {messagesContactFiltres.map((m) => {
+              const st = m.statut || 'nouveau'
+              const mailHref = (() => {
+                const sub = encodeURIComponent(`Re: Chez Moi CI — ${m.sujet || 'votre message'}`)
+                const prenom = (m.nom || '').trim().split(/\s+/)[0]
+                const body = encodeURIComponent(
+                  `Bonjour${prenom ? ' ' + prenom : ''},\n\n\n\n—\nL’équipe Chez Moi CI`
+                )
+                return `mailto:${encodeURIComponent(m.email || '')}?subject=${sub}&body=${body}`
+              })()
+              return (
+                <div
+                  key={m.id}
+                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span
+                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                            st === 'nouveau'
+                              ? 'bg-amber-100 text-amber-900'
+                              : st === 'en_cours'
+                                ? 'bg-sky-100 text-sky-900'
+                                : 'bg-emerald-100 text-emerald-900'
+                          }`}
+                        >
+                          {STATUT_CONTACT_OPTIONS.find((o) => o.value === st)?.label || st}
+                        </span>
+                        {m.sujet && (
+                          <span className="font-bold text-gray-900 text-sm">{m.sujet}</span>
+                        )}
+                      </div>
+                      <p className="text-gray-700 text-sm">
+                        <span className="font-semibold">{m.nom || '—'}</span>
+                        {' · '}
+                        <a
+                          href={`mailto:${m.email}`}
+                          className="text-[#1B5E20] font-bold hover:underline break-all"
+                        >
+                          {m.email}
+                        </a>
+                      </p>
+                      {m.message && (
+                        <p className="text-gray-600 text-sm mt-2 whitespace-pre-wrap border-l-2 border-emerald-200 pl-3">
+                          {m.message}
+                        </p>
+                      )}
+                      <p className="text-gray-400 text-xs mt-2">
+                        Reçu :{' '}
+                        {m.created_at
+                          ? new Date(m.created_at).toLocaleString('fr-FR')
+                          : '—'}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 shrink-0 lg:w-52">
+                      <select
+                        value={st}
+                        onChange={(e) => changerStatutMessageContact(m.id, e.target.value)}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-[#1B5E20]"
+                      >
+                        {STATUT_CONTACT_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      {m.email && (
+                        <a
+                          href={mailHref}
+                          className="text-center text-xs font-bold px-3 py-2 rounded-lg bg-[#1B5E20] text-white hover:bg-green-800"
+                        >
+                          Répondre (courriel)
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <label className="text-[10px] font-bold uppercase text-gray-500 block mb-1">
+                      Note interne (non visible par l’utilisateur)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={
+                        notesBrouillonContact[m.id] !== undefined
+                          ? notesBrouillonContact[m.id]
+                          : (m.note_interne ?? '')
+                      }
+                      onChange={(e) =>
+                        setNotesBrouillonContact((prev) => ({
+                          ...prev,
+                          [m.id]: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#1B5E20]"
+                      placeholder="Mémo équipe, suivi, lien CRM…"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => sauverNoteContact(m.id)}
+                      className="mt-2 text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      Enregistrer la note
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
 
