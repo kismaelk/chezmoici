@@ -1242,11 +1242,12 @@ export default function AdminPortail() {
             <button
               key={o.id}
               type="button"
+              aria-current={onglet === o.id ? 'page' : undefined}
               onClick={() => naviguerOnglet(o.id)}
               className={`text-left text-sm font-semibold rounded-lg px-3 py-2 transition-colors [color-scheme:dark] ${
                 onglet === o.id
-                  ? 'bg-teal-600 !text-white text-white shadow-md ring-1 ring-white/25'
-                  : '!text-amber-50 hover:bg-slate-800 hover:!text-white'
+                  ? 'bg-teal-600 text-white shadow-md ring-1 ring-white/25 aria-current-page:!text-white'
+                  : 'text-amber-50 hover:bg-slate-800 hover:text-white'
               }`}
             >
               {o.label}
