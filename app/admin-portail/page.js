@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState, startTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react'
 import { observerConnexion } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import {
@@ -22,6 +22,9 @@ import {
   updateFeatureFlagAdmin,
   fetchContactMessagesAdmin,
   updateContactMessageAdmin,
+  fetchStaffDiscussionMessages,
+  insertStaffDiscussionMessage,
+  listenStaffDiscussionMessages,
 } from '@/lib/firestoreApp'
 import { useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
@@ -76,8 +79,16 @@ const ONGLETS = [
   { id: 'signalements', label: '🚩 Signalements' },
   { id: 'demandes_badge', label: '🏅 Badges' },
   { id: 'messagerie_contact', label: '📩 Messages contact' },
+  { id: 'chat_equipe', label: '💬 Discussion équipe' },
   { id: 'feature_flags', label: '⚙️ Fonctionnalités' },
 ]
+
+const ROLE_STAFF_COURT = {
+  super_admin: 'Super admin',
+  admin: 'Admin',
+  moderator: 'Modérateur',
+  annonce_manager: 'Gestionnaire annonces',
+}
 
 export default function AdminPortail() {
   const [onglet, setOnglet] = useState('dashboard')
@@ -138,6 +149,10 @@ export default function AdminPortail() {
   const [mergeTarget, setMergeTarget] = useState('')
   const [fusionEnCours, setFusionEnCours] = useState(false)
   const [bulkEnCours, setBulkEnCours] = useState(false)
+  const [staffChatMessages, setStaffChatMessages] = useState([])
+  const [staffChatDraft, setStaffChatDraft] = useState('')
+  const [staffChatSending, setStaffChatSending] = useState(false)
+  const staffChatBottomRef = useRef(null)
 
   const router = useRouter()
 
@@ -219,6 +234,8 @@ export default function AdminPortail() {
           return permissions.voirOngletBadges
         case 'messagerie_contact':
           return permissions.voirOngletMessagerieContact
+        case 'chat_equipe':
+          return permissions.voirOngletChatEquipe
         case 'feature_flags':
           return permissions.voirOngletFeatureFlags
         default:
@@ -243,6 +260,21 @@ export default function AdminPortail() {
     moderator: 'Modérateur',
     annonce_manager: 'Gestionnaire annonces',
   }[roleStaff || ''] || 'Staff'
+
+  const envoyerMessageEquipe = async () => {
+    const t = staffChatDraft.trim()
+    if (!t || staffChatSending) return
+    setStaffChatSending(true)
+    try {
+      await insertStaffDiscussionMessage(t)
+      setStaffChatDraft('')
+      setStaffChatMessages(await fetchStaffDiscussionMessages())
+    } catch (e) {
+      showToast('error', e?.message || String(e))
+    } finally {
+      setStaffChatSending(false)
+    }
+  }
 
   useEffect(() => {
     const unsub = observerConnexion(async (user) => {
@@ -280,6 +312,26 @@ export default function AdminPortail() {
       }
     })()
   }, [chargement, permissions.voirOngletMessagerieContact])
+
+  useEffect(() => {
+    if (chargement || !permissions.voirOngletChatEquipe || onglet !== 'chat_equipe') return
+    let dispose = () => {}
+    ;(async () => {
+      try {
+        const msgs = await fetchStaffDiscussionMessages()
+        setStaffChatMessages(msgs)
+        dispose = listenStaffDiscussionMessages(setStaffChatMessages)
+      } catch (e) {
+        showToast('error', e?.message || 'Impossible de charger la discussion équipe.')
+      }
+    })()
+    return () => dispose()
+  }, [chargement, onglet, permissions.voirOngletChatEquipe, showToast])
+
+  useEffect(() => {
+    if (onglet !== 'chat_equipe') return
+    staffChatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [onglet, staffChatMessages])
 
   useEffect(() => {
     if (chargement) return
@@ -1171,9 +1223,9 @@ export default function AdminPortail() {
     <div className="min-h-screen bg-gradient-to-b from-indigo-50/90 via-slate-50 to-slate-100">
       <SiteHeader />
 
-      <div className="bg-indigo-950 text-white px-4 py-3 flex flex-wrap items-center gap-2 border-b border-indigo-800/80 shadow-sm">
-        <span className="text-cyan-300 font-bold text-sm shrink-0 tracking-tight">🛡️ PORTAIL STAFF</span>
-        <span className="text-indigo-200/90 text-xs">
+      <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center gap-2 border-b border-slate-700 shadow-sm">
+        <span className="text-teal-300 font-bold text-sm shrink-0 tracking-tight">🛡️ PORTAIL STAFF</span>
+        <span className="text-slate-300 text-xs">
           Connecté en <strong className="text-white">{roleLabel}</strong>
           {' · '}
           Super admin = contrôle total · Admin = gestion étendue · Modérateur = contenu & signalements ·
@@ -1182,15 +1234,17 @@ export default function AdminPortail() {
       </div>
 
       <div className="flex flex-col lg:flex-row max-w-[1600px] mx-auto min-h-[calc(100vh-8rem)]">
-        <aside className="hidden lg:flex w-56 shrink-0 bg-indigo-950 text-indigo-100 flex-col p-3 gap-1 border-r border-indigo-900/80">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 px-2 mb-1">Sections</p>
+        <aside className="hidden lg:flex w-60 shrink-0 bg-slate-900 flex-col p-3 gap-1 border-r border-slate-700 shadow-inner">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1">Sections</p>
           {ongletsVisibles.map((o) => (
             <button
               key={o.id}
               type="button"
               onClick={() => naviguerOnglet(o.id)}
               className={`text-left text-sm font-semibold rounded-lg px-3 py-2 transition-colors ${
-                onglet === o.id ? 'bg-teal-600 text-white shadow-md' : 'hover:bg-indigo-900/70'
+                onglet === o.id
+                  ? 'bg-teal-600 text-white shadow-md'
+                  : 'text-slate-100 hover:bg-slate-800 hover:text-white'
               }`}
             >
               {o.label}
@@ -1236,7 +1290,7 @@ export default function AdminPortail() {
               </button>
             ))}
           </div>
-          {onglet !== 'dashboard' && (
+          {onglet !== 'dashboard' && onglet !== 'chat_equipe' && (
             <input
               type="text"
               placeholder={
@@ -1395,6 +1449,15 @@ export default function AdminPortail() {
                   className="text-xs font-bold px-3 py-2 rounded-lg bg-white border border-indigo-200 text-indigo-900 hover:bg-indigo-50"
                 >
                   Demandes badge
+                </button>
+              )}
+              {permissions.voirOngletChatEquipe && (
+                <button
+                  type="button"
+                  onClick={() => naviguerOnglet('chat_equipe')}
+                  className="text-xs font-bold px-3 py-2 rounded-lg bg-white border border-indigo-200 text-indigo-900 hover:bg-indigo-50"
+                >
+                  Discussion équipe
                 </button>
               )}
             </div>
@@ -2288,6 +2351,101 @@ export default function AdminPortail() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {onglet === 'chat_equipe' && (
+          <div className="flex flex-col max-h-[min(72vh,720px)] rounded-2xl border border-slate-200 bg-slate-50 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-200 bg-slate-900 text-slate-100">
+              <p className="font-bold text-sm text-white">Discussion équipe</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Salon réservé aux comptes staff (super admin, admin, modérateur, gestionnaire). Messages visibles
+                par tous les membres de l’équipe.
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[280px] bg-slate-100/80">
+              {staffChatMessages.length === 0 && (
+                <p className="text-center text-slate-500 text-sm py-12">
+                  Aucun message pour l’instant. Écrivez le premier ci-dessous.
+                </p>
+              )}
+              {staffChatMessages.map((msg) => {
+                const isMoi = msg.author_id === adminUid
+                const roleCourt =
+                  ROLE_STAFF_COURT[msg.author_admin_role] ||
+                  (msg.author_is_admin ? 'Super admin' : '—')
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex gap-3 ${isMoi ? 'flex-row-reverse' : ''}`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        isMoi ? 'bg-teal-600 text-white' : 'bg-slate-600 text-white'
+                      }`}
+                    >
+                      {(msg.author_nom || '?').trim().charAt(0).toUpperCase()}
+                    </div>
+                    <div className={`min-w-0 max-w-[85%] ${isMoi ? 'items-end' : 'items-start'} flex flex-col`}>
+                      <div
+                        className={`flex flex-wrap items-baseline gap-x-2 gap-y-0 text-xs ${
+                          isMoi ? 'justify-end' : ''
+                        }`}
+                      >
+                        <span className="font-bold text-slate-800">
+                          {msg.author_nom?.trim() || 'Sans nom'}
+                        </span>
+                        <span className="text-slate-500 font-medium">{roleCourt}</span>
+                        <span className="text-slate-400">
+                          {msg.created_at
+                            ? new Date(msg.created_at).toLocaleString('fr-FR', {
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : ''}
+                        </span>
+                      </div>
+                      <div
+                        className={`mt-1 rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words shadow-sm ${
+                          isMoi
+                            ? 'bg-teal-600 text-white rounded-tr-sm'
+                            : 'bg-white text-slate-800 border border-slate-200 rounded-tl-sm'
+                        }`}
+                      >
+                        {msg.body}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              <div ref={staffChatBottomRef} />
+            </div>
+            <div className="p-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row gap-2">
+              <textarea
+                rows={2}
+                value={staffChatDraft}
+                onChange={(e) => setStaffChatDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    void envoyerMessageEquipe()
+                  }
+                }}
+                placeholder="Message à tout le staff… (Entrée pour envoyer, Maj+Entrée pour une ligne)"
+                className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 resize-y min-h-[44px]"
+                disabled={staffChatSending}
+              />
+              <button
+                type="button"
+                onClick={() => void envoyerMessageEquipe()}
+                disabled={staffChatSending || !staffChatDraft.trim()}
+                className="shrink-0 self-end sm:self-stretch px-4 py-2 rounded-xl bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 disabled:opacity-45 disabled:cursor-not-allowed"
+              >
+                {staffChatSending ? '…' : 'Envoyer'}
+              </button>
+            </div>
           </div>
         )}
 

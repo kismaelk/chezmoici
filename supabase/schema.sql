@@ -324,6 +324,14 @@ create table if not exists site_feature_flags (
 );
 alter table site_feature_flags enable row level security;
 
+-- Salon discussion staff (RLS : migrations 20260510000004)
+create table if not exists staff_discussion_messages (
+  id uuid default gen_random_uuid() primary key,
+  author_id uuid not null references profiles(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
 -- Localisation précise des annonces
 alter table annonces add column if not exists rue              text;
 alter table annonces add column if not exists secteur          text;
