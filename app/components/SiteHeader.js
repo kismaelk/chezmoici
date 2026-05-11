@@ -9,11 +9,16 @@ import Notifications from '@/app/components/Notifications'
 import { getHeaderAuthState, subscribeHeaderAuth } from '@/lib/headerAuthStore'
 
 /** « Carte » est le bouton à côté de Publier (évite le doublon dans la barre) */
-const LIENS = [
-  { href: '/annonces?type=location', label: 'Louer' },
-  { href: '/annonces?type=vente', label: 'Acheter' },
+const NAV_ITEMS = [
+  {
+    id: 'acheter_louer',
+    label: 'Acheter/Louer',
+    dropdown: [
+      { href: '/annonces?type=location', label: 'Louer' },
+      { href: '/annonces?type=vente', label: 'Acheter' },
+    ],
+  },
   { href: '/annonces?type=prestations', label: 'Services & pros' },
-  { href: '/guide', label: 'Guide' },
   { href: '/packs', label: 'Packs' },
 ]
 
@@ -71,29 +76,56 @@ export default function SiteHeader() {
           </div>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-1 shrink-0 min-w-0">
-          {LIENS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-[color:var(--chez-green,#1B5E20)] transition-colors"
-            >
-              {l.label}
-            </Link>
-          ))}
+        <nav className="hidden lg:flex flex-1 justify-center items-center gap-1 shrink-0 min-w-0">
+          {NAV_ITEMS.map((it) => {
+            if (it.dropdown) {
+              return (
+                <div key={it.id} className="relative group">
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-[color:var(--chez-green,#1B5E20)] transition-colors"
+                    aria-label={it.label}
+                  >
+                    {it.label}
+                  </button>
+                  <div className="absolute left-0 top-full mt-2 bg-white border border-gray-100 shadow-xl rounded-xl overflow-hidden hidden group-hover:block z-[1001]">
+                    {it.dropdown.map((d) => (
+                      <Link
+                        key={d.href}
+                        href={d.href}
+                        className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-[color:var(--chez-green,#1B5E20)]"
+                      >
+                        {d.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <Link
+                key={it.href}
+                href={it.href}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-[color:var(--chez-green,#1B5E20)] transition-colors"
+              >
+                {it.label}
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="flex flex-1 sm:flex-none flex-wrap items-center justify-end gap-1 sm:gap-2 min-w-0 basis-full sm:basis-auto">
           <Link
             href="/carte"
-            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 shrink-0 border border-[color:var(--chez-green,#1B5E20)]/25 text-[color:var(--chez-green,#1B5E20)] px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-emerald-50 transition-colors"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 shrink-0 border border-[color:var(--chez-green,#1B5E20)]/25 text-[color:var(--chez-green,#1B5E20)] px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-emerald-50 transition-colors transition-transform duration-150 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-sm"
           >
             <span aria-hidden>🗺️</span>
             <span className="hidden sm:inline">Carte</span>
           </Link>
           <Link
             href="/publier"
-            className="hidden md:inline-flex items-center gap-1 bg-[#F9A825] text-white px-2.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-yellow-600 whitespace-nowrap shrink-0"
+            className="hidden md:inline-flex items-center gap-1 bg-[#F9A825] text-white px-2.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-yellow-600 whitespace-nowrap shrink-0 transition-transform duration-150 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-sm"
           >
             <span className="text-base leading-none">+</span> Publier
           </Link>
@@ -105,7 +137,7 @@ export default function SiteHeader() {
                 <button
                   type="button"
                   onClick={() => setOuvert((v) => !v)}
-                  className="flex items-center gap-2 border border-gray-200 rounded-full pl-2 pr-3 py-1.5 hover:border-[#1B5E20] hover:bg-[#E8F5E9] transition-colors"
+                  className={`flex items-center gap-2 border border-gray-200 rounded-full pl-2 pr-3 py-1.5 transition-colors transition-transform duration-150 hover:border-[#1B5E20] hover:bg-[#E8F5E9] hover:-translate-y-0.5 hover:shadow-sm ${compteBadge.text === 'Compte vérifié' ? 'ring-2 ring-emerald-200/60' : ''}`}
                   aria-label="Menu du compte"
                 >
                   {profil?.photo_url ? (

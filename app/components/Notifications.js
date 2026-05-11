@@ -34,6 +34,7 @@ export default function Notifications({ utilisateurId }) {
   const formaterDate = (date) => {
     const d = new Date(date)
     if (Number.isNaN(d.getTime())) return ''
+    // eslint-disable-next-line react-hooks/purity
     const diff = Date.now() - d.getTime()
     if (diff < 60000) return "À l'instant"
     if (diff < 3600000) return `Il y a ${Math.floor(diff / 60000)} min`
@@ -46,11 +47,13 @@ export default function Notifications({ utilisateurId }) {
       <button
         type="button"
         onClick={() => setOuvert(!ouvert)}
-        className="relative text-gray-600 p-2 hover:bg-gray-100 rounded-lg"
+        className={`relative text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-transform duration-150 hover:scale-[1.08] hover:text-[color:var(--chez-green,#1B5E20)] ${nonLues > 0 ? 'animate-pulse' : ''}`}
         aria-expanded={ouvert}
         aria-label="Notifications"
       >
-        <span className="text-xl">🔔</span>
+        <span className="text-xl" aria-hidden>
+          🔔
+        </span>
         {nonLues > 0 && (
           <span className="absolute -top-1 -right-1 bg-[#F9A825] text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
             {nonLues > 9 ? '9+' : nonLues}
