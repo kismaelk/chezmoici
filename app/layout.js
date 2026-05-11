@@ -2,6 +2,7 @@ import './globals.css'
 import BackToTopButton from '@/app/components/BackToTopButton'
 import AuthStaleSessionCleaner from '@/app/components/AuthStaleSessionCleaner'
 import AccountSuspensionListener from '@/app/components/AccountSuspensionListener'
+import HeaderAuthSubscriber from '@/app/components/HeaderAuthSubscriber'
 
 export const metadata = {
   title: 'Chez Moi CI — Immobilier de confiance à Abidjan',
@@ -64,6 +65,7 @@ export default function RootLayout({ children }) {
       <body className="font-sans antialiased" style={{ fontFamily: 'Arial, sans-serif' }}>
         <AuthStaleSessionCleaner />
         <AccountSuspensionListener />
+        <HeaderAuthSubscriber />
         {children}
         <BackToTopButton />
       </body>

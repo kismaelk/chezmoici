@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { observerConnexion, deconnecter } from '@/lib/auth'
-import { getProfilFirestore } from '@/lib/firestoreApp'
+import { useSyncExternalStore, useState } from 'react'
+import { deconnecter } from '@/lib/auth'
 import { isStaff } from '@/lib/staffRoles'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Notifications from '@/app/components/Notifications'
+import { getHeaderAuthState, subscribeHeaderAuth } from '@/lib/headerAuthStore'
 
 /** « Carte » est le bouton à côté de Publier (évite le doublon dans la barre) */
 const LIENS = [
@@ -17,25 +17,17 @@ const LIENS = [
   { href: '/packs', label: 'Packs' },
 ]
 
-export default function SiteHeader({ variant = 'default' }) {
-  const [user, setUser] = useState(null)
-  const [profil, setProfil] = useState(null)
+const SERVER_AUTH_SNAPSHOT = Object.freeze({ user: null, profil: null })
+
+export default function SiteHeader() {
+  const { user, profil } = useSyncExternalStore(
+    subscribeHeaderAuth,
+    getHeaderAuthState,
+    () => SERVER_AUTH_SNAPSHOT
+  )
   const [ouvert, setOuvert] = useState(false)
   const [menuMobile, setMenuMobile] = useState(false)
   const router = useRouter()
-
-  useEffect(() => {
-    const unsub = observerConnexion(async (u) => {
-      setUser(u)
-      if (u) {
-        const p = await getProfilFirestore(u.uid)
-        setProfil(p)
-      } else {
-        setProfil(null)
-      }
-    })
-    return () => unsub()
-  }, [])
 
   const deconnexion = async () => {
     await deconnecter()
@@ -81,30 +73,30 @@ export default function SiteHeader({ variant = 'default' }) {
 
         <nav className="hidden lg:flex items-center gap-1 shrink-0 min-w-0">
           {LIENS.map((l) => (
-            <a
+            <Link
               key={l.href}
               href={l.href}
               className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-[color:var(--chez-green,#1B5E20)] transition-colors"
             >
               {l.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
         <div className="flex flex-1 sm:flex-none flex-wrap items-center justify-end gap-1 sm:gap-2 min-w-0 basis-full sm:basis-auto">
-          <a
+          <Link
             href="/carte"
             className="inline-flex items-center justify-center gap-1 sm:gap-1.5 shrink-0 border border-[color:var(--chez-green,#1B5E20)]/25 text-[color:var(--chez-green,#1B5E20)] px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-emerald-50 transition-colors"
           >
             <span aria-hidden>🗺️</span>
             <span className="hidden sm:inline">Carte</span>
-          </a>
-          <a
+          </Link>
+          <Link
             href="/publier"
             className="hidden md:inline-flex items-center gap-1 bg-[#F9A825] text-white px-2.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-yellow-600 whitespace-nowrap shrink-0"
           >
             <span className="text-base leading-none">+</span> Publier
-          </a>
+          </Link>
 
           {user ? (
             <>
@@ -149,14 +141,15 @@ export default function SiteHeader({ variant = 'default' }) {
                       </div>
                     </div>
                     {accountLinks.map((m) => (
-                      <a
+                      <Link
                         key={m.href}
                         href={m.href}
                         className="flex items-center gap-2 px-3 py-1.5 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20]"
+                        onClick={() => setOuvert(false)}
                       >
                         <span className="text-[13px] leading-none">{m.icon}</span>
                         <span className="font-semibold">{m.label}</span>
-                      </a>
+                      </Link>
                     ))}
                     <div className="border-t border-gray-100 mt-1 pt-1">
                       <button
@@ -173,18 +166,18 @@ export default function SiteHeader({ variant = 'default' }) {
             </>
           ) : (
             <>
-              <a
+              <Link
                 href="/connexion"
                 className="hidden sm:inline-flex text-sm font-medium text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100"
               >
                 Connexion
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/inscription"
                 className="inline-flex items-center justify-center bg-[#1B5E20] text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold hover:bg-green-800 whitespace-nowrap shrink-0"
               >
                 S&apos;inscrire
-              </a>
+              </Link>
             </>
           )}
 
@@ -208,46 +201,52 @@ export default function SiteHeader({ variant = 'default' }) {
       {menuMobile && (
         <div className="lg:hidden bg-white border-t border-gray-100 px-2 py-2">
           {LIENS.map((l) => (
-            <a
+            <Link
               key={l.href}
               href={l.href}
               className="block px-3 py-2 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20] rounded-lg text-sm font-medium"
+              onClick={() => setMenuMobile(false)}
             >
               {l.label}
-            </a>
+            </Link>
           ))}
-          <a
+          <Link
             href="/calculateur-pret"
             className="block px-3 py-2 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20] rounded-lg text-sm font-medium"
+            onClick={() => setMenuMobile(false)}
           >
             Calculateur de prêt
-          </a>
-          <a
+          </Link>
+          <Link
             href="/estimation"
             className="block px-3 py-2 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20] rounded-lg text-sm font-medium"
+            onClick={() => setMenuMobile(false)}
           >
             Estimation de bien
-          </a>
-          <a
+          </Link>
+          <Link
             href="/guide"
             className="block px-3 py-2 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20] rounded-lg text-sm font-medium"
+            onClick={() => setMenuMobile(false)}
           >
             Guide achat & financement
-          </a>
+          </Link>
           {!user && (
-            <a
+            <Link
               href="/connexion"
               className="block px-3 py-2 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20] rounded-lg text-sm font-medium"
+              onClick={() => setMenuMobile(false)}
             >
               Connexion
-            </a>
+            </Link>
           )}
-          <a
+          <Link
             href="/publier"
             className="block mt-2 mx-1 bg-[#F9A825] text-white px-4 py-2 rounded-lg text-sm font-bold text-center hover:bg-yellow-600"
+            onClick={() => setMenuMobile(false)}
           >
             + Publier une annonce
-          </a>
+          </Link>
         </div>
       )}
     </header>
