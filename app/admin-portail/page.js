@@ -30,7 +30,7 @@ import { useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
 import { resolveStaffRole, staffPermissions } from '@/lib/staffRoles'
-import { telechargerCsv } from '@/lib/adminCsv'
+import AdminExportButtons from '@/app/components/admin/AdminExportButtons'
 
 const BADGE_LABEL = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
 const BADGE_OPTIONS = ['bronze', 'argent', 'or']
@@ -166,31 +166,6 @@ export default function AdminPortail() {
       setToasts((t) => t.filter((x) => x.id !== id))
     }, 5200)
   }, [])
-
-  const ouvrirImpressionPdfListe = useCallback((titre, entetes, lignesTextes) => {
-    const esc = (s) =>
-      String(s ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-    const rowsHtml = lignesTextes
-      .map((row) => `<tr>${row.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`)
-      .join('')
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(
-      titre
-    )}</title><style>body{font-family:system-ui,sans-serif;padding:16px;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #ccc;padding:6px;font-size:11px;text-align:left;}th{background:#f4f4f5;}</style></head><body><h1 style="font-size:16px;">${esc(
-      titre
-    )}</h1><table><thead><tr>${entetes
-      .map((h) => `<th>${esc(h)}</th>`)
-      .join('')}</tr></thead><tbody>${rowsHtml}</tbody></table><script>window.onload=function(){window.print();}</script></body></html>`
-    const w = typeof window !== 'undefined' ? window.open('', '_blank') : null
-    if (!w) {
-      showToast('error', 'Autorisez les pop-ups pour imprimer ou exporter en PDF.')
-      return
-    }
-    w.document.write(html)
-    w.document.close()
-  }, [showToast])
 
   const notifierEquipeEvent = useCallback(async (event, payload) => {
     try {
@@ -1511,61 +1486,34 @@ export default function AdminPortail() {
                 </select>
               </div>
               {permissions.peutExporterDonnees && (
-                <div className="flex flex-wrap gap-2 items-center border-t border-slate-100 pt-3">
-                  <span className="text-xs font-bold text-slate-500 uppercase">
-                    Export (résultats filtrés)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      telechargerCsv(
-                        'annonces_admin',
-                        [
-                          { key: 'id', label: 'id' },
-                          { key: 'titre', label: 'titre' },
-                          { key: 'statut', label: 'statut' },
-                          { key: 'type', label: 'type' },
-                          { key: 'badge', label: 'badge' },
-                          { key: 'quartier', label: 'quartier' },
-                          { key: 'prix', label: 'prix' },
-                          { key: 'proprietaire', label: 'proprietaire' },
-                        ],
-                        annoncesFiltrees.map((a) => ({
-                          id: a.id,
-                          titre: a.titre,
-                          statut: a.statut,
-                          type: a.type,
-                          badge: a.badge,
-                          quartier: a.quartier,
-                          prix: a.prix,
-                          proprietaire: a.profiles?.nom || '',
-                        }))
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
-                  >
-                    CSV / Excel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      ouvrirImpressionPdfListe(
-                        'Annonces',
-                        ['id', 'titre', 'statut', 'type', 'badge'],
-                        annoncesFiltrees.map((a) => [
-                          a.id,
-                          a.titre,
-                          a.statut,
-                          a.type,
-                          a.badge,
-                        ])
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-                  >
-                    PDF (impression)
-                  </button>
-                </div>
+                <AdminExportButtons
+                  wrapperClassName="flex flex-wrap gap-2 items-center border-t border-slate-100 pt-3"
+                  label="Export (résultats filtrés)"
+                  fichierBase="annonces_admin"
+                  sheetName="Annonces"
+                  titrePdf="Annonces"
+                  showToast={showToast}
+                  columns={[
+                    { key: 'id', label: 'id' },
+                    { key: 'titre', label: 'titre' },
+                    { key: 'statut', label: 'statut' },
+                    { key: 'type', label: 'type' },
+                    { key: 'badge', label: 'badge' },
+                    { key: 'quartier', label: 'quartier' },
+                    { key: 'prix', label: 'prix' },
+                    { key: 'proprietaire', label: 'proprietaire' },
+                  ]}
+                  rows={annoncesFiltrees.map((a) => ({
+                    id: a.id,
+                    titre: a.titre,
+                    statut: a.statut,
+                    type: a.type,
+                    badge: a.badge,
+                    quartier: a.quartier,
+                    prix: a.prix,
+                    proprietaire: a.profiles?.nom || '',
+                  }))}
+                />
               )}
               {permissions.selectionGroupéeAnnonces && (
                 <div className="flex flex-wrap gap-2 items-end border-t border-slate-100 pt-3">
@@ -1766,52 +1714,29 @@ export default function AdminPortail() {
                 </select>
               </div>
               {permissions.peutExporterDonnees && (
-                <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      telechargerCsv(
-                        'signalements_admin',
-                        [
-                          { key: 'id', label: 'id' },
-                          { key: 'motif', label: 'motif' },
-                          { key: 'statut', label: 'statut' },
-                          { key: 'annonce', label: 'annonce' },
-                          { key: 'signalant', label: 'signalant' },
-                          { key: 'created_at', label: 'cree_le' },
-                        ],
-                        signalementsFiltres.map((s) => ({
-                          id: s.id,
-                          motif: s.motif,
-                          statut: s.statut,
-                          annonce: s.annonce_titre || s.annonce_id,
-                          signalant: s.profiles?.nom || s.signalant_uid,
-                          created_at: s.created_at,
-                        }))
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
-                  >
-                    CSV / Excel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      ouvrirImpressionPdfListe(
-                        'Signalements',
-                        ['motif', 'statut', 'annonce'],
-                        signalementsFiltres.map((s) => [
-                          s.motif,
-                          s.statut,
-                          s.annonce_titre || s.annonce_id,
-                        ])
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-                  >
-                    PDF (impression)
-                  </button>
-                </div>
+                <AdminExportButtons
+                  wrapperClassName="flex flex-wrap gap-2 border-t border-slate-100 pt-3"
+                  fichierBase="signalements_admin"
+                  sheetName="Signalements"
+                  titrePdf="Signalements"
+                  showToast={showToast}
+                  columns={[
+                    { key: 'id', label: 'id' },
+                    { key: 'motif', label: 'motif' },
+                    { key: 'statut', label: 'statut' },
+                    { key: 'annonce', label: 'annonce' },
+                    { key: 'signalant', label: 'signalant' },
+                    { key: 'created_at', label: 'cree_le' },
+                  ]}
+                  rows={signalementsFiltres.map((s) => ({
+                    id: s.id,
+                    motif: s.motif,
+                    statut: s.statut,
+                    annonce: s.annonce_titre || s.annonce_id,
+                    signalant: s.profiles?.nom || s.signalant_uid,
+                    created_at: s.created_at,
+                  }))}
+                />
               )}
               {permissions.selectionGroupéeModerationContenu && (
                 <div className="flex flex-wrap gap-2 items-end border-t border-slate-100 pt-3">
@@ -1942,55 +1867,31 @@ export default function AdminPortail() {
                 </select>
               </div>
               {permissions.peutExporterDonnees && (
-                <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      telechargerCsv(
-                        'demandes_badge_admin',
-                        [
-                          { key: 'id', label: 'id' },
-                          { key: 'nom', label: 'nom' },
-                          { key: 'telephone', label: 'telephone' },
-                          { key: 'badge_demande', label: 'badge_demande' },
-                          { key: 'statut', label: 'statut' },
-                          { key: 'annonce', label: 'annonce' },
-                          { key: 'created_at', label: 'cree_le' },
-                        ],
-                        demandesBadgeFiltrees.map((d) => ({
-                          id: d.id,
-                          nom: d.nom,
-                          telephone: d.telephone,
-                          badge_demande: d.badge_demande,
-                          statut: d.statut,
-                          annonce: d.annonce_titre || d.annonce_id,
-                          created_at: d.created_at,
-                        }))
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
-                  >
-                    CSV / Excel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      ouvrirImpressionPdfListe(
-                        'Demandes badge',
-                        ['nom', 'telephone', 'badge', 'statut'],
-                        demandesBadgeFiltrees.map((d) => [
-                          d.nom,
-                          d.telephone,
-                          d.badge_demande,
-                          d.statut,
-                        ])
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-                  >
-                    PDF (impression)
-                  </button>
-                </div>
+                <AdminExportButtons
+                  wrapperClassName="flex flex-wrap gap-2 border-t border-slate-100 pt-3"
+                  fichierBase="demandes_badge_admin"
+                  sheetName="Demandes badge"
+                  titrePdf="Demandes badge"
+                  showToast={showToast}
+                  columns={[
+                    { key: 'id', label: 'id' },
+                    { key: 'nom', label: 'nom' },
+                    { key: 'telephone', label: 'telephone' },
+                    { key: 'badge_demande', label: 'badge_demande' },
+                    { key: 'statut', label: 'statut' },
+                    { key: 'annonce', label: 'annonce' },
+                    { key: 'created_at', label: 'cree_le' },
+                  ]}
+                  rows={demandesBadgeFiltrees.map((d) => ({
+                    id: d.id,
+                    nom: d.nom,
+                    telephone: d.telephone,
+                    badge_demande: d.badge_demande,
+                    statut: d.statut,
+                    annonce: d.annonce_titre || d.annonce_id,
+                    created_at: d.created_at,
+                  }))}
+                />
               )}
               {permissions.selectionGroupéeModerationContenu && (
                 <div className="flex flex-wrap gap-2 items-end border-t border-slate-100 pt-3">
@@ -2134,53 +2035,29 @@ export default function AdminPortail() {
                 </select>
               </div>
               {permissions.peutExporterDonnees && (
-                <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      telechargerCsv(
-                        'messages_contact_admin',
-                        [
-                          { key: 'id', label: 'id' },
-                          { key: 'statut', label: 'statut' },
-                          { key: 'nom', label: 'nom' },
-                          { key: 'email', label: 'email' },
-                          { key: 'sujet', label: 'sujet' },
-                          { key: 'created_at', label: 'cree_le' },
-                        ],
-                        messagesContactFiltres.map((m) => ({
-                          id: m.id,
-                          statut: m.statut || 'nouveau',
-                          nom: m.nom,
-                          email: m.email,
-                          sujet: m.sujet,
-                          created_at: m.created_at,
-                        }))
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
-                  >
-                    CSV / Excel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      ouvrirImpressionPdfListe(
-                        'Messages contact',
-                        ['statut', 'nom', 'email', 'sujet'],
-                        messagesContactFiltres.map((m) => [
-                          m.statut || 'nouveau',
-                          m.nom,
-                          m.email,
-                          m.sujet,
-                        ])
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-                  >
-                    PDF (impression)
-                  </button>
-                </div>
+                <AdminExportButtons
+                  wrapperClassName="flex flex-wrap gap-2 border-t border-slate-100 pt-3"
+                  fichierBase="messages_contact_admin"
+                  sheetName="Messages contact"
+                  titrePdf="Messages contact"
+                  showToast={showToast}
+                  columns={[
+                    { key: 'id', label: 'id' },
+                    { key: 'statut', label: 'statut' },
+                    { key: 'nom', label: 'nom' },
+                    { key: 'email', label: 'email' },
+                    { key: 'sujet', label: 'sujet' },
+                    { key: 'created_at', label: 'cree_le' },
+                  ]}
+                  rows={messagesContactFiltres.map((m) => ({
+                    id: m.id,
+                    statut: m.statut || 'nouveau',
+                    nom: m.nom,
+                    email: m.email,
+                    sujet: m.sujet,
+                    created_at: m.created_at,
+                  }))}
+                />
               )}
               {permissions.selectionGroupéeMessagerie && (
                 <div className="flex flex-wrap gap-2 items-end border-t border-slate-100 pt-3">
@@ -2468,53 +2345,29 @@ export default function AdminPortail() {
                 </select>
               </div>
               {permissions.peutExporterDonnees && (
-                <div className="flex flex-wrap gap-2 sm:ml-auto">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      telechargerCsv(
-                        'avis_admin',
-                        [
-                          { key: 'id', label: 'id' },
-                          { key: 'note', label: 'note' },
-                          { key: 'auteur', label: 'auteur' },
-                          { key: 'annonce', label: 'annonce' },
-                          { key: 'masque', label: 'masque' },
-                          { key: 'created_at', label: 'cree_le' },
-                        ],
-                        avisFiltres.map((a) => ({
-                          id: a.id,
-                          note: a.note,
-                          auteur: a.auteur_nom,
-                          annonce: a.annonce_titre || a.annonce_id,
-                          masque: a.is_hidden ? 'oui' : 'non',
-                          created_at: a.created_at,
-                        }))
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
-                  >
-                    CSV / Excel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      ouvrirImpressionPdfListe(
-                        'Avis',
-                        ['note', 'auteur', 'annonce', 'masqué'],
-                        avisFiltres.map((a) => [
-                          a.note,
-                          a.auteur_nom,
-                          a.annonce_titre || a.annonce_id,
-                          a.is_hidden ? 'oui' : 'non',
-                        ])
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-                  >
-                    PDF (impression)
-                  </button>
-                </div>
+                <AdminExportButtons
+                  wrapperClassName="flex flex-wrap gap-2 sm:ml-auto"
+                  fichierBase="avis_admin"
+                  sheetName="Avis"
+                  titrePdf="Avis"
+                  showToast={showToast}
+                  columns={[
+                    { key: 'id', label: 'id' },
+                    { key: 'note', label: 'note' },
+                    { key: 'auteur', label: 'auteur' },
+                    { key: 'annonce', label: 'annonce' },
+                    { key: 'masque', label: 'masque' },
+                    { key: 'created_at', label: 'cree_le' },
+                  ]}
+                  rows={avisFiltres.map((a) => ({
+                    id: a.id,
+                    note: a.note,
+                    auteur: a.auteur_nom,
+                    annonce: a.annonce_titre || a.annonce_id,
+                    masque: a.is_hidden ? 'oui' : 'non',
+                    created_at: a.created_at,
+                  }))}
+                />
               )}
             </div>
             {avisFiltres.length === 0 && (
@@ -2581,52 +2434,29 @@ export default function AdminPortail() {
                 </select>
               </div>
               {permissions.peutExporterDonnees && (
-                <div className="flex flex-wrap gap-2 sm:ml-auto">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      telechargerCsv(
-                        'historique_moderation_avis',
-                        [
-                          { key: 'id', label: 'id' },
-                          { key: 'action', label: 'action' },
-                          { key: 'annonce', label: 'annonce' },
-                          { key: 'moderateur', label: 'moderateur' },
-                          { key: 'reason', label: 'motif' },
-                          { key: 'created_at', label: 'cree_le' },
-                        ],
-                        logsFiltres.map((l) => ({
-                          id: l.id,
-                          action: l.action,
-                          annonce: l.annonce_titre || l.annonce_id,
-                          moderateur: l.moderateur_nom || l.moderator_id,
-                          reason: l.reason,
-                          created_at: l.created_at,
-                        }))
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
-                  >
-                    CSV / Excel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      ouvrirImpressionPdfListe(
-                        'Historique modération avis',
-                        ['action', 'annonce', 'modérateur'],
-                        logsFiltres.map((l) => [
-                          l.action,
-                          l.annonce_titre || l.annonce_id,
-                          l.moderateur_nom || l.moderator_id,
-                        ])
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-                  >
-                    PDF (impression)
-                  </button>
-                </div>
+                <AdminExportButtons
+                  wrapperClassName="flex flex-wrap gap-2 sm:ml-auto"
+                  fichierBase="historique_moderation_avis"
+                  sheetName="Historique moderation"
+                  titrePdf="Historique modération avis"
+                  showToast={showToast}
+                  columns={[
+                    { key: 'id', label: 'id' },
+                    { key: 'action', label: 'action' },
+                    { key: 'annonce', label: 'annonce' },
+                    { key: 'moderateur', label: 'moderateur' },
+                    { key: 'reason', label: 'motif' },
+                    { key: 'created_at', label: 'cree_le' },
+                  ]}
+                  rows={logsFiltres.map((l) => ({
+                    id: l.id,
+                    action: l.action,
+                    annonce: l.annonce_titre || l.annonce_id,
+                    moderateur: l.moderateur_nom || l.moderator_id,
+                    reason: l.reason,
+                    created_at: l.created_at,
+                  }))}
+                />
               )}
             </div>
             {logsFiltres.length === 0 && (
@@ -2759,59 +2589,34 @@ export default function AdminPortail() {
                 />
               </div>
               {permissions.peutExporterDonnees && (
-                <div className="flex flex-wrap gap-2 items-center border-t border-slate-100 pt-3">
-                  <span className="text-xs font-bold text-slate-500 uppercase">Export</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      telechargerCsv(
-                        'utilisateurs_admin',
-                        [
-                          { key: 'id', label: 'id' },
-                          { key: 'nom', label: 'nom' },
-                          { key: 'email', label: 'email' },
-                          { key: 'type', label: 'type' },
-                          { key: 'account_status', label: 'statut_compte' },
-                          { key: 'badge', label: 'badge' },
-                          { key: 'quartier', label: 'quartier' },
-                          { key: 'staff', label: 'equipe' },
-                        ],
-                        utilisateursFiltres.map((u) => ({
-                          id: u.id,
-                          nom: u.nom,
-                          email: u.email,
-                          type: u.type,
-                          account_status: u.account_status,
-                          badge: u.badge,
-                          quartier: u.quartier,
-                          staff: u.is_admin ? 'oui' : 'non',
-                        }))
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
-                  >
-                    CSV / Excel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      ouvrirImpressionPdfListe(
-                        'Utilisateurs',
-                        ['id', 'nom', 'email', 'statut', 'badge'],
-                        utilisateursFiltres.map((u) => [
-                          u.id,
-                          u.nom,
-                          u.email,
-                          u.account_status,
-                          u.badge,
-                        ])
-                      )
-                    }
-                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-                  >
-                    PDF (impression)
-                  </button>
-                </div>
+                <AdminExportButtons
+                  wrapperClassName="flex flex-wrap gap-2 items-center border-t border-slate-100 pt-3"
+                  label="Export"
+                  fichierBase="utilisateurs_admin"
+                  sheetName="Utilisateurs"
+                  titrePdf="Utilisateurs"
+                  showToast={showToast}
+                  columns={[
+                    { key: 'id', label: 'id' },
+                    { key: 'nom', label: 'nom' },
+                    { key: 'email', label: 'email' },
+                    { key: 'type', label: 'type' },
+                    { key: 'account_status', label: 'statut_compte' },
+                    { key: 'badge', label: 'badge' },
+                    { key: 'quartier', label: 'quartier' },
+                    { key: 'staff', label: 'equipe' },
+                  ]}
+                  rows={utilisateursFiltres.map((u) => ({
+                    id: u.id,
+                    nom: u.nom,
+                    email: u.email,
+                    type: u.type,
+                    account_status: u.account_status,
+                    badge: u.badge,
+                    quartier: u.quartier,
+                    staff: u.is_admin ? 'oui' : 'non',
+                  }))}
+                />
               )}
               {permissions.selectionGroupéeUtilisateurs && permissions.utilisateursEdit && (
                 <div className="flex flex-wrap gap-2 items-end border-t border-slate-100 pt-3">
@@ -3060,29 +2865,23 @@ export default function AdminPortail() {
               Activez ou désactivez des leviers produit (réservé au super admin). Les clés sont créées en base ; ajoutez-en via migration SQL si besoin.
             </p>
             {permissions.peutExporterDonnees && featureFlagsFiltres.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    telechargerCsv(
-                      'feature_flags_admin',
-                      [
-                        { key: 'key', label: 'cle' },
-                        { key: 'value_boolean', label: 'actif' },
-                        { key: 'updated_at', label: 'maj' },
-                      ],
-                      featureFlagsFiltres.map((f) => ({
-                        key: f.key,
-                        value_boolean: f.value_boolean ? 'oui' : 'non',
-                        updated_at: f.updated_at,
-                      }))
-                    )
-                  }
-                  className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
-                >
-                  Exporter CSV / Excel
-                </button>
-              </div>
+              <AdminExportButtons
+                wrapperClassName="flex flex-wrap gap-2"
+                fichierBase="feature_flags_admin"
+                sheetName="Feature flags"
+                titrePdf="Feature flags"
+                showToast={showToast}
+                columns={[
+                  { key: 'key', label: 'cle' },
+                  { key: 'value_boolean', label: 'actif' },
+                  { key: 'updated_at', label: 'maj' },
+                ]}
+                rows={featureFlagsFiltres.map((f) => ({
+                  key: f.key,
+                  value_boolean: f.value_boolean ? 'oui' : 'non',
+                  updated_at: f.updated_at,
+                }))}
+              />
             )}
             {featureFlagsFiltres.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center text-gray-400 border border-gray-100">

@@ -28,14 +28,28 @@ function estTopNote(stat) {
   return Boolean(stat && stat.total > 0 && stat.moyenne >= 4.5)
 }
 
-/** Couleurs d’origine (goutte sur la carte, comme sur ta capture) */
+/** Couleurs vives (marqueurs, prix, accents liste) — aligné esprit Chez Moi CI */
 const TYPE_COLORS = {
-  vente:    { marker: '#2563EB', price: '#2563EB' },
-  location: { marker: '#059669', price: '#059669' },
-  service:  { marker: '#EA580C', price: '#EA580C' },
-  artisan:  { marker: '#7C3AED', price: '#7C3AED' },
+  vente:    { marker: '#1d4ed8', price: '#1e40af', accent: '#3b82f6' },
+  location: { marker: '#059669', price: '#047857', accent: '#10b981' },
+  service:  { marker: '#ea580c', price: '#c2410c', accent: '#fb923c' },
+  artisan:  { marker: '#7c3aed', price: '#6d28d9', accent: '#a78bfa' },
 }
-const MARKER_SELECTED = '#F59E0B'
+const MARKER_SELECTED = '#f59e0b'
+
+/** Style carte plus saturé (ignoré si `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` — styling cloud) */
+const VIVID_MAP_STYLES = [
+  { featureType: 'water', elementType: 'geometry.fill', stylers: [{ color: '#06b6d4' }, { lightness: 12 }] },
+  { featureType: 'landscape.natural', elementType: 'geometry.fill', stylers: [{ color: '#86efac' }, { lightness: 18 }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: '#fef08a' }, { lightness: 22 }] },
+  { featureType: 'poi.park', elementType: 'geometry.fill', stylers: [{ color: '#4ade80' }, { lightness: 5 }] },
+  { featureType: 'road.highway', elementType: 'geometry.fill', stylers: [{ color: '#fde047' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#ca8a04' }, { weight: 0.8 }] },
+  { featureType: 'road.arterial', elementType: 'geometry.fill', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road.local', elementType: 'geometry.fill', stylers: [{ color: '#f1f5f9' }] },
+  { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'simplified' }] },
+]
 
 /** Pins compacts (largeur × hauteur, ancre bas centre) */
 function getClassicPinMetrics(sel) {
@@ -124,18 +138,18 @@ function buildMarkerContentElement(annonce, selected) {
   el.style.pointerEvents = 'auto'
   el.style.touchAction = 'manipulation'
 
-  const fill = selected
-    ? MARKER_SELECTED
-    : (TYPE_COLORS[annonce.type] || TYPE_COLORS.vente).marker
+  const tc = TYPE_COLORS[annonce.type] || TYPE_COLORS.vente
+  const fill = selected ? MARKER_SELECTED : tc.marker
+  const fillDeep = selected ? '#d97706' : tc.price
   const w = selected ? 36 : 32
   const h = selected ? 44 : 38
   el.style.width = `${w}px`
   el.style.height = `${h}px`
   el.style.borderRadius = '9999px 9999px 9999px 0'
   el.style.transform = 'rotate(-45deg)'
-  el.style.background = fill
-  el.style.border = 'none'
-  el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)'
+  el.style.background = `linear-gradient(155deg, ${fill} 0%, ${fillDeep} 100%)`
+  el.style.border = '3px solid #fff'
+  el.style.boxShadow = '0 4px 14px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.08)'
 
   const glyph = document.createElement('span')
   glyph.textContent = emoji
@@ -158,7 +172,7 @@ function buildPinIconDataUrl(annonce, selected) {
   const m = getClassicPinMetrics(selected)
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${m.w}" height="${m.h}" viewBox="0 0 48 56">
     <path d="M24 3 C12 3 3 12 3 24 C3 38 24 53 24 53 C24 53 45 38 45 24 C45 12 36 3 24 3 Z"
-      fill="${fill}" stroke="none"/>
+      fill="${fill}" stroke="#ffffff" stroke-width="2.5"/>
     <text x="24" y="31" text-anchor="middle" font-size="${selected ? 14 : 12}" dominant-baseline="middle">${emoji}</text>
   </svg>`
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
@@ -418,7 +432,7 @@ function CarteGoogleMaps() {
           }
         }
 
-        const map = new google.maps.Map(mapContainerRef.current, {
+        const mapOpts = {
           center: ABIDJAN_CENTER,
           zoom: ABIDJAN_DEFAULT_ZOOM,
           mapId: mapId || undefined,
@@ -426,7 +440,11 @@ function CarteGoogleMaps() {
           streetViewControl: true,
           fullscreenControl: true,
           mapTypeControlOptions: { position: google.maps.ControlPosition.TOP_LEFT },
-        })
+        }
+        if (!mapId) {
+          mapOpts.styles = VIVID_MAP_STYLES
+        }
+        const map = new google.maps.Map(mapContainerRef.current, mapOpts)
         mapRef.current = map
 
         setMapReady(true)
@@ -490,10 +508,10 @@ function CarteGoogleMaps() {
       }
       drawnPolygonRef.current = new google.maps.Polygon({
         paths: pts,
-        fillColor: '#0f766e',
-        fillOpacity: 0.18,
-        strokeColor: '#0f766e',
-        strokeWeight: 2,
+        fillColor: '#10b981',
+        fillOpacity: 0.28,
+        strokeColor: '#047857',
+        strokeWeight: 3,
         clickable: false,
         editable: false,
         zIndex: 1,
@@ -511,8 +529,8 @@ function CarteGoogleMaps() {
     if (dessinZoneActif) {
       if (!draftLineRef.current) {
         draftLineRef.current = new google.maps.Polyline({
-          strokeColor: '#0f766e',
-          strokeWeight: 2,
+          strokeColor: '#059669',
+          strokeWeight: 3,
           map,
         })
       }
@@ -597,22 +615,29 @@ function CarteGoogleMaps() {
         render(cluster) {
           const count = cluster.count
           const position = cluster.position
-          const r = 17
-          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38">
-            <circle cx="19" cy="19" r="${r}" fill="#475569"/>
+          const r = 16
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 42 42">
+            <defs>
+              <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#15803d;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#0d9488;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <circle cx="21" cy="21" r="20" fill="url(#g)" stroke="#fef08a" stroke-width="2.5"/>
+            <circle cx="21" cy="21" r="${r}" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>
           </svg>`
           return new google.maps.Marker({
             position,
             icon: {
               url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-              scaledSize: new google.maps.Size(38, 38),
-              anchor: new google.maps.Point(19, 19),
+              scaledSize: new google.maps.Size(42, 42),
+              anchor: new google.maps.Point(21, 21),
             },
             label: {
               text: String(count),
-              color: 'rgba(255,255,255,0.95)',
-              fontSize: '10px',
-              fontWeight: '600',
+              color: '#fffbeb',
+              fontSize: '11px',
+              fontWeight: '800',
             },
             zIndex: 1000 + count,
           })
@@ -689,21 +714,21 @@ function CarteGoogleMaps() {
   )
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#F5F5F5]">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-gradient-to-b from-emerald-50 via-amber-50/40 to-teal-50/90">
       <SiteHeader />
 
-      <div className="relative z-[600] flex flex-shrink-0 flex-col gap-2 border-b border-gray-200 bg-white px-3 py-2 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <div className="relative z-[600] flex flex-shrink-0 flex-col gap-2 border-b border-emerald-800/15 bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-700 px-3 py-2.5 shadow-lg shadow-emerald-900/20 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div className="flex flex-col min-w-0 gap-0.5 sm:max-w-[40%]">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
-            <span className="text-sm font-semibold text-slate-800">Carte — Côte d&apos;Ivoire</span>
+            <span className="text-sm font-bold tracking-tight text-white drop-shadow-sm">Carte — Côte d&apos;Ivoire</span>
             {!chargement && (
-              <span className="text-xs text-slate-500 flex-shrink-0">
+              <span className="text-xs font-semibold text-amber-100 flex-shrink-0 rounded-full bg-white/15 px-2 py-0.5 backdrop-blur-sm">
                 {annoncesAffichees.length} sur {annoncesFiltrees.length} annonce{annoncesFiltrees.length > 1 ? 's' : ''}
                 {zoneRing ? ' (zone)' : ''}
               </span>
             )}
           </div>
-          <span className="text-[10px] text-slate-400 truncate">Chez Moi CI · Google Maps</span>
+          <span className="text-[10px] text-emerald-100/90 truncate">Chez Moi CI · repères colorés par type</span>
         </div>
 
           <div className="flex flex-1 flex-wrap items-center justify-center gap-1 sm:px-2">
@@ -716,8 +741,8 @@ function CarteGoogleMaps() {
                 onClick={() => appliquerFiltreTypeRapide(f.id)}
                 className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
                   actif
-                    ? 'bg-[#1B5E20] text-white shadow-md'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'bg-amber-400 text-emerald-950 shadow-md ring-2 ring-white/40'
+                    : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
                 }`}
               >
                 {f.label}
@@ -727,7 +752,7 @@ function CarteGoogleMaps() {
             <select
               value={triCarte}
               onChange={(e) => setTriCarte(e.target.value)}
-              className="rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700"
+              className="rounded-full border-2 border-amber-300/60 bg-white/95 px-2.5 py-1.5 text-xs font-bold text-emerald-900 shadow-sm"
             >
               <option value="recent">Récents</option>
               <option value="plus_vus">Plus vus</option>
@@ -738,14 +763,14 @@ function CarteGoogleMaps() {
         <div className="flex flex-shrink-0 items-center justify-end gap-2">
           <Link
             href={lienListe}
-            className="hidden md:inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-[#1B5E20] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#2E7D32]"
+            className="hidden md:inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2 text-sm font-bold text-emerald-950 shadow-md transition-transform hover:scale-[1.02] hover:bg-amber-300"
           >
             Voir en liste
           </Link>
           <button
             type="button"
             onClick={() => setShowListMobile((v) => !v)}
-            className="md:hidden inline-flex flex-shrink-0 items-center gap-1 rounded-lg bg-[#1B5E20] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#2E7D32]"
+            className="md:hidden inline-flex flex-shrink-0 items-center gap-1 rounded-xl bg-amber-400 px-3 py-1.5 text-xs font-bold text-emerald-950 shadow-md transition-transform hover:bg-amber-300"
           >
             {showListMobile ? 'Carte' : 'Liste'}
           </button>
@@ -757,21 +782,21 @@ function CarteGoogleMaps() {
         <div
           className={`${
             showListMobile ? 'flex' : 'hidden'
-          } md:flex min-h-0 w-full flex-shrink-0 flex-col overflow-hidden border-t border-slate-200 bg-white md:w-[300px] md:max-h-none md:border-t-0 md:border-r md:border-slate-200 max-h-[42vh] md:max-h-full`}
+          } md:flex min-h-0 w-full flex-shrink-0 flex-col overflow-hidden border-t-2 border-emerald-700/20 bg-gradient-to-b from-white to-emerald-50/50 shadow-[4px_0_24px_-8px_rgba(6,95,70,0.25)] md:w-[min(100%,22rem)] md:max-h-none md:border-t-0 md:border-r-2 md:border-emerald-800/15 max-h-[46vh] md:max-h-full`}
         >
-          <div className="flex-shrink-0 border-b border-slate-100 bg-slate-50/80 px-3 py-2.5">
-            <h2 className="text-sm font-semibold text-slate-800">
-              {chargement ? 'Chargement...' : `${annoncesAffichees.length} résultats`}
+          <div className="flex-shrink-0 bg-gradient-to-r from-emerald-700 to-teal-600 px-3 py-3 text-white shadow-inner">
+            <h2 className="text-sm font-bold tracking-tight">
+              {chargement ? 'Chargement…' : `${annoncesAffichees.length} résultats`}
             </h2>
-            <p className="text-[11px] text-slate-500 mt-0.5">Toucher une ligne pour centrer la carte</p>
+            <p className="text-[11px] text-emerald-100 mt-0.5 font-medium">Touchez une carte pour zoomer sur la carte</p>
           </div>
-          <div className="cartes-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
+          <div className="cartes-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-emerald-50/30 px-2 py-2 [scrollbar-gutter:stable]">
             {annoncesAffichees.length === 0 && !chargement ? (
-              <div className="p-8 text-center text-slate-400">
+              <div className="m-2 rounded-2xl border-2 border-dashed border-amber-300/80 bg-amber-50/90 p-8 text-center">
                 <p className="text-4xl mb-2">🔍</p>
-                <p className="text-sm">Aucune annonce dans cette zone</p>
+                <p className="text-sm font-semibold text-emerald-900">Aucune annonce dans cette zone</p>
                 {zoneRing && (
-                  <button type="button" onClick={effacerZone} className="mt-3 text-xs font-semibold text-emerald-800 underline decoration-emerald-800/40 underline-offset-2">
+                  <button type="button" onClick={effacerZone} className="mt-4 rounded-full bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-emerald-700">
                     Effacer le filtre zone
                   </button>
                 )}
@@ -787,14 +812,23 @@ function CarteGoogleMaps() {
                     key={annonce.id}
                     type="button"
                     onClick={() => allerAnnonce(annonce)}
-                    className={`w-full border-b border-slate-100 text-left transition-colors ${
-                      estPrestation ? 'px-2 py-1.5' : 'px-2.5 py-2'
-                    } ${estSel ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200/60' : 'hover:bg-slate-50'}`}
+                    className={`mb-2 w-full rounded-xl border-2 text-left shadow-sm transition-all duration-150 ${
+                      estPrestation ? 'p-2' : 'p-2.5'
+                    } ${
+                      estSel
+                        ? 'border-amber-400 bg-gradient-to-br from-amber-50 to-white shadow-md ring-2 ring-amber-300/60 scale-[1.01]'
+                        : 'border-emerald-100 bg-white hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5'
+                    }`}
+                    style={{
+                      borderLeftWidth: '5px',
+                      borderLeftStyle: 'solid',
+                      borderLeftColor: col.accent || col.marker,
+                    }}
                   >
                     <div className={`flex items-center ${estPrestation ? 'gap-2' : 'gap-2.5'}`}>
                       <div
-                        className={`flex-shrink-0 overflow-hidden rounded-md bg-slate-100 ring-1 ring-slate-200/80 ${
-                          estPrestation ? 'h-8 w-8' : 'h-11 w-11 rounded-lg'
+                        className={`flex-shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-slate-100 to-emerald-50 ring-2 ring-white shadow-md ${
+                          estPrestation ? 'h-9 w-9' : 'h-12 w-12'
                         }`}
                       >
                         <img src={cover} alt="" className="h-full w-full object-cover" />
@@ -802,14 +836,14 @@ function CarteGoogleMaps() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2">
                           <p
-                            className={`truncate font-semibold leading-tight text-slate-800 ${
+                            className={`truncate font-bold leading-tight text-slate-900 ${
                               estPrestation ? 'text-[11px]' : 'text-[13px]'
                             }`}
                           >
                             {annonce.titre}
                           </p>
                           <span
-                            className={`flex-shrink-0 font-semibold tabular-nums ${
+                            className={`flex-shrink-0 font-extrabold tabular-nums ${
                               estPrestation ? 'text-[10px]' : 'text-[12px]'
                             }`}
                             style={{ color: col.price }}
@@ -817,15 +851,15 @@ function CarteGoogleMaps() {
                             {formaterPrix(annonce.prix)}
                           </span>
                         </div>
-                        <p className={`truncate text-slate-500 ${estPrestation ? 'mt-0 text-[10px]' : 'mt-0.5 text-[11px]'}`}>
+                        <p className={`truncate font-medium text-emerald-800/85 ${estPrestation ? 'mt-0 text-[10px]' : 'mt-0.5 text-[11px]'}`}>
                           {annonce.quartier}
                           {estPrestation && annonce.type_service ? ` · ${annonce.type_service}` : ''}
                         </p>
-                        <p className={`truncate text-slate-400 ${estPrestation ? 'mt-0 text-[10px]' : 'mt-0.5 text-[11px]'}`}>
+                        <p className={`truncate text-slate-600 ${estPrestation ? 'mt-0 text-[10px]' : 'mt-0.5 text-[11px]'}`}>
                           👁️ {annonce.nb_vues || 0} · {formaterNoteCourt(avisStats[annonce.id])}
                         </p>
                         {estTopNote(avisStats[annonce.id]) && (
-                          <p className="mt-0.5 text-[10px] font-bold text-fuchsia-700">🏅 Top noté</p>
+                          <p className="mt-1 inline-block rounded-full bg-fuchsia-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">🏅 Top noté</p>
                         )}
                       </div>
                     </div>
@@ -839,16 +873,16 @@ function CarteGoogleMaps() {
         <div
           className={`${
             showListMobile ? 'hidden' : 'block'
-          } relative min-h-0 flex-1 overflow-hidden md:block md:min-h-0`}
+          } relative min-h-0 flex-1 overflow-hidden ring-2 ring-inset ring-emerald-800/10 md:block md:min-h-0`}
           ref={mapShellRef}
         >
 
-          <div className="absolute left-2 right-2 top-2 z-20 flex max-h-[32vh] flex-col gap-1 overflow-y-auto rounded-lg border border-emerald-900/10 bg-white/92 p-1.5 shadow-sm backdrop-blur-sm">
+          <div className="absolute left-2 right-2 top-2 z-20 flex max-h-[32vh] flex-col gap-1.5 overflow-y-auto rounded-xl border-2 border-amber-300/70 bg-gradient-to-br from-emerald-900/95 via-emerald-800/92 to-teal-800/95 p-2 shadow-xl shadow-emerald-950/30 backdrop-blur-md">
             <div className="flex flex-wrap items-center gap-1">
               <button
                 type="button"
                 onClick={() => setFiltresVisibles((v) => !v)}
-                className="rounded-md bg-stone-100 px-2 py-1 text-[10px] font-semibold text-stone-700 hover:bg-stone-200"
+                className="rounded-lg bg-white/95 px-2.5 py-1 text-[10px] font-bold text-emerald-900 shadow-sm hover:bg-amber-100"
               >
                 {filtresVisibles ? 'Masquer' : 'Filtres'}
               </button>
@@ -857,8 +891,8 @@ function CarteGoogleMaps() {
                 onClick={() => {
                   setDessinZoneActif((v) => !v)
                 }}
-                className={`rounded-md px-2 py-1 text-[10px] font-semibold ${
-                  dessinZoneActif ? 'bg-amber-500 text-white' : 'bg-emerald-700 text-white hover:bg-emerald-800'
+                className={`rounded-lg px-2.5 py-1 text-[10px] font-bold shadow-md ${
+                  dessinZoneActif ? 'bg-amber-400 text-emerald-950 ring-2 ring-white' : 'bg-teal-500 text-white hover:bg-teal-400'
                 }`}
               >
                 {dessinZoneActif ? 'Fin zone' : 'Zone'}
@@ -867,13 +901,13 @@ function CarteGoogleMaps() {
                 <button
                   type="button"
                   onClick={effacerZone}
-                  className="rounded-md border border-stone-200 bg-white px-2 py-1 text-[10px] font-medium text-stone-600 hover:bg-stone-50"
+                  className="rounded-lg border-2 border-white/40 bg-white/15 px-2.5 py-1 text-[10px] font-bold text-amber-100 hover:bg-white/25"
                 >
                   Effacer
                 </button>
               )}
               {dessinZoneActif && (
-                <span className="text-[9px] font-medium text-amber-900/75">Clics sur la carte, puis Fin zone</span>
+                <span className="text-[9px] font-semibold text-amber-200">Clics sur la carte, puis Fin zone</span>
               )}
             </div>
             <div
@@ -884,17 +918,17 @@ function CarteGoogleMaps() {
               <input type="number" value={filtresCarte.prixMin}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, prixMin: e.target.value }))}
                 placeholder="Prix min"
-                className="rounded border border-stone-200 bg-white px-1.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                className="rounded-lg border-2 border-emerald-200 bg-white px-1.5 py-1 text-[10px] font-medium text-emerald-950 focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
               <input type="number" value={filtresCarte.prixMax}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, prixMax: e.target.value }))}
                 placeholder="Prix max"
-                className="rounded border border-stone-200 bg-white px-1.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                className="rounded-lg border-2 border-emerald-200 bg-white px-1.5 py-1 text-[10px] font-medium text-emerald-950 focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
               <select
                 value={filtresCarte.beds}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, beds: e.target.value }))}
-                className="rounded border border-stone-200 bg-white px-1.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                className="rounded-lg border-2 border-emerald-200 bg-white px-1.5 py-1 text-[10px] font-medium text-emerald-950 focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 <option value="">Chambres</option>
                 <option value="1">1+</option>
@@ -905,7 +939,7 @@ function CarteGoogleMaps() {
               <select
                 value={filtresCarte.baths}
                 onChange={(e) => setFiltresCarte((p) => ({ ...p, baths: e.target.value }))}
-                className="rounded border border-stone-200 bg-white px-1.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                className="rounded-lg border-2 border-emerald-200 bg-white px-1.5 py-1 text-[10px] font-medium text-emerald-950 focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 <option value="">Salles de bain</option>
                 <option value="1">1+</option>
@@ -919,7 +953,7 @@ function CarteGoogleMaps() {
                   appliquerFiltreTypeRapide('')
                   setFiltresCarte({ type: '', prixMin: '', prixMax: '', beds: '', baths: '' })
                 }}
-                className="rounded border border-stone-200 bg-stone-50 px-1.5 py-1 text-[10px] font-semibold text-stone-600 hover:bg-stone-100"
+                className="rounded-lg border-2 border-amber-300 bg-amber-300 px-1.5 py-1 text-[10px] font-bold text-emerald-950 hover:bg-amber-200"
               >
                 Réinit.
               </button>
@@ -927,15 +961,15 @@ function CarteGoogleMaps() {
           </div>
 
           {chargement ? (
-            <div className="flex h-full min-h-[12rem] w-full flex-col items-center justify-center gap-3 bg-[#F5F5F5] md:absolute md:inset-0 md:min-h-0">
-              <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-              <p className="text-sm font-semibold text-slate-700">Chargement de la carte...</p>
+            <div className="flex h-full min-h-[12rem] w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-emerald-100 via-teal-50 to-amber-50 md:absolute md:inset-0 md:min-h-0">
+              <div className="h-11 w-11 animate-spin rounded-full border-[3px] border-emerald-200 border-t-emerald-700" />
+              <p className="text-sm font-bold text-emerald-900">Chargement de la carte…</p>
             </div>
           ) : erreurAffichee ? (
-            <div className="flex h-full min-h-[12rem] w-full items-center justify-center bg-gray-100 px-6 md:absolute md:inset-0 md:min-h-0">
-              <div className="text-center">
+            <div className="flex h-full min-h-[12rem] w-full items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 px-6 md:absolute md:inset-0 md:min-h-0">
+              <div className="text-center rounded-2xl border-2 border-amber-200 bg-white/90 p-6 shadow-lg">
                 <p className="text-4xl mb-3">🗺️</p>
-                <p className="text-gray-600 text-sm">{erreurAffichee}</p>
+                <p className="text-emerald-900 text-sm font-medium">{erreurAffichee}</p>
               </div>
             </div>
           ) : (
@@ -946,45 +980,49 @@ function CarteGoogleMaps() {
           )}
 
           {selectionne && !chargement && !erreurAffichee && (
-            <div className="absolute bottom-3 left-3 right-3 z-20 rounded-xl border border-slate-200 bg-white p-3 shadow-lg md:left-auto md:right-3 md:w-[360px]">
-              <div className="flex items-start gap-3">
+            <div className="absolute bottom-3 left-3 right-3 z-20 overflow-hidden rounded-2xl border-2 border-amber-400/80 bg-gradient-to-br from-white via-emerald-50/80 to-amber-50/90 p-0 shadow-2xl shadow-emerald-900/25 md:left-auto md:right-3 md:w-[380px]">
+              <div
+                className="h-1.5 w-full"
+                style={{ background: (TYPE_COLORS[selectionne.type] || TYPE_COLORS.vente).accent }}
+              />
+              <div className="flex items-start gap-3 p-3">
                 <img
                   src={getListingCoverSrc(selectionne)}
                   alt={selectionne.titre}
-                  className="h-20 w-24 flex-shrink-0 rounded-lg object-cover ring-1 ring-slate-200"
+                  className="h-20 w-24 flex-shrink-0 rounded-xl object-cover ring-2 ring-white shadow-md"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-800">{selectionne.titre}</p>
-                  <p className="truncate text-xs text-slate-500">{selectionne.quartier}</p>
-                  <p className="mt-1 text-sm font-semibold tabular-nums" style={{ color: (TYPE_COLORS[selectionne.type] || TYPE_COLORS.vente).price }}>
+                  <p className="truncate text-sm font-bold text-slate-900">{selectionne.titre}</p>
+                  <p className="truncate text-xs font-semibold text-emerald-800">{selectionne.quartier}</p>
+                  <p className="mt-1 text-base font-extrabold tabular-nums" style={{ color: (TYPE_COLORS[selectionne.type] || TYPE_COLORS.vente).price }}>
                     {formaterPrix(selectionne.prix)}
                   </p>
                   <div className="mt-2 flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-gray-500">{badgeLabel[selectionne.badge] || '🔓 Bronze'}</span>
-                    <span className="text-[11px] text-gray-500">👁️ {selectionne.nb_vues || 0} · {formaterNoteCourt(avisStats[selectionne.id])}</span>
+                    <span className="text-[11px] font-semibold text-amber-900/90">{badgeLabel[selectionne.badge] || '🔓 Bronze'}</span>
+                    <span className="text-[11px] font-medium text-slate-600">👁️ {selectionne.nb_vues || 0} · {formaterNoteCourt(avisStats[selectionne.id])}</span>
                   </div>
                   {estTopNote(avisStats[selectionne.id]) && (
-                    <p className="mt-1 text-[11px] font-bold text-fuchsia-700">🏅 Top noté</p>
+                    <p className="mt-1 inline-block rounded-full bg-fuchsia-600 px-2 py-0.5 text-[11px] font-bold text-white">🏅 Top noté</p>
                   )}
                   <div className="mt-2 flex items-center justify-end gap-2">
                     <Link href={`/annonces/${selectionne.id}`}
-                      className="rounded-lg bg-[#1B5E20] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#2E7D32]">
+                      className="rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-3 py-1.5 text-xs font-bold text-white shadow-md transition-transform hover:scale-[1.02]">
                       Détails →
                     </Link>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <button type="button" onClick={allerPrecedente} disabled={selectionIndex <= 0}
-                      className="text-xs bg-gray-100 text-gray-700 py-1.5 rounded-lg font-bold disabled:opacity-40">
+                      className="text-xs bg-white border-2 border-emerald-200 text-emerald-900 py-1.5 rounded-xl font-bold disabled:opacity-40 hover:bg-emerald-50">
                       ← Précédent
                     </button>
                     <button type="button" onClick={allerSuivante} disabled={selectionIndex < 0 || selectionIndex >= annoncesAffichees.length - 1}
-                      className="text-xs bg-gray-100 text-gray-700 py-1.5 rounded-lg font-bold disabled:opacity-40">
+                      className="text-xs bg-white border-2 border-emerald-200 text-emerald-900 py-1.5 rounded-xl font-bold disabled:opacity-40 hover:bg-emerald-50">
                       Suivant →
                     </button>
                   </div>
                 </div>
                 <button type="button" onClick={() => setSelectionne(null)}
-                  className="text-gray-400 hover:text-gray-600 text-lg leading-none" aria-label="Fermer">
+                  className="text-emerald-700/60 hover:text-emerald-900 text-lg font-bold leading-none" aria-label="Fermer">
                   ✕
                 </button>
               </div>
@@ -999,8 +1037,8 @@ function CarteGoogleMaps() {
 export default function Carte() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-100 to-amber-50">
+        <div className="h-11 w-11 animate-spin rounded-full border-[3px] border-emerald-200 border-t-emerald-700" />
       </div>
     }>
       <CarteGoogleMaps />
