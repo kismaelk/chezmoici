@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, startTransition } from 'react'
 import { observerConnexion } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import {
@@ -27,6 +27,7 @@ import { useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
 import { resolveStaffRole, staffPermissions } from '@/lib/staffRoles'
+import { telechargerCsv } from '@/lib/adminCsv'
 
 const BADGE_LABEL = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
 const BADGE_OPTIONS = ['bronze', 'argent', 'or']
@@ -67,6 +68,7 @@ const STATUT_CONTACT_OPTIONS = [
 ]
 
 const ONGLETS = [
+  { id: 'dashboard', label: '📊 Tableau de bord' },
   { id: 'annonces', label: '🏠 Annonces' },
   { id: 'avis', label: '⭐ Avis' },
   { id: 'historique_moderation', label: '🗂️ Historique modération' },
@@ -78,7 +80,7 @@ const ONGLETS = [
 ]
 
 export default function AdminPortail() {
-  const [onglet, setOnglet] = useState('annonces')
+  const [onglet, setOnglet] = useState('dashboard')
   const [annonces, setAnnonces] = useState([])
   const [utilisateurs, setUtilisateurs] = useState([])
   const [signalements, setSignalements] = useState([])
@@ -104,6 +106,39 @@ export default function AdminPortail() {
   const [notesBrouillonContact, setNotesBrouillonContact] = useState({})
   const [annonceDetailModal, setAnnonceDetailModal] = useState(null)
 
+  const [filtreAnnonceStatut, setFiltreAnnonceStatut] = useState('')
+  const [filtreAnnonceType, setFiltreAnnonceType] = useState('')
+  const [filtreAnnonceBadge, setFiltreAnnonceBadge] = useState('')
+  const [filtreUserType, setFiltreUserType] = useState('')
+  const [filtreUserStatut, setFiltreUserStatut] = useState('')
+  const [filtreUserBadge, setFiltreUserBadge] = useState('')
+  const [filtreUserStaff, setFiltreUserStaff] = useState('')
+  const [filtreUserEmail, setFiltreUserEmail] = useState('')
+  const [filtreSignalementStatut, setFiltreSignalementStatut] = useState('')
+  const [filtreDemandeBadgeStatut, setFiltreDemandeBadgeStatut] = useState('')
+  const [filtreAvisVisibilite, setFiltreAvisVisibilite] = useState('')
+  const [filtreContactStatut, setFiltreContactStatut] = useState('')
+  const [filtreLogAction, setFiltreLogAction] = useState('')
+
+  const [selAnnonces, setSelAnnonces] = useState(() => new Set())
+  const [selUsers, setSelUsers] = useState(() => new Set())
+  const [selSignalements, setSelSignalements] = useState(() => new Set())
+  const [selDemandes, setSelDemandes] = useState(() => new Set())
+  const [selMessagesContact, setSelMessagesContact] = useState(() => new Set())
+
+  const [bulkAnnonceStatut, setBulkAnnonceStatut] = useState('actif')
+  const [bulkAnnonceBadge, setBulkAnnonceBadge] = useState('bronze')
+  const [bulkUserStatut, setBulkUserStatut] = useState('active')
+  const [bulkUserBadge, setBulkUserBadge] = useState('bronze')
+  const [bulkSigStatut, setBulkSigStatut] = useState('vu')
+  const [bulkDemandeStatut, setBulkDemandeStatut] = useState('en_cours')
+  const [bulkContactStatut, setBulkContactStatut] = useState('en_cours')
+
+  const [mergeSource, setMergeSource] = useState('')
+  const [mergeTarget, setMergeTarget] = useState('')
+  const [fusionEnCours, setFusionEnCours] = useState(false)
+  const [bulkEnCours, setBulkEnCours] = useState(false)
+
   const router = useRouter()
 
   const showToast = useCallback((type, msg) => {
@@ -116,6 +151,31 @@ export default function AdminPortail() {
       setToasts((t) => t.filter((x) => x.id !== id))
     }, 5200)
   }, [])
+
+  const ouvrirImpressionPdfListe = useCallback((titre, entetes, lignesTextes) => {
+    const esc = (s) =>
+      String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+    const rowsHtml = lignesTextes
+      .map((row) => `<tr>${row.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`)
+      .join('')
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(
+      titre
+    )}</title><style>body{font-family:system-ui,sans-serif;padding:16px;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #ccc;padding:6px;font-size:11px;text-align:left;}th{background:#f4f4f5;}</style></head><body><h1 style="font-size:16px;">${esc(
+      titre
+    )}</h1><table><thead><tr>${entetes
+      .map((h) => `<th>${esc(h)}</th>`)
+      .join('')}</tr></thead><tbody>${rowsHtml}</tbody></table><script>window.onload=function(){window.print();}</script></body></html>`
+    const w = typeof window !== 'undefined' ? window.open('', '_blank') : null
+    if (!w) {
+      showToast('error', 'Autorisez les pop-ups pour imprimer ou exporter en PDF.')
+      return
+    }
+    w.document.write(html)
+    w.document.close()
+  }, [showToast])
 
   const notifierEquipeEvent = useCallback(async (event, payload) => {
     try {
@@ -143,6 +203,8 @@ export default function AdminPortail() {
   const ongletsVisibles = useMemo(() => {
     return ONGLETS.filter((o) => {
       switch (o.id) {
+        case 'dashboard':
+          return permissions.voirOngletDashboard
         case 'annonces':
           return permissions.voirOngletAnnonces
         case 'avis':
@@ -164,6 +226,16 @@ export default function AdminPortail() {
       }
     })
   }, [permissions])
+
+  const naviguerOnglet = useCallback((id) => {
+    setOnglet(id)
+    setRecherche('')
+    setSelAnnonces(new Set())
+    setSelUsers(new Set())
+    setSelSignalements(new Set())
+    setSelDemandes(new Set())
+    setSelMessagesContact(new Set())
+  }, [])
 
   const roleLabel = {
     super_admin: 'Super admin',
@@ -194,9 +266,9 @@ export default function AdminPortail() {
   useEffect(() => {
     if (!roleStaff) return
     if (ongletsVisibles.length && !ongletsVisibles.some((o) => o.id === onglet)) {
-      setOnglet(ongletsVisibles[0].id)
+      startTransition(() => naviguerOnglet(ongletsVisibles[0].id))
     }
-  }, [roleStaff, onglet, ongletsVisibles])
+  }, [roleStaff, onglet, ongletsVisibles, naviguerOnglet])
 
   useEffect(() => {
     if (chargement || !permissions.voirOngletMessagerieContact) return
@@ -212,7 +284,47 @@ export default function AdminPortail() {
   useEffect(() => {
     if (chargement) return
     ;(async () => {
-      if (onglet === 'annonces') {
+      if (onglet === 'dashboard') {
+        try {
+          const ann = await fetchAllAnnoncesAdmin()
+          setAnnonces(ann)
+          const tasks = []
+          if (permissions.voirOngletMessagerieContact) {
+            tasks.push(
+              fetchContactMessagesAdmin()
+                .then(setMessagesContact)
+                .catch(() => {})
+            )
+          }
+          if (permissions.voirOngletUtilisateurs) {
+            tasks.push(
+              fetchAllProfiles().then((list) => {
+                list.sort((a, b) => {
+                  const ta = a.created_at ? new Date(a.created_at).getTime() : 0
+                  const tb = b.created_at ? new Date(b.created_at).getTime() : 0
+                  return tb - ta
+                })
+                setUtilisateurs(list)
+              })
+            )
+          }
+          if (permissions.voirOngletSignalements) {
+            tasks.push(fetchAllSignalementsAdmin().then(setSignalements))
+          }
+          if (permissions.voirOngletAvis) {
+            tasks.push(fetchAllAvisAdmin().then(setAvisList))
+          }
+          if (permissions.voirOngletBadges) {
+            tasks.push(fetchAllDemandesBadgeAdmin().then(setDemandesBadge))
+          }
+          if (permissions.voirOngletHistoriqueModeration) {
+            tasks.push(fetchAvisModerationLogsAdmin().then(setModerationLogs))
+          }
+          await Promise.all(tasks)
+        } catch (e) {
+          showToast('error', e?.message || 'Erreur chargement tableau de bord.')
+        }
+      } else if (onglet === 'annonces') {
         const list = await fetchAllAnnoncesAdmin()
         setAnnonces(list)
         setAnnonceModifs({})
@@ -243,7 +355,7 @@ export default function AdminPortail() {
         setFeatureFlags(await fetchFeatureFlagsAdmin())
       }
     })()
-  }, [onglet, chargement])
+  }, [onglet, chargement, permissions, showToast])
 
   const appelerUserAuth = async (action, targetUserId) => {
     try {
@@ -627,81 +739,350 @@ export default function AdminPortail() {
 
   // ── Filtres recherche ─────────────────────────────────────────────────────────
 
-  const annoncesFiltrees = annonces.filter(a =>
-    !recherche ||
-    a.titre?.toLowerCase().includes(recherche.toLowerCase()) ||
-    a.quartier?.toLowerCase().includes(recherche.toLowerCase()) ||
-    a.profiles?.nom?.toLowerCase().includes(recherche.toLowerCase())
-  )
+  const qRecherche = recherche.trim().toLowerCase()
 
-  const utilisateursFiltres = utilisateurs.filter(u =>
-    !recherche ||
-    u.nom?.toLowerCase().includes(recherche.toLowerCase()) ||
-    u.quartier?.toLowerCase().includes(recherche.toLowerCase())
-  )
+  const annoncesFiltrees = useMemo(() => {
+    return annonces.filter((a) => {
+      if (filtreAnnonceStatut && (a.statut || '') !== filtreAnnonceStatut) return false
+      if (filtreAnnonceType && String(a.type || '') !== filtreAnnonceType) return false
+      if (filtreAnnonceBadge && (a.badge || 'bronze') !== filtreAnnonceBadge) return false
+      if (!qRecherche) return true
+      return (
+        a.titre?.toLowerCase().includes(qRecherche) ||
+        a.quartier?.toLowerCase().includes(qRecherche) ||
+        a.profiles?.nom?.toLowerCase().includes(qRecherche) ||
+        String(a.id).toLowerCase().includes(qRecherche)
+      )
+    })
+  }, [annonces, qRecherche, filtreAnnonceStatut, filtreAnnonceType, filtreAnnonceBadge])
 
-  const signalementsFiltres = signalements.filter((s) => {
-    if (!recherche) return true
-    const q = recherche.toLowerCase()
-    return (
-      (s.motif && s.motif.toLowerCase().includes(q)) ||
-      (s.annonce_titre && s.annonce_titre.toLowerCase().includes(q)) ||
-      (s.profiles?.nom && s.profiles.nom.toLowerCase().includes(q))
-    )
-  })
+  const utilisateursFiltres = useMemo(() => {
+    return utilisateurs.filter((u) => {
+      if (filtreUserStatut && (u.account_status || '') !== filtreUserStatut) return false
+      if (filtreUserBadge && (u.badge || 'bronze') !== filtreUserBadge) return false
+      if (filtreUserType && String(u.type || '') !== filtreUserType) return false
+      if (filtreUserStaff === 'staff' && !u.is_admin) return false
+      if (filtreUserStaff === 'public' && u.is_admin) return false
+      const em = filtreUserEmail.trim().toLowerCase()
+      if (em && !(u.email || '').toLowerCase().includes(em)) return false
+      if (!qRecherche) return true
+      return (
+        u.nom?.toLowerCase().includes(qRecherche) ||
+        u.quartier?.toLowerCase().includes(qRecherche) ||
+        (u.email || '').toLowerCase().includes(qRecherche) ||
+        String(u.id).toLowerCase().includes(qRecherche)
+      )
+    })
+  }, [
+    utilisateurs,
+    qRecherche,
+    filtreUserStatut,
+    filtreUserBadge,
+    filtreUserType,
+    filtreUserStaff,
+    filtreUserEmail,
+  ])
 
-  const demandesBadgeFiltrees = demandesBadge.filter((d) => {
-    if (!recherche) return true
-    const q = recherche.toLowerCase()
-    return (
-      (d.nom && d.nom.toLowerCase().includes(q)) ||
-      (d.telephone && d.telephone.includes(recherche)) ||
-      (d.badge_demande && d.badge_demande.toLowerCase().includes(q)) ||
-      (d.annonce_titre && d.annonce_titre.toLowerCase().includes(q)) ||
-      (d.profiles?.nom && d.profiles.nom.toLowerCase().includes(q))
-    )
-  })
+  const signalementsFiltres = useMemo(() => {
+    return signalements.filter((s) => {
+      if (filtreSignalementStatut && (s.statut || 'en_attente') !== filtreSignalementStatut) {
+        return false
+      }
+      if (!qRecherche) return true
+      return (
+        (s.motif && s.motif.toLowerCase().includes(qRecherche)) ||
+        (s.annonce_titre && s.annonce_titre.toLowerCase().includes(qRecherche)) ||
+        (s.profiles?.nom && s.profiles.nom.toLowerCase().includes(qRecherche))
+      )
+    })
+  }, [signalements, qRecherche, filtreSignalementStatut])
 
-  const avisFiltres = avisList.filter((a) => {
-    if (!recherche) return true
-    const q = recherche.toLowerCase()
-    return (
-      (a.commentaire && a.commentaire.toLowerCase().includes(q)) ||
-      (a.auteur_nom && a.auteur_nom.toLowerCase().includes(q)) ||
-      (a.annonce_titre && a.annonce_titre.toLowerCase().includes(q))
-    )
-  })
-  const logsFiltres = moderationLogs.filter((l) => {
-    if (!recherche) return true
-    const q = recherche.toLowerCase()
-    return (
-      (l.annonce_titre && l.annonce_titre.toLowerCase().includes(q)) ||
-      (l.moderateur_nom && l.moderateur_nom.toLowerCase().includes(q)) ||
-      (l.reason && l.reason.toLowerCase().includes(q))
-    )
-  })
+  const demandesBadgeFiltrees = useMemo(() => {
+    return demandesBadge.filter((d) => {
+      if (filtreDemandeBadgeStatut && (d.statut || 'en_attente') !== filtreDemandeBadgeStatut) {
+        return false
+      }
+      if (!qRecherche) return true
+      const qTel = recherche.trim()
+      return (
+        (d.nom && d.nom.toLowerCase().includes(qRecherche)) ||
+        (d.telephone && qTel && d.telephone.includes(qTel)) ||
+        (d.badge_demande && d.badge_demande.toLowerCase().includes(qRecherche)) ||
+        (d.annonce_titre && d.annonce_titre.toLowerCase().includes(qRecherche)) ||
+        (d.profiles?.nom && d.profiles.nom.toLowerCase().includes(qRecherche))
+      )
+    })
+  }, [demandesBadge, qRecherche, filtreDemandeBadgeStatut, recherche])
 
-  const featureFlagsFiltres = featureFlags.filter((f) => {
-    if (!recherche) return true
-    return (f.key && f.key.toLowerCase().includes(recherche.toLowerCase()))
-  })
+  const avisFiltres = useMemo(() => {
+    return avisList.filter((a) => {
+      if (filtreAvisVisibilite === 'visible' && a.is_hidden) return false
+      if (filtreAvisVisibilite === 'masque' && !a.is_hidden) return false
+      if (!qRecherche) return true
+      return (
+        (a.commentaire && a.commentaire.toLowerCase().includes(qRecherche)) ||
+        (a.auteur_nom && a.auteur_nom.toLowerCase().includes(qRecherche)) ||
+        (a.annonce_titre && a.annonce_titre.toLowerCase().includes(qRecherche))
+      )
+    })
+  }, [avisList, qRecherche, filtreAvisVisibilite])
 
-  const messagesContactFiltres = messagesContact.filter((m) => {
-    if (!recherche) return true
-    const q = recherche.toLowerCase()
-    return (
-      (m.nom && m.nom.toLowerCase().includes(q)) ||
-      (m.email && m.email.toLowerCase().includes(q)) ||
-      (m.sujet && m.sujet.toLowerCase().includes(q)) ||
-      (m.message && m.message.toLowerCase().includes(q)) ||
-      (m.note_interne && m.note_interne.toLowerCase().includes(q))
-    )
-  })
+  const logsFiltres = useMemo(() => {
+    return moderationLogs.filter((l) => {
+      if (filtreLogAction && (l.action || '') !== filtreLogAction) return false
+      if (!qRecherche) return true
+      return (
+        (l.annonce_titre && l.annonce_titre.toLowerCase().includes(qRecherche)) ||
+        (l.moderateur_nom && l.moderateur_nom.toLowerCase().includes(qRecherche)) ||
+        (l.reason && l.reason.toLowerCase().includes(qRecherche))
+      )
+    })
+  }, [moderationLogs, qRecherche, filtreLogAction])
+
+  const featureFlagsFiltres = useMemo(() => {
+    return featureFlags.filter((f) => {
+      if (!qRecherche) return true
+      return f.key && f.key.toLowerCase().includes(qRecherche)
+    })
+  }, [featureFlags, qRecherche])
+
+  const messagesContactFiltres = useMemo(() => {
+    return messagesContact.filter((m) => {
+      const st = m.statut || 'nouveau'
+      if (filtreContactStatut && st !== filtreContactStatut) return false
+      if (!qRecherche) return true
+      return (
+        (m.nom && m.nom.toLowerCase().includes(qRecherche)) ||
+        (m.email && m.email.toLowerCase().includes(qRecherche)) ||
+        (m.sujet && m.sujet.toLowerCase().includes(qRecherche)) ||
+        (m.message && m.message.toLowerCase().includes(qRecherche)) ||
+        (m.note_interne && m.note_interne.toLowerCase().includes(qRecherche))
+      )
+    })
+  }, [messagesContact, qRecherche, filtreContactStatut])
+
+  const typesAnnonceUniques = useMemo(() => {
+    const s = new Set()
+    annonces.forEach((a) => {
+      if (a?.type) s.add(String(a.type))
+    })
+    return [...s].sort()
+  }, [annonces])
+
+  const typesProfilUniques = useMemo(() => {
+    const s = new Set()
+    utilisateurs.forEach((u) => {
+      if (u?.type) s.add(String(u.type))
+    })
+    return [...s].sort()
+  }, [utilisateurs])
+
+  const recentsAnnonces = useMemo(() => {
+    return [...annonces]
+      .sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0
+        return tb - ta
+      })
+      .slice(0, 8)
+  }, [annonces])
+
+  const recentsUtilisateurs = useMemo(() => {
+    return [...utilisateurs]
+      .sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0
+        return tb - ta
+      })
+      .slice(0, 8)
+  }, [utilisateurs])
+
+  const recentsAvis = useMemo(() => {
+    return [...avisList]
+      .sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0
+        return tb - ta
+      })
+      .slice(0, 6)
+  }, [avisList])
 
   const showRoleCol =
     permissions.utilisateursAssignSuper ||
     permissions.utilisateursAssignAdmin ||
     permissions.utilisateursAssignLowerRoles
+
+  const fusionnerProfils = async () => {
+    if (!permissions.fusionProfils) return
+    if (!mergeSource || !mergeTarget || mergeSource === mergeTarget) {
+      return showToast('error', 'Choisissez deux comptes distincts (source → cible).')
+    }
+    setFusionEnCours(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        showToast('error', 'Session expirée.')
+        return
+      }
+      const r = await fetch('/api/admin/merge-profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ sourceUserId: mergeSource, targetUserId: mergeTarget }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        showToast('error', j.error || 'Fusion refusée')
+        return
+      }
+      showToast('success', j.message || 'Fusion effectuée.')
+      setMergeSource('')
+      setMergeTarget('')
+      const [list, ann] = await Promise.all([fetchAllProfiles(), fetchAllAnnoncesAdmin()])
+      list.sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0
+        return tb - ta
+      })
+      setUtilisateurs(list)
+      setAnnonces(ann)
+    } catch (e) {
+      showToast('error', e?.message || String(e))
+    } finally {
+      setFusionEnCours(false)
+    }
+  }
+
+  const appliquerBulkAnnonces = async () => {
+    if (!permissions.selectionGroupéeAnnonces) return
+    if (selAnnonces.size === 0) return showToast('error', 'Sélectionnez des annonces.')
+    setBulkEnCours(true)
+    try {
+      for (const id of selAnnonces) {
+        const payload = { statut: bulkAnnonceStatut }
+        if (permissions.annoncesEditBadge) payload.badge = bulkAnnonceBadge
+        await updateAnnonce(id, payload)
+      }
+      setAnnonces((prev) =>
+        prev.map((x) =>
+          selAnnonces.has(x.id)
+            ? {
+                ...x,
+                statut: bulkAnnonceStatut,
+                ...(permissions.annoncesEditBadge ? { badge: bulkAnnonceBadge } : {}),
+              }
+            : x
+        )
+      )
+      setSelAnnonces(new Set())
+      setAnnonceModifs({})
+      showToast('success', 'Annonces mises à jour en masse.')
+    } catch (e) {
+      showToast('error', e?.message || String(e))
+    } finally {
+      setBulkEnCours(false)
+    }
+  }
+
+  const appliquerBulkUtilisateurs = async () => {
+    if (!permissions.selectionGroupéeUtilisateurs || !permissions.utilisateursEdit) return
+    if (selUsers.size === 0) return showToast('error', 'Sélectionnez des utilisateurs.')
+    setBulkEnCours(true)
+    try {
+      for (const id of selUsers) {
+        await updateProfileField(id, { account_status: bulkUserStatut, badge: bulkUserBadge })
+      }
+      setUtilisateurs((prev) =>
+        prev.map((x) =>
+          selUsers.has(x.id) ? { ...x, account_status: bulkUserStatut, badge: bulkUserBadge } : x
+        )
+      )
+      setProfilModifs({})
+      setSelUsers(new Set())
+      showToast('success', 'Profils mis à jour en masse.')
+    } catch (e) {
+      showToast('error', e?.message || String(e))
+    } finally {
+      setBulkEnCours(false)
+    }
+  }
+
+  const appliquerBulkSignalements = async () => {
+    if (!permissions.selectionGroupéeModerationContenu) return
+    if (selSignalements.size === 0) return showToast('error', 'Sélectionnez des signalements.')
+    setBulkEnCours(true)
+    try {
+      for (const id of selSignalements) {
+        await updateSignalement(id, { statut: bulkSigStatut })
+      }
+      setSignalements((prev) =>
+        prev.map((s) => (selSignalements.has(s.id) ? { ...s, statut: bulkSigStatut } : s))
+      )
+      setSelSignalements(new Set())
+      showToast('success', 'Statuts de signalements mis à jour.')
+    } catch (e) {
+      showToast('error', e?.message || String(e))
+    } finally {
+      setBulkEnCours(false)
+    }
+  }
+
+  const appliquerBulkDemandesBadge = async () => {
+    if (!permissions.selectionGroupéeModerationContenu) return
+    if (selDemandes.size === 0) return showToast('error', 'Sélectionnez des demandes.')
+    setBulkEnCours(true)
+    try {
+      for (const id of selDemandes) {
+        await updateDemandeBadge(id, { statut: bulkDemandeStatut })
+      }
+      setDemandesBadge((prev) =>
+        prev.map((d) => (selDemandes.has(d.id) ? { ...d, statut: bulkDemandeStatut } : d))
+      )
+      setSelDemandes(new Set())
+      showToast('success', 'Statuts des demandes badge mis à jour.')
+    } catch (e) {
+      showToast('error', e?.message || String(e))
+    } finally {
+      setBulkEnCours(false)
+    }
+  }
+
+  const appliquerBulkMessagesContact = async () => {
+    if (!permissions.selectionGroupéeMessagerie || !adminUid) return
+    if (selMessagesContact.size === 0) return showToast('error', 'Sélectionnez des messages.')
+    setBulkEnCours(true)
+    try {
+      for (const id of selMessagesContact) {
+        const fields =
+          bulkContactStatut === 'traite'
+            ? { statut: bulkContactStatut, traite_le: new Date().toISOString(), traite_par: adminUid }
+            : { statut: bulkContactStatut, traite_le: null, traite_par: null }
+        await updateContactMessageAdmin(id, fields)
+      }
+      setMessagesContact((prev) =>
+        prev.map((x) => {
+          if (!selMessagesContact.has(x.id)) return x
+          if (bulkContactStatut === 'traite') {
+            return {
+              ...x,
+              statut: bulkContactStatut,
+              traite_le: new Date().toISOString(),
+              traite_par: adminUid,
+            }
+          }
+          return { ...x, statut: bulkContactStatut, traite_le: null, traite_par: null }
+        })
+      )
+      setSelMessagesContact(new Set())
+      showToast('success', 'Statuts des messages mis à jour.')
+    } catch (e) {
+      showToast('error', e?.message || String(e))
+    } finally {
+      setBulkEnCours(false)
+    }
+  }
 
   // ── Stats ────────────────────────────────────────────────────────────────────
 
@@ -723,6 +1104,24 @@ export default function AdminPortail() {
               },
             ]
           : []),
+        ...(permissions.voirOngletSignalements
+          ? [
+              {
+                label: 'Signalements (nouveaux)',
+                valeur: signalements.filter((s) => (s.statut || 'en_attente') === 'en_attente').length,
+                emoji: '🚩',
+              },
+            ]
+          : []),
+        ...(permissions.voirOngletBadges
+          ? [
+              {
+                label: 'Demandes badge (attente)',
+                valeur: demandesBadge.filter((d) => (d.statut || 'en_attente') === 'en_attente').length,
+                emoji: '🏅',
+              },
+            ]
+          : []),
       ]
     : [
         { label: 'Annonces', valeur: annonces.length, emoji: '🏠' },
@@ -740,6 +1139,24 @@ export default function AdminPortail() {
             ]
           : []),
         { label: 'Badges Or', valeur: annonces.filter((a) => a.badge === 'or').length, emoji: '🥇' },
+        ...(permissions.voirOngletSignalements
+          ? [
+              {
+                label: 'Signalements (nouveaux)',
+                valeur: signalements.filter((s) => (s.statut || 'en_attente') === 'en_attente').length,
+                emoji: '🚩',
+              },
+            ]
+          : []),
+        ...(permissions.voirOngletBadges
+          ? [
+              {
+                label: 'Demandes badge (attente)',
+                valeur: demandesBadge.filter((d) => (d.statut || 'en_attente') === 'en_attente').length,
+                emoji: '🏅',
+              },
+            ]
+          : []),
       ]
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -751,12 +1168,12 @@ export default function AdminPortail() {
   )
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50/90 via-slate-50 to-slate-100">
       <SiteHeader />
 
-      <div className="bg-[#0f172a] text-white px-4 py-3 flex flex-wrap items-center gap-2 border-b border-slate-700">
-        <span className="text-amber-400 font-bold text-sm shrink-0">🛡️ PORTAIL STAFF</span>
-        <span className="text-slate-400 text-xs">
+      <div className="bg-indigo-950 text-white px-4 py-3 flex flex-wrap items-center gap-2 border-b border-indigo-800/80 shadow-sm">
+        <span className="text-cyan-300 font-bold text-sm shrink-0 tracking-tight">🛡️ PORTAIL STAFF</span>
+        <span className="text-indigo-200/90 text-xs">
           Connecté en <strong className="text-white">{roleLabel}</strong>
           {' · '}
           Super admin = contrôle total · Admin = gestion étendue · Modérateur = contenu & signalements ·
@@ -765,15 +1182,15 @@ export default function AdminPortail() {
       </div>
 
       <div className="flex flex-col lg:flex-row max-w-[1600px] mx-auto min-h-[calc(100vh-8rem)]">
-        <aside className="hidden lg:flex w-56 shrink-0 bg-slate-900 text-slate-200 flex-col p-3 gap-1 border-r border-slate-800">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 mb-1">Sections</p>
+        <aside className="hidden lg:flex w-56 shrink-0 bg-indigo-950 text-indigo-100 flex-col p-3 gap-1 border-r border-indigo-900/80">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 px-2 mb-1">Sections</p>
           {ongletsVisibles.map((o) => (
             <button
               key={o.id}
               type="button"
-              onClick={() => { setOnglet(o.id); setRecherche('') }}
+              onClick={() => naviguerOnglet(o.id)}
               className={`text-left text-sm font-semibold rounded-lg px-3 py-2 transition-colors ${
-                onglet === o.id ? 'bg-[#1B5E20] text-white' : 'hover:bg-slate-800'
+                onglet === o.id ? 'bg-teal-600 text-white shadow-md' : 'hover:bg-indigo-900/70'
               }`}
             >
               {o.label}
@@ -783,17 +1200,17 @@ export default function AdminPortail() {
 
         <div className="flex-1 py-6 px-4 md:px-6">
 
-        <h1 className="text-2xl font-bold text-gray-800 mb-1">Pilotage plateforme</h1>
-        <p className="text-gray-500 text-sm mb-6">
+        <h1 className="text-2xl font-bold text-indigo-950 mb-1">Pilotage plateforme</h1>
+        <p className="text-slate-600 text-sm mb-6">
           Chez Moi CI — outils avancés réservés au personnel habilité
         </p>
 
         {/* STATS */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-8">
           {stats.map(s => (
-            <div key={s.label} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm text-center min-w-0">
+            <div key={s.label} className="bg-white/95 rounded-xl p-3 sm:p-4 shadow-sm border border-indigo-100/80 text-center min-w-0">
               <div className="text-2xl mb-1">{s.emoji}</div>
-              <div className="text-2xl font-bold text-[#1B5E20]">
+              <div className="text-2xl font-bold text-teal-700">
                 {s.needUsers && !utilisateurs.length ? '—' : s.valeur}
               </div>
               <div className="text-gray-500 text-[10px] sm:text-xs leading-tight break-words px-0.5">{s.label}</div>
@@ -808,53 +1225,360 @@ export default function AdminPortail() {
               <button
                 key={o.id}
                 type="button"
-                onClick={() => { setOnglet(o.id); setRecherche('') }}
+                onClick={() => naviguerOnglet(o.id)}
                 className={`shrink-0 px-3 sm:px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
                   onglet === o.id
-                    ? 'bg-[#1B5E20] text-white'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                    ? 'bg-teal-600 text-white shadow'
+                    : 'bg-white text-slate-600 border border-indigo-100 hover:bg-indigo-50/80'
                 }`}
               >
                 {o.label}
               </button>
             ))}
           </div>
-          <input
-            type="text"
-            placeholder={
-              onglet === 'annonces'
-                ? 'Rechercher une annonce…'
-                : onglet === 'avis'
-                  ? 'Avis, auteur, annonce…'
-                : onglet === 'historique_moderation'
-                  ? 'Annonce, modérateur, motif…'
-                : onglet === 'utilisateurs'
-                  ? 'Rechercher un utilisateur…'
-                  : onglet === 'signalements'
-                    ? 'Motif, annonce, signalant…'
-                    : onglet === 'messagerie_contact'
-                      ? 'Nom, e-mail, sujet, message…'
-                    : onglet === 'feature_flags'
-                      ? 'Clé de paramètre…'
-                      : 'Nom, téléphone, niveau, annonce…'
-            }
-            value={recherche}
-            onChange={e => setRecherche(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full sm:w-64 lg:ml-auto focus:outline-none focus:border-[#1B5E20]"
-          />
+          {onglet !== 'dashboard' && (
+            <input
+              type="text"
+              placeholder={
+                onglet === 'annonces'
+                  ? 'Rechercher une annonce…'
+                  : onglet === 'avis'
+                    ? 'Avis, auteur, annonce…'
+                    : onglet === 'historique_moderation'
+                      ? 'Annonce, modérateur, motif…'
+                    : onglet === 'utilisateurs'
+                      ? 'Rechercher un utilisateur…'
+                      : onglet === 'signalements'
+                        ? 'Motif, annonce, signalant…'
+                        : onglet === 'messagerie_contact'
+                          ? 'Nom, e-mail, sujet, message…'
+                          : onglet === 'feature_flags'
+                            ? 'Clé de paramètre…'
+                            : 'Nom, téléphone, niveau, annonce…'
+              }
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+              className="border border-indigo-100 rounded-lg px-3 py-2 text-sm w-full sm:max-w-md lg:ml-auto focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500 bg-white"
+            />
+          )}
         </div>
+
+        {onglet === 'dashboard' && (
+          <div className="space-y-6 mb-8">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-white/95 rounded-xl border border-indigo-100 p-4 shadow-sm">
+                <h2 className="font-bold text-indigo-950 mb-3 text-sm uppercase tracking-wide">
+                  Annonces récentes
+                </h2>
+                <ul className="space-y-2 text-sm">
+                  {recentsAnnonces.length === 0 && (
+                    <li className="text-slate-400">Aucune annonce chargée.</li>
+                  )}
+                  {recentsAnnonces.map((a) => (
+                    <li
+                      key={a.id}
+                      className="flex justify-between gap-2 border-b border-slate-100 pb-2"
+                    >
+                      <span className="truncate text-slate-800">{a.titre}</span>
+                      <span className="text-xs text-slate-500 shrink-0">
+                        {a.created_at
+                          ? new Date(a.created_at).toLocaleDateString('fr-FR')
+                          : '—'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => naviguerOnglet('annonces')}
+                  className="mt-3 text-xs font-bold text-teal-700 hover:underline"
+                >
+                  Voir toutes les annonces →
+                </button>
+              </div>
+              {permissions.voirOngletUtilisateurs && (
+                <div className="bg-white/95 rounded-xl border border-indigo-100 p-4 shadow-sm">
+                  <h2 className="font-bold text-indigo-950 mb-3 text-sm uppercase tracking-wide">
+                    Comptes récents
+                  </h2>
+                  <ul className="space-y-2 text-sm">
+                    {recentsUtilisateurs.length === 0 && (
+                      <li className="text-slate-400">Aucun profil chargé.</li>
+                    )}
+                    {recentsUtilisateurs.map((u) => (
+                      <li
+                        key={u.id}
+                        className="flex justify-between gap-2 border-b border-slate-100 pb-2"
+                      >
+                        <span className="truncate text-slate-800">
+                          {u.nom || u.email || u.id}
+                        </span>
+                        <span className="text-xs text-slate-500 shrink-0">
+                          {u.created_at
+                            ? new Date(u.created_at).toLocaleDateString('fr-FR')
+                            : '—'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => naviguerOnglet('utilisateurs')}
+                    className="mt-3 text-xs font-bold text-teal-700 hover:underline"
+                  >
+                    Gérer les utilisateurs →
+                  </button>
+                </div>
+              )}
+            </div>
+            {permissions.voirOngletAvis && recentsAvis.length > 0 && (
+              <div className="bg-white/95 rounded-xl border border-indigo-100 p-4 shadow-sm">
+                <h2 className="font-bold text-indigo-950 mb-3 text-sm uppercase tracking-wide">
+                  Avis récents
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {recentsAvis.map((a) => (
+                    <div
+                      key={a.id}
+                      className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 max-w-full"
+                    >
+                      <span className="font-bold text-amber-600">
+                        {'★'.repeat(Math.min(5, Math.max(0, a.note || 0)))}
+                      </span>
+                      <span className="text-slate-600 ml-1">
+                        {(a.annonce_titre || a.id || '').toString().slice(0, 48)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => naviguerOnglet('avis')}
+                  className="mt-3 text-xs font-bold text-teal-700 hover:underline"
+                >
+                  Modérer les avis →
+                </button>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {permissions.voirOngletSignalements && (
+                <button
+                  type="button"
+                  onClick={() => naviguerOnglet('signalements')}
+                  className="text-xs font-bold px-3 py-2 rounded-lg bg-white border border-indigo-200 text-indigo-900 hover:bg-indigo-50"
+                >
+                  Signalements
+                </button>
+              )}
+              {permissions.voirOngletMessagerieContact && (
+                <button
+                  type="button"
+                  onClick={() => naviguerOnglet('messagerie_contact')}
+                  className="text-xs font-bold px-3 py-2 rounded-lg bg-white border border-indigo-200 text-indigo-900 hover:bg-indigo-50"
+                >
+                  Messages contact
+                </button>
+              )}
+              {permissions.voirOngletFeatureFlags && (
+                <button
+                  type="button"
+                  onClick={() => naviguerOnglet('feature_flags')}
+                  className="text-xs font-bold px-3 py-2 rounded-lg bg-white border border-indigo-200 text-indigo-900 hover:bg-indigo-50"
+                >
+                  Fonctionnalités (flags)
+                </button>
+              )}
+              {permissions.voirOngletBadges && (
+                <button
+                  type="button"
+                  onClick={() => naviguerOnglet('demandes_badge')}
+                  className="text-xs font-bold px-3 py-2 rounded-lg bg-white border border-indigo-200 text-indigo-900 hover:bg-indigo-50"
+                >
+                  Demandes badge
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── ONGLET ANNONCES ── */}
         {onglet === 'annonces' && (
           <div className="space-y-3">
+            <div className="flex flex-col gap-3 bg-white/95 border border-indigo-100 rounded-xl p-4 shadow-sm">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs font-bold text-slate-500 uppercase">Filtres</span>
+                <select
+                  value={filtreAnnonceStatut}
+                  onChange={(e) => setFiltreAnnonceStatut(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Statut (tous)</option>
+                  {STATUT_OPTIONS.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={filtreAnnonceType}
+                  onChange={(e) => setFiltreAnnonceType(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Type (tous)</option>
+                  {typesAnnonceUniques.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={filtreAnnonceBadge}
+                  onChange={(e) => setFiltreAnnonceBadge(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Badge (tous)</option>
+                  {BADGE_OPTIONS.map((b) => (
+                    <option key={b} value={b}>
+                      {BADGE_LABEL[b]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {permissions.peutExporterDonnees && (
+                <div className="flex flex-wrap gap-2 items-center border-t border-slate-100 pt-3">
+                  <span className="text-xs font-bold text-slate-500 uppercase">
+                    Export (résultats filtrés)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      telechargerCsv(
+                        'annonces_admin',
+                        [
+                          { key: 'id', label: 'id' },
+                          { key: 'titre', label: 'titre' },
+                          { key: 'statut', label: 'statut' },
+                          { key: 'type', label: 'type' },
+                          { key: 'badge', label: 'badge' },
+                          { key: 'quartier', label: 'quartier' },
+                          { key: 'prix', label: 'prix' },
+                          { key: 'proprietaire', label: 'proprietaire' },
+                        ],
+                        annoncesFiltrees.map((a) => ({
+                          id: a.id,
+                          titre: a.titre,
+                          statut: a.statut,
+                          type: a.type,
+                          badge: a.badge,
+                          quartier: a.quartier,
+                          prix: a.prix,
+                          proprietaire: a.profiles?.nom || '',
+                        }))
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
+                  >
+                    CSV / Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      ouvrirImpressionPdfListe(
+                        'Annonces',
+                        ['id', 'titre', 'statut', 'type', 'badge'],
+                        annoncesFiltrees.map((a) => [
+                          a.id,
+                          a.titre,
+                          a.statut,
+                          a.type,
+                          a.badge,
+                        ])
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                  >
+                    PDF (impression)
+                  </button>
+                </div>
+              )}
+              {permissions.selectionGroupéeAnnonces && (
+                <div className="flex flex-wrap gap-2 items-end border-t border-slate-100 pt-3">
+                  <span className="text-xs font-bold text-slate-500 uppercase">
+                    Sélection ({selAnnonces.size})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelAnnonces(new Set(annoncesFiltrees.map((x) => x.id)))}
+                    className="text-xs font-bold px-2 py-1 rounded border border-slate-200 hover:bg-slate-50"
+                  >
+                    Tout (filtré)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelAnnonces(new Set())}
+                    className="text-xs font-bold px-2 py-1 rounded border border-slate-200 hover:bg-slate-50"
+                  >
+                    Effacer
+                  </button>
+                  <select
+                    value={bulkAnnonceStatut}
+                    onChange={(e) => setBulkAnnonceStatut(e.target.value)}
+                    className="text-xs border rounded-lg px-2 py-1 bg-white"
+                  >
+                    {STATUT_OPTIONS.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                  {permissions.annoncesEditBadge && (
+                    <select
+                      value={bulkAnnonceBadge}
+                      onChange={(e) => setBulkAnnonceBadge(e.target.value)}
+                      className="text-xs border rounded-lg px-2 py-1 bg-white"
+                    >
+                      {BADGE_OPTIONS.map((b) => (
+                        <option key={b} value={b}>
+                          {BADGE_LABEL[b]}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    type="button"
+                    disabled={bulkEnCours}
+                    onClick={appliquerBulkAnnonces}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-teal-600 text-white disabled:opacity-50"
+                  >
+                    Appliquer à la sélection
+                  </button>
+                </div>
+              )}
+            </div>
             {annoncesFiltrees.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center text-gray-400 border border-gray-100">
                 Aucune annonce trouvée.
               </div>
             )}
             {annoncesFiltrees.map(a => (
-              <div key={a.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-4">
+              <div key={a.id} className="bg-white rounded-xl p-4 shadow-sm border border-indigo-100/80">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  {permissions.selectionGroupéeAnnonces && (
+                    <input
+                      type="checkbox"
+                      checked={selAnnonces.has(a.id)}
+                      onChange={() => {
+                        setSelAnnonces((prev) => {
+                          const n = new Set(prev)
+                          if (n.has(a.id)) n.delete(a.id)
+                          else n.add(a.id)
+                          return n
+                        })
+                      }}
+                      className="w-4 h-4 accent-teal-600 shrink-0"
+                      aria-label={`Sélectionner annonce ${a.titre}`}
+                    />
+                  )}
                   {/* Photo */}
                   <div className="w-16 h-14 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
                     {a.photos?.[0] ? (
@@ -959,6 +1683,111 @@ export default function AdminPortail() {
         {/* ── ONGLET SIGNALEMENTS ── */}
         {onglet === 'signalements' && (
           <div className="space-y-3">
+            <div className="flex flex-col gap-3 bg-white/95 border border-indigo-100 rounded-xl p-4 shadow-sm">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs font-bold text-slate-500 uppercase">Filtres</span>
+                <select
+                  value={filtreSignalementStatut}
+                  onChange={(e) => setFiltreSignalementStatut(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Statut (tous)</option>
+                  {STATUT_SIGNALEMENT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {permissions.peutExporterDonnees && (
+                <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      telechargerCsv(
+                        'signalements_admin',
+                        [
+                          { key: 'id', label: 'id' },
+                          { key: 'motif', label: 'motif' },
+                          { key: 'statut', label: 'statut' },
+                          { key: 'annonce', label: 'annonce' },
+                          { key: 'signalant', label: 'signalant' },
+                          { key: 'created_at', label: 'cree_le' },
+                        ],
+                        signalementsFiltres.map((s) => ({
+                          id: s.id,
+                          motif: s.motif,
+                          statut: s.statut,
+                          annonce: s.annonce_titre || s.annonce_id,
+                          signalant: s.profiles?.nom || s.signalant_uid,
+                          created_at: s.created_at,
+                        }))
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
+                  >
+                    CSV / Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      ouvrirImpressionPdfListe(
+                        'Signalements',
+                        ['motif', 'statut', 'annonce'],
+                        signalementsFiltres.map((s) => [
+                          s.motif,
+                          s.statut,
+                          s.annonce_titre || s.annonce_id,
+                        ])
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                  >
+                    PDF (impression)
+                  </button>
+                </div>
+              )}
+              {permissions.selectionGroupéeModerationContenu && (
+                <div className="flex flex-wrap gap-2 items-end border-t border-slate-100 pt-3">
+                  <span className="text-xs font-bold text-slate-500 uppercase">
+                    Sélection ({selSignalements.size})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelSignalements(new Set(signalementsFiltres.map((x) => x.id)))}
+                    className="text-xs font-bold px-2 py-1 rounded border border-slate-200 hover:bg-slate-50"
+                  >
+                    Tout (filtré)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelSignalements(new Set())}
+                    className="text-xs font-bold px-2 py-1 rounded border border-slate-200 hover:bg-slate-50"
+                  >
+                    Effacer
+                  </button>
+                  <select
+                    value={bulkSigStatut}
+                    onChange={(e) => setBulkSigStatut(e.target.value)}
+                    className="text-xs border rounded-lg px-2 py-1 bg-white"
+                  >
+                    {STATUT_SIGNALEMENT_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={bulkEnCours}
+                    onClick={appliquerBulkSignalements}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-teal-600 text-white disabled:opacity-50"
+                  >
+                    Appliquer à la sélection
+                  </button>
+                </div>
+              )}
+            </div>
             {signalementsFiltres.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center text-gray-400 border border-gray-100">
                 Aucun signalement.
@@ -970,7 +1799,23 @@ export default function AdminPortail() {
                 className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                  <div className="min-w-0">
+                  {permissions.selectionGroupéeModerationContenu && (
+                    <input
+                      type="checkbox"
+                      checked={selSignalements.has(s.id)}
+                      onChange={() => {
+                        setSelSignalements((prev) => {
+                          const n = new Set(prev)
+                          if (n.has(s.id)) n.delete(s.id)
+                          else n.add(s.id)
+                          return n
+                        })
+                      }}
+                      className="w-4 h-4 accent-teal-600 shrink-0 mt-1"
+                      aria-label="Sélectionner signalement"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
                     <p className="font-bold text-gray-800">{s.motif}</p>
                     <p className="text-gray-500 text-xs mt-1">
                       Annonce :{' '}
@@ -1014,6 +1859,114 @@ export default function AdminPortail() {
 
         {onglet === 'demandes_badge' && (
           <div className="space-y-3">
+            <div className="flex flex-col gap-3 bg-white/95 border border-indigo-100 rounded-xl p-4 shadow-sm">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs font-bold text-slate-500 uppercase">Filtres</span>
+                <select
+                  value={filtreDemandeBadgeStatut}
+                  onChange={(e) => setFiltreDemandeBadgeStatut(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Statut (tous)</option>
+                  {STATUT_DEMANDE_BADGE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {permissions.peutExporterDonnees && (
+                <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      telechargerCsv(
+                        'demandes_badge_admin',
+                        [
+                          { key: 'id', label: 'id' },
+                          { key: 'nom', label: 'nom' },
+                          { key: 'telephone', label: 'telephone' },
+                          { key: 'badge_demande', label: 'badge_demande' },
+                          { key: 'statut', label: 'statut' },
+                          { key: 'annonce', label: 'annonce' },
+                          { key: 'created_at', label: 'cree_le' },
+                        ],
+                        demandesBadgeFiltrees.map((d) => ({
+                          id: d.id,
+                          nom: d.nom,
+                          telephone: d.telephone,
+                          badge_demande: d.badge_demande,
+                          statut: d.statut,
+                          annonce: d.annonce_titre || d.annonce_id,
+                          created_at: d.created_at,
+                        }))
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
+                  >
+                    CSV / Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      ouvrirImpressionPdfListe(
+                        'Demandes badge',
+                        ['nom', 'telephone', 'badge', 'statut'],
+                        demandesBadgeFiltrees.map((d) => [
+                          d.nom,
+                          d.telephone,
+                          d.badge_demande,
+                          d.statut,
+                        ])
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                  >
+                    PDF (impression)
+                  </button>
+                </div>
+              )}
+              {permissions.selectionGroupéeModerationContenu && (
+                <div className="flex flex-wrap gap-2 items-end border-t border-slate-100 pt-3">
+                  <span className="text-xs font-bold text-slate-500 uppercase">
+                    Sélection ({selDemandes.size})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelDemandes(new Set(demandesBadgeFiltrees.map((x) => x.id)))}
+                    className="text-xs font-bold px-2 py-1 rounded border border-slate-200 hover:bg-slate-50"
+                  >
+                    Tout (filtré)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelDemandes(new Set())}
+                    className="text-xs font-bold px-2 py-1 rounded border border-slate-200 hover:bg-slate-50"
+                  >
+                    Effacer
+                  </button>
+                  <select
+                    value={bulkDemandeStatut}
+                    onChange={(e) => setBulkDemandeStatut(e.target.value)}
+                    className="text-xs border rounded-lg px-2 py-1 bg-white"
+                  >
+                    {STATUT_DEMANDE_BADGE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={bulkEnCours}
+                    onClick={appliquerBulkDemandesBadge}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-teal-600 text-white disabled:opacity-50"
+                  >
+                    Appliquer à la sélection
+                  </button>
+                </div>
+              )}
+            </div>
             {demandesBadgeFiltrees.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center text-gray-400 border border-gray-100">
                 Aucune demande badge.
@@ -1025,7 +1978,23 @@ export default function AdminPortail() {
                 className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                  <div className="min-w-0">
+                  {permissions.selectionGroupéeModerationContenu && (
+                    <input
+                      type="checkbox"
+                      checked={selDemandes.has(d.id)}
+                      onChange={() => {
+                        setSelDemandes((prev) => {
+                          const n = new Set(prev)
+                          if (n.has(d.id)) n.delete(d.id)
+                          else n.add(d.id)
+                          return n
+                        })
+                      }}
+                      className="w-4 h-4 accent-teal-600 shrink-0 mt-1"
+                      aria-label="Sélectionner demande badge"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
                     <p className="font-bold text-gray-800">
                       {d.nom} — {d.telephone}
                     </p>
@@ -1082,6 +2051,114 @@ export default function AdminPortail() {
               (cloche utilisateur) restent dans la table <code className="text-xs bg-white px-1 rounded">notifications</code>{' '}
               — elles ne sont pas listées ici.
             </p>
+            <div className="flex flex-col gap-3 bg-white/95 border border-indigo-100 rounded-xl p-4 shadow-sm">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs font-bold text-slate-500 uppercase">Filtres</span>
+                <select
+                  value={filtreContactStatut}
+                  onChange={(e) => setFiltreContactStatut(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Statut (tous)</option>
+                  {STATUT_CONTACT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {permissions.peutExporterDonnees && (
+                <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      telechargerCsv(
+                        'messages_contact_admin',
+                        [
+                          { key: 'id', label: 'id' },
+                          { key: 'statut', label: 'statut' },
+                          { key: 'nom', label: 'nom' },
+                          { key: 'email', label: 'email' },
+                          { key: 'sujet', label: 'sujet' },
+                          { key: 'created_at', label: 'cree_le' },
+                        ],
+                        messagesContactFiltres.map((m) => ({
+                          id: m.id,
+                          statut: m.statut || 'nouveau',
+                          nom: m.nom,
+                          email: m.email,
+                          sujet: m.sujet,
+                          created_at: m.created_at,
+                        }))
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
+                  >
+                    CSV / Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      ouvrirImpressionPdfListe(
+                        'Messages contact',
+                        ['statut', 'nom', 'email', 'sujet'],
+                        messagesContactFiltres.map((m) => [
+                          m.statut || 'nouveau',
+                          m.nom,
+                          m.email,
+                          m.sujet,
+                        ])
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                  >
+                    PDF (impression)
+                  </button>
+                </div>
+              )}
+              {permissions.selectionGroupéeMessagerie && (
+                <div className="flex flex-wrap gap-2 items-end border-t border-slate-100 pt-3">
+                  <span className="text-xs font-bold text-slate-500 uppercase">
+                    Sélection ({selMessagesContact.size})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelMessagesContact(new Set(messagesContactFiltres.map((x) => x.id)))
+                    }
+                    className="text-xs font-bold px-2 py-1 rounded border border-slate-200 hover:bg-slate-50"
+                  >
+                    Tout (filtré)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelMessagesContact(new Set())}
+                    className="text-xs font-bold px-2 py-1 rounded border border-slate-200 hover:bg-slate-50"
+                  >
+                    Effacer
+                  </button>
+                  <select
+                    value={bulkContactStatut}
+                    onChange={(e) => setBulkContactStatut(e.target.value)}
+                    className="text-xs border rounded-lg px-2 py-1 bg-white"
+                  >
+                    {STATUT_CONTACT_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={bulkEnCours}
+                    onClick={appliquerBulkMessagesContact}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-teal-600 text-white disabled:opacity-50"
+                  >
+                    Appliquer à la sélection
+                  </button>
+                </div>
+              )}
+            </div>
             {messagesContactFiltres.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center text-gray-400 border border-gray-100">
                 Aucun message pour l’instant.
@@ -1103,6 +2180,22 @@ export default function AdminPortail() {
                   className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                    {permissions.selectionGroupéeMessagerie && (
+                      <input
+                        type="checkbox"
+                        checked={selMessagesContact.has(m.id)}
+                        onChange={() => {
+                          setSelMessagesContact((prev) => {
+                            const n = new Set(prev)
+                            if (n.has(m.id)) n.delete(m.id)
+                            else n.add(m.id)
+                            return n
+                          })
+                        }}
+                        className="w-4 h-4 accent-teal-600 shrink-0 mt-1"
+                        aria-label="Sélectionner message"
+                      />
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span
@@ -1200,6 +2293,69 @@ export default function AdminPortail() {
 
         {onglet === 'avis' && (
           <div className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center bg-white/95 border border-indigo-100 rounded-xl p-4 shadow-sm">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs font-bold text-slate-500 uppercase">Filtres</span>
+                <select
+                  value={filtreAvisVisibilite}
+                  onChange={(e) => setFiltreAvisVisibilite(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Visibilité (tous)</option>
+                  <option value="visible">Visibles</option>
+                  <option value="masque">Masqués</option>
+                </select>
+              </div>
+              {permissions.peutExporterDonnees && (
+                <div className="flex flex-wrap gap-2 sm:ml-auto">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      telechargerCsv(
+                        'avis_admin',
+                        [
+                          { key: 'id', label: 'id' },
+                          { key: 'note', label: 'note' },
+                          { key: 'auteur', label: 'auteur' },
+                          { key: 'annonce', label: 'annonce' },
+                          { key: 'masque', label: 'masque' },
+                          { key: 'created_at', label: 'cree_le' },
+                        ],
+                        avisFiltres.map((a) => ({
+                          id: a.id,
+                          note: a.note,
+                          auteur: a.auteur_nom,
+                          annonce: a.annonce_titre || a.annonce_id,
+                          masque: a.is_hidden ? 'oui' : 'non',
+                          created_at: a.created_at,
+                        }))
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
+                  >
+                    CSV / Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      ouvrirImpressionPdfListe(
+                        'Avis',
+                        ['note', 'auteur', 'annonce', 'masqué'],
+                        avisFiltres.map((a) => [
+                          a.note,
+                          a.auteur_nom,
+                          a.annonce_titre || a.annonce_id,
+                          a.is_hidden ? 'oui' : 'non',
+                        ])
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                  >
+                    PDF (impression)
+                  </button>
+                </div>
+              )}
+            </div>
             {avisFiltres.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center text-gray-400 border border-gray-100">
                 Aucun avis.
@@ -1250,6 +2406,68 @@ export default function AdminPortail() {
 
         {onglet === 'historique_moderation' && (
           <div className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center bg-white/95 border border-indigo-100 rounded-xl p-4 shadow-sm">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs font-bold text-slate-500 uppercase">Filtres</span>
+                <select
+                  value={filtreLogAction}
+                  onChange={(e) => setFiltreLogAction(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Action (toutes)</option>
+                  <option value="hide">Masqué</option>
+                  <option value="unhide">Affiché</option>
+                </select>
+              </div>
+              {permissions.peutExporterDonnees && (
+                <div className="flex flex-wrap gap-2 sm:ml-auto">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      telechargerCsv(
+                        'historique_moderation_avis',
+                        [
+                          { key: 'id', label: 'id' },
+                          { key: 'action', label: 'action' },
+                          { key: 'annonce', label: 'annonce' },
+                          { key: 'moderateur', label: 'moderateur' },
+                          { key: 'reason', label: 'motif' },
+                          { key: 'created_at', label: 'cree_le' },
+                        ],
+                        logsFiltres.map((l) => ({
+                          id: l.id,
+                          action: l.action,
+                          annonce: l.annonce_titre || l.annonce_id,
+                          moderateur: l.moderateur_nom || l.moderator_id,
+                          reason: l.reason,
+                          created_at: l.created_at,
+                        }))
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
+                  >
+                    CSV / Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      ouvrirImpressionPdfListe(
+                        'Historique modération avis',
+                        ['action', 'annonce', 'modérateur'],
+                        logsFiltres.map((l) => [
+                          l.action,
+                          l.annonce_titre || l.annonce_id,
+                          l.moderateur_nom || l.moderator_id,
+                        ])
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                  >
+                    PDF (impression)
+                  </button>
+                </div>
+              )}
+            </div>
             {logsFiltres.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center text-gray-400 border border-gray-100">
                 Aucun événement de modération.
@@ -1273,10 +2491,225 @@ export default function AdminPortail() {
         )}
 
         {onglet === 'utilisateurs' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="space-y-3">
+            {permissions.fusionProfils && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm shadow-sm">
+                <p className="font-bold text-amber-950 mb-1">Fusion de profils (super admin)</p>
+                <p className="text-amber-900/90 text-xs mb-3">
+                  Transfère les annonces et les demandes badge du compte source vers la cible, supprime les
+                  favoris du compte source, puis bannit le profil source. Les comptes de connexion (Auth)
+                  restent distincts — supprimez l’utilisateur source dans Supabase Auth si besoin.
+                </p>
+                <div className="flex flex-col lg:flex-row flex-wrap gap-3 items-end">
+                  <label className="text-xs font-bold text-amber-950 block flex-1 min-w-[12rem]">
+                    Profil source (absorbé)
+                    <select
+                      value={mergeSource}
+                      onChange={(e) => setMergeSource(e.target.value)}
+                      className="block mt-1 w-full border border-amber-300 rounded-lg px-2 py-1.5 text-xs bg-white"
+                    >
+                      <option value="">— Choisir —</option>
+                      {utilisateurs.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {(u.nom || u.email || u.id).slice(0, 48)} ({String(u.id).slice(0, 8)}…)
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-xs font-bold text-amber-950 block flex-1 min-w-[12rem]">
+                    Profil cible (conservé)
+                    <select
+                      value={mergeTarget}
+                      onChange={(e) => setMergeTarget(e.target.value)}
+                      className="block mt-1 w-full border border-amber-300 rounded-lg px-2 py-1.5 text-xs bg-white"
+                    >
+                      <option value="">— Choisir —</option>
+                      {utilisateurs.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {(u.nom || u.email || u.id).slice(0, 48)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={fusionEnCours}
+                    onClick={fusionnerProfils}
+                    className="text-xs font-bold px-4 py-2 rounded-lg bg-amber-800 text-white hover:bg-amber-900 disabled:opacity-50 shrink-0"
+                  >
+                    {fusionEnCours ? '…' : 'Fusionner'}
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="flex flex-col gap-3 bg-white/95 border border-indigo-100 rounded-xl p-4 shadow-sm">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs font-bold text-slate-500 uppercase">Filtres</span>
+                <select
+                  value={filtreUserStatut}
+                  onChange={(e) => setFiltreUserStatut(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Statut compte (tous)</option>
+                  <option value="en_attente">En attente</option>
+                  <option value="active">Vérifié</option>
+                  <option value="suspended">Suspendu</option>
+                  <option value="banned">Banni</option>
+                </select>
+                <select
+                  value={filtreUserBadge}
+                  onChange={(e) => setFiltreUserBadge(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Badge (tous)</option>
+                  {BADGE_OPTIONS.map((b) => (
+                    <option key={b} value={b}>
+                      {BADGE_LABEL[b]}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={filtreUserType}
+                  onChange={(e) => setFiltreUserType(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Type profil (tous)</option>
+                  {typesProfilUniques.map((t) => (
+                    <option key={t} value={t}>
+                      {TYPE_LABEL[t] || t}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={filtreUserStaff}
+                  onChange={(e) => setFiltreUserStaff(e.target.value)}
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 bg-white"
+                >
+                  <option value="">Staff / public (tous)</option>
+                  <option value="staff">Équipe uniquement</option>
+                  <option value="public">Hors équipe</option>
+                </select>
+                <input
+                  type="text"
+                  value={filtreUserEmail}
+                  onChange={(e) => setFiltreUserEmail(e.target.value)}
+                  placeholder="Filtre e-mail contient…"
+                  className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 min-w-[10rem] flex-1 max-w-xs bg-white"
+                />
+              </div>
+              {permissions.peutExporterDonnees && (
+                <div className="flex flex-wrap gap-2 items-center border-t border-slate-100 pt-3">
+                  <span className="text-xs font-bold text-slate-500 uppercase">Export</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      telechargerCsv(
+                        'utilisateurs_admin',
+                        [
+                          { key: 'id', label: 'id' },
+                          { key: 'nom', label: 'nom' },
+                          { key: 'email', label: 'email' },
+                          { key: 'type', label: 'type' },
+                          { key: 'account_status', label: 'statut_compte' },
+                          { key: 'badge', label: 'badge' },
+                          { key: 'quartier', label: 'quartier' },
+                          { key: 'staff', label: 'equipe' },
+                        ],
+                        utilisateursFiltres.map((u) => ({
+                          id: u.id,
+                          nom: u.nom,
+                          email: u.email,
+                          type: u.type,
+                          account_status: u.account_status,
+                          badge: u.badge,
+                          quartier: u.quartier,
+                          staff: u.is_admin ? 'oui' : 'non',
+                        }))
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
+                  >
+                    CSV / Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      ouvrirImpressionPdfListe(
+                        'Utilisateurs',
+                        ['id', 'nom', 'email', 'statut', 'badge'],
+                        utilisateursFiltres.map((u) => [
+                          u.id,
+                          u.nom,
+                          u.email,
+                          u.account_status,
+                          u.badge,
+                        ])
+                      )
+                    }
+                    className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                  >
+                    PDF (impression)
+                  </button>
+                </div>
+              )}
+              {permissions.selectionGroupéeUtilisateurs && permissions.utilisateursEdit && (
+                <div className="flex flex-wrap gap-2 items-end border-t border-slate-100 pt-3">
+                  <span className="text-xs font-bold text-slate-500 uppercase">
+                    Sélection ({selUsers.size})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelUsers(new Set(utilisateursFiltres.map((x) => x.id)))}
+                    className="text-xs font-bold px-2 py-1 rounded border border-slate-200 hover:bg-slate-50"
+                  >
+                    Tout (filtré)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelUsers(new Set())}
+                    className="text-xs font-bold px-2 py-1 rounded border border-slate-200 hover:bg-slate-50"
+                  >
+                    Effacer
+                  </button>
+                  <select
+                    value={bulkUserStatut}
+                    onChange={(e) => setBulkUserStatut(e.target.value)}
+                    className="text-xs border rounded-lg px-2 py-1 bg-white"
+                  >
+                    <option value="en_attente">En attente</option>
+                    <option value="active">Vérifié</option>
+                    <option value="suspended">Suspendu</option>
+                    <option value="banned">Banni</option>
+                  </select>
+                  <select
+                    value={bulkUserBadge}
+                    onChange={(e) => setBulkUserBadge(e.target.value)}
+                    className="text-xs border rounded-lg px-2 py-1 bg-white"
+                  >
+                    {BADGE_OPTIONS.map((b) => (
+                      <option key={b} value={b}>
+                        {BADGE_LABEL[b]}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={bulkEnCours}
+                    onClick={appliquerBulkUtilisateurs}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-teal-600 text-white disabled:opacity-50"
+                  >
+                    Appliquer à la sélection
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-indigo-100 overflow-hidden">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="bg-indigo-50/80 border-b border-indigo-100">
                 <tr>
+                  {permissions.selectionGroupéeUtilisateurs && (
+                    <th className="px-2 py-3 w-10" aria-label="Sélection" />
+                  )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-600">Utilisateur</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-600 hidden md:table-cell">Type</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-600">Statut</th>
@@ -1290,13 +2723,36 @@ export default function AdminPortail() {
               <tbody className="divide-y divide-gray-50">
                 {utilisateursFiltres.length === 0 && (
                   <tr>
-                    <td colSpan={showRoleCol ? 6 : 5} className="px-4 py-8 text-center text-gray-400 text-sm">
+                    <td
+                      colSpan={
+                        (permissions.selectionGroupéeUtilisateurs ? 1 : 0) + (showRoleCol ? 6 : 5)
+                      }
+                      className="px-4 py-8 text-center text-gray-400 text-sm"
+                    >
                       Aucun utilisateur trouvé.
                     </td>
                   </tr>
                 )}
                 {utilisateursFiltres.map(u => (
                   <tr key={u.id} className={`hover:bg-gray-50 transition-colors ${u.account_status === 'banned' ? 'bg-red-50/30' : ''}`}>
+                    {permissions.selectionGroupéeUtilisateurs && (
+                      <td className="px-2 py-3 align-top">
+                        <input
+                          type="checkbox"
+                          checked={selUsers.has(u.id)}
+                          onChange={() => {
+                            setSelUsers((prev) => {
+                              const n = new Set(prev)
+                              if (n.has(u.id)) n.delete(u.id)
+                              else n.add(u.id)
+                              return n
+                            })
+                          }}
+                          className="w-4 h-4 accent-teal-600 mt-1"
+                          aria-label={`Sélectionner ${u.nom || u.email}`}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-[#E8F5E9] flex items-center justify-center text-[#1B5E20] font-bold text-sm flex-shrink-0">
@@ -1434,6 +2890,7 @@ export default function AdminPortail() {
               </tbody>
             </table>
           </div>
+          </div>
         )}
 
         {onglet === 'feature_flags' && (
@@ -1441,6 +2898,31 @@ export default function AdminPortail() {
             <p className="text-sm text-gray-600">
               Activez ou désactivez des leviers produit (réservé au super admin). Les clés sont créées en base ; ajoutez-en via migration SQL si besoin.
             </p>
+            {permissions.peutExporterDonnees && featureFlagsFiltres.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    telechargerCsv(
+                      'feature_flags_admin',
+                      [
+                        { key: 'key', label: 'cle' },
+                        { key: 'value_boolean', label: 'actif' },
+                        { key: 'updated_at', label: 'maj' },
+                      ],
+                      featureFlagsFiltres.map((f) => ({
+                        key: f.key,
+                        value_boolean: f.value_boolean ? 'oui' : 'non',
+                        updated_at: f.updated_at,
+                      }))
+                    )
+                  }
+                  className="text-xs font-bold px-2 py-1.5 rounded-lg border border-teal-600 text-teal-700 hover:bg-teal-50"
+                >
+                  Exporter CSV / Excel
+                </button>
+              </div>
+            )}
             {featureFlagsFiltres.length === 0 && (
               <div className="bg-white rounded-xl p-8 text-center text-gray-400 border border-gray-100">
                 Aucun paramètre ou migration non appliquée.
