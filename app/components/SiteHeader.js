@@ -22,6 +22,14 @@ const NAV_ITEMS = [
   { href: '/packs', label: 'Packs' },
 ]
 
+// Menu mobile : version "sans dropdown" (guide déplacé dans le footer).
+const MOBILE_LINKS = [
+  { href: '/annonces?type=vente', label: 'Acheter' },
+  { href: '/annonces?type=location', label: 'Louer' },
+  { href: '/annonces?type=prestations', label: 'Services & pros' },
+  { href: '/packs', label: 'Packs' },
+]
+
 const SERVER_AUTH_SNAPSHOT = Object.freeze({ user: null, profil: null })
 
 export default function SiteHeader() {
@@ -232,7 +240,7 @@ export default function SiteHeader() {
 
       {menuMobile && (
         <div className="lg:hidden bg-white border-t border-gray-100 px-2 py-2">
-          {LIENS.map((l) => (
+          {MOBILE_LINKS.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -255,13 +263,6 @@ export default function SiteHeader() {
             onClick={() => setMenuMobile(false)}
           >
             Estimation de bien
-          </Link>
-          <Link
-            href="/guide"
-            className="block px-3 py-2 text-gray-700 hover:bg-[#E8F5E9] hover:text-[#1B5E20] rounded-lg text-sm font-medium"
-            onClick={() => setMenuMobile(false)}
-          >
-            Guide achat & financement
           </Link>
           {!user && (
             <Link
