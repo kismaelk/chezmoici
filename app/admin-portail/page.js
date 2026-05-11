@@ -1234,17 +1234,19 @@ export default function AdminPortail() {
       </div>
 
       <div className="flex flex-col lg:flex-row max-w-[1600px] mx-auto min-h-[calc(100vh-8rem)]">
-        <aside className="hidden lg:flex w-60 shrink-0 bg-slate-900 flex-col p-3 gap-1 border-r border-slate-700 shadow-inner">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1">Sections</p>
+        <aside className="hidden lg:flex w-60 shrink-0 bg-slate-900 flex-col p-3 gap-1 border-r border-slate-700 shadow-inner text-white">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200 px-2 mb-1">
+            Sections
+          </p>
           {ongletsVisibles.map((o) => (
             <button
               key={o.id}
               type="button"
               onClick={() => naviguerOnglet(o.id)}
-              className={`text-left text-sm font-semibold rounded-lg px-3 py-2 transition-colors ${
+              className={`text-left text-sm font-semibold rounded-lg px-3 py-2 transition-colors [color-scheme:dark] ${
                 onglet === o.id
-                  ? 'bg-teal-600 text-white shadow-md'
-                  : 'text-slate-100 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-teal-600 !text-white text-white shadow-md ring-1 ring-white/25'
+                  : '!text-amber-50 hover:bg-slate-800 hover:!text-white'
               }`}
             >
               {o.label}
