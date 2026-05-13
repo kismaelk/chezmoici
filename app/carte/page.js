@@ -714,66 +714,77 @@ function CarteGoogleMaps() {
   )
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-gradient-to-b from-emerald-50 via-amber-50/40 to-teal-50/90">
-      <SiteHeader />
+    <div className="flex min-h-0 h-[100dvh] flex-col overflow-hidden bg-gradient-to-b from-emerald-50 via-amber-50/40 to-teal-50/90">
+      <div className="shrink-0">
+        <SiteHeader />
+      </div>
 
-      <div className="relative z-[600] flex flex-shrink-0 flex-col gap-2 border-b border-emerald-800/15 bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-700 px-3 py-2.5 shadow-lg shadow-emerald-900/20 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <div className="flex flex-col min-w-0 gap-0.5 sm:max-w-[40%]">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
-            <span className="text-sm font-bold tracking-tight text-white drop-shadow-sm">Carte — Côte d&apos;Ivoire</span>
-            {!chargement && (
-              <span className="text-xs font-semibold text-amber-100 flex-shrink-0 rounded-full bg-white/15 px-2 py-0.5 backdrop-blur-sm">
-                {annoncesAffichees.length} sur {annoncesFiltrees.length} annonce{annoncesFiltrees.length > 1 ? 's' : ''}
-                {zoneRing ? ' (zone)' : ''}
-              </span>
-            )}
+      {/* Barre outils carte : mobile = 2 rangées alignées ; desktop = une ligne */}
+      <div className="relative z-[600] shrink-0 border-b border-emerald-900/20 bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-700 px-2.5 py-2 shadow-md shadow-emerald-950/15">
+        <div className="mx-auto flex w-full max-w-[100rem] flex-col gap-2 md:flex-row md:items-center md:gap-3 md:py-0.5">
+          <div className="flex items-start justify-between gap-2 md:contents">
+            <div className="min-w-0 flex-1 md:flex-none md:max-w-[38%]">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="text-[13px] font-bold leading-tight text-white md:text-sm">
+                  Carte — Côte d&apos;Ivoire
+                </span>
+                {!chargement && (
+                  <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-amber-50 ring-1 ring-white/25 md:text-xs">
+                    {annoncesAffichees.length}/{annoncesFiltrees.length}
+                    {zoneRing ? ' · zone' : ''}
+                  </span>
+                )}
+              </div>
+              <p className="mt-0.5 truncate text-[10px] font-medium text-emerald-100/95 md:text-[11px]">
+                Chez Moi CI · touchez une fiche pour centrer la carte
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowListMobile((v) => !v)}
+              className="shrink-0 rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-bold text-emerald-950 shadow-sm md:hidden"
+            >
+              {showListMobile ? 'Carte' : 'Liste'}
+            </button>
           </div>
-          <span className="text-[10px] text-emerald-100/90 truncate">Chez Moi CI · repères colorés par type</span>
-        </div>
 
-          <div className="flex flex-1 flex-wrap items-center justify-center gap-1 sm:px-2">
-          {FILTRES_TYPE_RAPIDES.map((f) => {
-            const actif = (filtresURL.type || '') === f.id
-            return (
-              <button
-                key={f.id || 'all'}
-                type="button"
-                onClick={() => appliquerFiltreTypeRapide(f.id)}
-                className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
-                  actif
-                    ? 'bg-amber-400 text-emerald-950 shadow-md ring-2 ring-white/40'
-                    : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
-                }`}
-              >
-                {f.label}
-              </button>
-            )
-          })}
+          <div className="flex flex-wrap items-center gap-1 md:flex-1 md:justify-center md:px-2">
+            {FILTRES_TYPE_RAPIDES.map((f) => {
+              const actif = (filtresURL.type || '') === f.id
+              return (
+                <button
+                  key={f.id || 'all'}
+                  type="button"
+                  onClick={() => appliquerFiltreTypeRapide(f.id)}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition-all md:px-3 md:py-1.5 md:text-xs ${
+                    actif
+                      ? 'bg-amber-400 text-emerald-950 shadow-sm ring-1 ring-white/50'
+                      : 'bg-white/15 text-white ring-1 ring-white/10 hover:bg-white/25'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              )
+            })}
             <select
               value={triCarte}
               onChange={(e) => setTriCarte(e.target.value)}
-              className="rounded-full border-2 border-amber-300/60 bg-white/95 px-2.5 py-1.5 text-xs font-bold text-emerald-900 shadow-sm"
+              className="ml-auto rounded-full border border-amber-300/70 bg-white px-2 py-1 text-[11px] font-bold text-emerald-900 shadow-sm md:ml-0 md:px-2.5 md:py-1.5 md:text-xs"
             >
               <option value="recent">Récents</option>
               <option value="plus_vus">Plus vus</option>
               <option value="mieux_notes">Mieux notés</option>
             </select>
-        </div>
+          </div>
 
-        <div className="flex flex-shrink-0 items-center justify-end gap-2">
-          <Link
-            href={lienListe}
-            className="hidden md:inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2 text-sm font-bold text-emerald-950 shadow-md transition-transform hover:scale-[1.02] hover:bg-amber-300"
-          >
-            Voir en liste
-          </Link>
-          <button
-            type="button"
-            onClick={() => setShowListMobile((v) => !v)}
-            className="md:hidden inline-flex flex-shrink-0 items-center gap-1 rounded-xl bg-amber-400 px-3 py-1.5 text-xs font-bold text-emerald-950 shadow-md transition-transform hover:bg-amber-300"
-          >
-            {showListMobile ? 'Carte' : 'Liste'}
-          </button>
+          <div className="hidden shrink-0 md:block">
+            <Link
+              href={lienListe}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-400 px-3 py-2 text-sm font-bold text-emerald-950 shadow-sm transition-colors hover:bg-amber-300"
+            >
+              Voir en liste
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -782,17 +793,17 @@ function CarteGoogleMaps() {
         <div
           className={`${
             showListMobile ? 'flex' : 'hidden'
-          } md:flex min-h-0 w-full flex-shrink-0 flex-col overflow-hidden border-t-2 border-emerald-700/20 bg-gradient-to-b from-white to-emerald-50/50 shadow-[4px_0_24px_-8px_rgba(6,95,70,0.25)] md:w-[min(100%,22rem)] md:max-h-none md:border-t-0 md:border-r-2 md:border-emerald-800/15 max-h-[46vh] md:max-h-full`}
+          } md:flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden border-t border-emerald-800/20 bg-gradient-to-b from-white to-emerald-50/60 shadow-[4px_0_20px_-6px_rgba(6,95,70,0.2)] md:max-h-none md:w-[min(100%,20rem)] md:flex-none md:border-r-2 md:border-t-0 md:border-emerald-800/12`}
         >
-          <div className="flex-shrink-0 bg-gradient-to-r from-emerald-700 to-teal-600 px-3 py-3 text-white shadow-inner">
-            <h2 className="text-sm font-bold tracking-tight">
-              {chargement ? 'Chargement…' : `${annoncesAffichees.length} résultats`}
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-emerald-800/10 bg-emerald-800/90 px-2.5 py-2 text-white">
+            <h2 className="text-xs font-bold md:text-sm">
+              {chargement ? 'Chargement…' : `${annoncesAffichees.length} résultat${annoncesAffichees.length > 1 ? 's' : ''}`}
             </h2>
-            <p className="text-[11px] text-emerald-100 mt-0.5 font-medium">Touchez une carte pour zoomer sur la carte</p>
+            <span className="hidden text-[10px] text-emerald-100/90 sm:inline">Faites défiler la liste</span>
           </div>
-          <div className="cartes-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-emerald-50/30 px-2 py-2 [scrollbar-gutter:stable]">
+          <div className="cartes-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-emerald-50/40 px-2 py-1.5 [scrollbar-gutter:stable] pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             {annoncesAffichees.length === 0 && !chargement ? (
-              <div className="m-2 rounded-2xl border-2 border-dashed border-amber-300/80 bg-amber-50/90 p-8 text-center">
+              <div className="m-1 rounded-2xl border-2 border-dashed border-amber-300/80 bg-amber-50/90 p-8 text-center">
                 <p className="text-4xl mb-2">🔍</p>
                 <p className="text-sm font-semibold text-emerald-900">Aucune annonce dans cette zone</p>
                 {zoneRing && (
@@ -802,7 +813,8 @@ function CarteGoogleMaps() {
                 )}
               </div>
             ) : (
-              annoncesAffichees.slice(0, 80).map((annonce) => {
+              <div className="flex flex-col gap-2">
+              {annoncesAffichees.slice(0, 80).map((annonce) => {
                 const estSel = selectionne?.id === annonce.id
                 const col = TYPE_COLORS[annonce.type] || TYPE_COLORS.vente
                 const cover = getListingCoverSrc(annonce)
@@ -812,7 +824,7 @@ function CarteGoogleMaps() {
                     key={annonce.id}
                     type="button"
                     onClick={() => allerAnnonce(annonce)}
-                    className={`mb-2 w-full rounded-xl border-2 text-left shadow-sm transition-all duration-150 ${
+                    className={`w-full rounded-xl border-2 text-left shadow-sm transition-all duration-150 ${
                       estPrestation ? 'p-2' : 'p-2.5'
                     } ${
                       estSel
@@ -865,19 +877,21 @@ function CarteGoogleMaps() {
                     </div>
                   </button>
                 )
-              })
+              })}
+              </div>
             )}
           </div>
         </div>
 
         <div
           className={`${
-            showListMobile ? 'hidden' : 'block'
-          } relative min-h-0 flex-1 overflow-hidden ring-2 ring-inset ring-emerald-800/10 md:block md:min-h-0`}
+            showListMobile ? 'hidden' : 'flex'
+          } relative min-h-0 flex-1 flex-col overflow-hidden ring-1 ring-inset ring-emerald-800/10 md:flex md:min-h-0`}
           ref={mapShellRef}
         >
 
-          <div className="absolute left-2 right-2 top-2 z-20 flex max-h-[32vh] flex-col gap-1.5 overflow-y-auto rounded-xl border-2 border-amber-300/70 bg-gradient-to-br from-emerald-900/95 via-emerald-800/92 to-teal-800/95 p-2 shadow-xl shadow-emerald-950/30 backdrop-blur-md">
+          <div className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-1rem)]">
+            <div className="pointer-events-auto inline-flex max-h-[32vh] flex-col gap-1 overflow-y-auto rounded-xl border border-amber-400/50 bg-gradient-to-br from-emerald-900/96 to-teal-900/95 p-1.5 shadow-lg shadow-black/20 backdrop-blur-sm">
             <div className="flex flex-wrap items-center gap-1">
               <button
                 type="button"
@@ -958,15 +972,16 @@ function CarteGoogleMaps() {
                 Réinit.
               </button>
             </div>
+            </div>
           </div>
 
           {chargement ? (
-            <div className="flex h-full min-h-[12rem] w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-emerald-100 via-teal-50 to-amber-50 md:absolute md:inset-0 md:min-h-0">
+            <div className="flex min-h-[12rem] flex-1 flex-col items-center justify-center gap-3 bg-gradient-to-br from-emerald-100 via-teal-50 to-amber-50 md:absolute md:inset-0 md:min-h-0">
               <div className="h-11 w-11 animate-spin rounded-full border-[3px] border-emerald-200 border-t-emerald-700" />
               <p className="text-sm font-bold text-emerald-900">Chargement de la carte…</p>
             </div>
           ) : erreurAffichee ? (
-            <div className="flex h-full min-h-[12rem] w-full items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 px-6 md:absolute md:inset-0 md:min-h-0">
+            <div className="flex min-h-[12rem] flex-1 items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 px-6 md:absolute md:inset-0 md:min-h-0">
               <div className="text-center rounded-2xl border-2 border-amber-200 bg-white/90 p-6 shadow-lg">
                 <p className="text-4xl mb-3">🗺️</p>
                 <p className="text-emerald-900 text-sm font-medium">{erreurAffichee}</p>
@@ -975,7 +990,7 @@ function CarteGoogleMaps() {
           ) : (
             <div
               ref={mapContainerRef}
-              className="h-full min-h-[16rem] w-full md:absolute md:inset-0 md:min-h-0"
+              className="min-h-[14rem] w-full flex-1 md:absolute md:inset-0 md:min-h-0"
             />
           )}
 
