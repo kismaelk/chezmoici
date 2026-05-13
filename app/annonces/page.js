@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { fetchAnnoncesList, fetchAvisStatsForAnnonces } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
@@ -264,7 +265,35 @@ const BADGE_STYLE = {
   or:     { label: '🥇 Or',     cls: 'bg-yellow-50 text-yellow-700' },
 }
 
-function CarteAnnonce({ annonce, vue, avisStat }) {
+/** Paramètres repris par la page /carte (hors ville, non utilisée sur la carte). */
+const PARAMS_CARTE_DEPUIS_ANNONCES = [
+  'type', 'quartier', 'prixMin', 'prixMax', 'nbPieces', 'nbChambres', 'meuble', 'badge',
+  'surfaceMin', 'recherche', 'typePropriete', 'typeService', 'disponibilite',
+]
+
+function buildHrefCarteAnnonce(annonceId, filtres) {
+  const p = new URLSearchParams()
+  p.set('annonce', annonceId)
+  for (const key of PARAMS_CARTE_DEPUIS_ANNONCES) {
+    const v = filtres?.[key]
+    if (v != null && String(v).trim() !== '') p.set(key, String(v).trim())
+  }
+  return `/carte?${p.toString()}`
+}
+
+function IconePinCarte({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path
+        d="M12 2C8.13 2 5 5.13 5 9c0 4.52 4.86 9.53 6.24 10.8.14.13.33.2.51.2.18 0 .37-.07.51-.2C13.14 18.53 18 13.52 18 9c0-3.87-3.13-7-7-7z"
+        className="fill-[#1B5E20]"
+      />
+      <circle cx="12" cy="9" r="2.25" className="fill-white" />
+    </svg>
+  )
+}
+
+function CarteAnnonce({ annonce, vue, avisStat, filtresPourCarte = {} }) {
   const badge = BADGE_STYLE[annonce.badge] || BADGE_STYLE.bronze
   const typeColor = TYPE_COLOR[annonce.type] || 'bg-gray-500'
   const nbVues = annonce.nb_vues || 0
@@ -272,139 +301,154 @@ function CarteAnnonce({ annonce, vue, avisStat }) {
   const totalAvis = avisStat?.total || 0
   const topNote = moyenneAvis >= 4.5 && totalAvis > 0
 
+  const hrefDetail = `/annonces/${annonce.id}`
+  const hrefCarte = buildHrefCarteAnnonce(annonce.id, filtresPourCarte)
+
   if (vue === 'liste') {
     return (
-      <a
-        href={`/annonces/${annonce.id}`}
-        className="group flex flex-col sm:flex-row bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-      >
-        <div className="relative w-full sm:w-52 h-48 sm:h-auto bg-gray-100 flex-shrink-0 overflow-hidden">
-          {annonce.photos?.[0] ? (
-            <Image
-              src={annonce.photos[0]}
-              alt={annonce.titre}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
-              sizes="208px"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-6xl bg-gradient-to-br from-gray-100 to-gray-200">
-              {getPlaceholderIcon(annonce)}
+      <div className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl sm:flex-row">
+        <Link
+          href={hrefDetail}
+          className="flex min-w-0 flex-1 flex-col sm:flex-row"
+        >
+          <div className="relative h-48 w-full flex-shrink-0 overflow-hidden bg-gray-100 sm:h-auto sm:w-52">
+            {annonce.photos?.[0] ? (
+              <Image
+                src={annonce.photos[0]}
+                alt={annonce.titre}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="208px"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-6xl">
+                {getPlaceholderIcon(annonce)}
+              </div>
+            )}
+            <span className={`absolute left-3 top-3 ${typeColor} rounded-full px-2.5 py-1 text-xs font-bold capitalize text-white shadow-sm`}>
+              {annonce.type}
+            </span>
+            {topNote && (
+              <span className="absolute right-3 top-3 rounded-full bg-fuchsia-600 px-2 py-1 text-[10px] font-bold text-white shadow-sm">
+                Top noté
+              </span>
+            )}
+          </div>
+          <div className="flex flex-1 flex-col p-5">
+            <div className="mb-1.5 flex items-start justify-between gap-2">
+              <h3 className="line-clamp-1 text-base font-bold text-gray-900">{annonce.titre}</h3>
+              <span className={`flex-shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${badge.cls}`}>
+                {badge.label}
+              </span>
             </div>
-          )}
-          <span className={`absolute top-3 left-3 ${typeColor} text-white text-xs px-2.5 py-1 rounded-full font-bold capitalize shadow-sm`}>
-            {annonce.type}
-          </span>
-          {topNote && (
-            <span className="absolute top-3 right-3 bg-fuchsia-600 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-sm">
-              Top noté
-            </span>
-          )}
-        </div>
-        <div className="p-5 flex-1 flex flex-col">
-          <div className="flex items-start justify-between gap-2 mb-1.5">
-            <h3 className="font-bold text-gray-900 line-clamp-1 text-base">{annonce.titre}</h3>
-            <span className={`text-xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap flex-shrink-0 ${badge.cls}`}>
-              {badge.label}
-            </span>
+            <p className="mb-2 text-sm text-gray-400">📍 {annonce.quartier}, Abidjan</p>
+            <p className="line-clamp-2 text-sm text-gray-500">{annonce.description}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+              {annonce.nb_chambres > 0 && <span className="flex items-center gap-1">🛏 {annonce.nb_chambres} ch.</span>}
+              {annonce.nb_pieces    > 0 && <span className="flex items-center gap-1">🚪 {annonce.nb_pieces}p</span>}
+              {annonce.surface           && <span className="flex items-center gap-1">📐 {annonce.surface} m²</span>}
+              {annonce.meuble            && <span className="flex items-center gap-1">🛋️ Meublé</span>}
+              {annonce.type_service      && <span className="flex items-center gap-1">🔧 {annonce.type_service}</span>}
+              {annonce.disponibilite     && <span className="flex items-center gap-1">🕐 {annonce.disponibilite}</span>}
+              <span className="flex items-center gap-1">👁️ {nbVues} clics</span>
+              <span className="flex items-center gap-1">
+                {totalAvis > 0 ? `${renderStars(moyenneAvis)} ${moyenneAvis.toFixed(1).replace('.', ',')} (${totalAvis})` : '☆☆☆☆☆ 0 avis'}
+              </span>
+            </div>
+            <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+              <p className="text-xl font-extrabold text-[#1B5E20]">
+                {formaterPrix(annonce.prix)}
+                {annonce.type === 'location' && <span className="text-sm font-normal text-gray-400"> /mois</span>}
+                {annonce.type === 'artisan'  && <span className="text-sm font-normal text-gray-400"> /h</span>}
+              </p>
+              <span className="rounded-full bg-[#1B5E20] px-3 py-1.5 text-xs font-bold text-white transition-colors group-hover:bg-[#2E7D32]">
+                Détails →
+              </span>
+            </div>
           </div>
-          <p className="text-gray-400 text-sm mb-2">📍 {annonce.quartier}, Abidjan</p>
-          <p className="text-gray-500 text-sm line-clamp-2">{annonce.description}</p>
-          <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 flex-wrap">
-            {annonce.nb_chambres > 0 && <span className="flex items-center gap-1">🛏 {annonce.nb_chambres} ch.</span>}
-            {annonce.nb_pieces    > 0 && <span className="flex items-center gap-1">🚪 {annonce.nb_pieces}p</span>}
-            {annonce.surface           && <span className="flex items-center gap-1">📐 {annonce.surface} m²</span>}
-            {annonce.meuble            && <span className="flex items-center gap-1">🛋️ Meublé</span>}
-            {annonce.type_service      && <span className="flex items-center gap-1">🔧 {annonce.type_service}</span>}
-            {annonce.disponibilite     && <span className="flex items-center gap-1">🕐 {annonce.disponibilite}</span>}
-            <span className="flex items-center gap-1">👁️ {nbVues} clics</span>
-            <span className="flex items-center gap-1">
-              {totalAvis > 0 ? `${renderStars(moyenneAvis)} ${moyenneAvis.toFixed(1).replace('.', ',')} (${totalAvis})` : '☆☆☆☆☆ 0 avis'}
-            </span>
-          </div>
-          <div className="flex items-end justify-between mt-auto pt-4">
-            <p className="text-[#1B5E20] font-extrabold text-xl">
-              {formaterPrix(annonce.prix)}
-              {annonce.type === 'location' && <span className="text-gray-400 text-sm font-normal"> /mois</span>}
-              {annonce.type === 'artisan'  && <span className="text-gray-400 text-sm font-normal"> /h</span>}
-            </p>
-            <span className="text-xs font-bold text-white bg-[#1B5E20] px-3 py-1.5 rounded-full group-hover:bg-[#2E7D32] transition-colors">
-              Voir →
-            </span>
-          </div>
-        </div>
-      </a>
+        </Link>
+        <Link
+          href={hrefCarte}
+          title="Voir sur la carte"
+          className="flex flex-col items-center justify-center gap-1 border-t border-gray-100 bg-emerald-50/60 px-3 py-3 text-emerald-900 transition-colors hover:bg-emerald-100 sm:w-[5.25rem] sm:border-l sm:border-t-0 sm:px-2"
+        >
+          <IconePinCarte className="h-8 w-8 shrink-0" />
+          <span className="text-[10px] font-bold uppercase tracking-wide">Carte</span>
+        </Link>
+      </div>
     )
   }
 
   // Vue grille — style marketplace/TikTok
   return (
-    <a
-      href={`/annonces/${annonce.id}`}
-      className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 block"
-    >
-      {/* IMAGE PRINCIPALE */}
-      <div className="relative h-56 bg-gray-100 overflow-hidden">
-        {annonce.photos?.[0] ? (
-          <Image
-            src={annonce.photos[0]}
-            alt={annonce.titre}
-            fill
-            className="object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-6xl">
-            {getPlaceholderIcon(annonce)}
+    <div className="group relative block overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+      <Link href={hrefDetail} className="block">
+        {/* IMAGE PRINCIPALE */}
+        <div className="relative h-56 overflow-hidden bg-gray-100">
+          {annonce.photos?.[0] ? (
+            <Image
+              src={annonce.photos[0]}
+              alt={annonce.titre}
+              fill
+              className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-6xl">
+              {getPlaceholderIcon(annonce)}
+            </div>
+          )}
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+          <span className={`absolute left-3 top-3 ${typeColor} rounded-full px-2.5 py-1 text-xs font-bold capitalize text-white shadow-md`}>
+            {annonce.type}
+          </span>
+
+          <span className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-bold shadow-md backdrop-blur-sm ${badge.cls}`}>
+            {badge.label}
+          </span>
+          {topNote && (
+            <span className="absolute right-3 top-11 rounded-full bg-fuchsia-600 px-2 py-1 text-[10px] font-bold text-white shadow-md">
+              Top noté
+            </span>
+          )}
+
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <p className="text-xl font-extrabold leading-tight text-white drop-shadow">
+              {formaterPrix(annonce.prix)}
+              {annonce.type === 'location' && <span className="text-sm font-normal text-white/70"> /mois</span>}
+              {annonce.type === 'artisan'  && <span className="text-sm font-normal text-white/70"> /h</span>}
+            </p>
+            <p className="mt-0.5 text-xs text-white/80 drop-shadow">📍 {annonce.quartier}, Abidjan</p>
           </div>
-        )}
-
-        {/* Gradient overlay du bas */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-
-        {/* Type badge en haut à gauche */}
-        <span className={`absolute top-3 left-3 ${typeColor} text-white text-xs px-2.5 py-1 rounded-full font-bold capitalize shadow-md`}>
-          {annonce.type}
-        </span>
-
-        {/* Badge vérifié en haut à droite */}
-        <span className={`absolute top-3 right-3 text-xs px-2.5 py-1 rounded-full font-bold shadow-md backdrop-blur-sm ${badge.cls}`}>
-          {badge.label}
-        </span>
-        {topNote && (
-          <span className="absolute top-11 right-3 bg-fuchsia-600 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-md">
-            Top noté
-          </span>
-        )}
-
-        {/* Prix + localisation sur l'image */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <p className="text-white font-extrabold text-xl leading-tight drop-shadow">
-            {formaterPrix(annonce.prix)}
-            {annonce.type === 'location' && <span className="text-white/70 text-sm font-normal"> /mois</span>}
-            {annonce.type === 'artisan'  && <span className="text-white/70 text-sm font-normal"> /h</span>}
-          </p>
-          <p className="text-white/80 text-xs mt-0.5 drop-shadow">📍 {annonce.quartier}, Abidjan</p>
         </div>
-      </div>
 
-      {/* INFOS BAS DE CARTE */}
-      <div className="p-4">
-        <h3 className="font-bold text-gray-900 line-clamp-1 text-sm mb-2">{annonce.titre}</h3>
-        <div className="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
-          {annonce.nb_chambres > 0 && <span className="bg-gray-50 px-2 py-0.5 rounded-full">🛏 {annonce.nb_chambres} ch.</span>}
-          {annonce.nb_pieces    > 0 && <span className="bg-gray-50 px-2 py-0.5 rounded-full">🚪 {annonce.nb_pieces}p</span>}
-          {annonce.surface           && <span className="bg-gray-50 px-2 py-0.5 rounded-full">📐 {annonce.surface} m²</span>}
-          {annonce.meuble            && <span className="bg-gray-50 px-2 py-0.5 rounded-full">🛋️ Meublé</span>}
-          {annonce.type_service      && <span className="bg-gray-50 px-2 py-0.5 rounded-full">{annonce.type_service}</span>}
-          {annonce.disponibilite     && <span className="bg-gray-50 px-2 py-0.5 rounded-full">🕐 {annonce.disponibilite}</span>}
-          <span className="bg-gray-50 px-2 py-0.5 rounded-full">👁️ {nbVues} clics</span>
-          <span className="bg-gray-50 px-2 py-0.5 rounded-full">
-            {totalAvis > 0 ? `⭐ ${moyenneAvis.toFixed(1).replace('.', ',')} (${totalAvis})` : '☆☆☆☆☆'}
-          </span>
+        <div className="p-4">
+          <h3 className="mb-2 line-clamp-1 text-sm font-bold text-gray-900">{annonce.titre}</h3>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+            {annonce.nb_chambres > 0 && <span className="rounded-full bg-gray-50 px-2 py-0.5">🛏 {annonce.nb_chambres} ch.</span>}
+            {annonce.nb_pieces    > 0 && <span className="rounded-full bg-gray-50 px-2 py-0.5">🚪 {annonce.nb_pieces}p</span>}
+            {annonce.surface           && <span className="rounded-full bg-gray-50 px-2 py-0.5">📐 {annonce.surface} m²</span>}
+            {annonce.meuble            && <span className="rounded-full bg-gray-50 px-2 py-0.5">🛋️ Meublé</span>}
+            {annonce.type_service      && <span className="rounded-full bg-gray-50 px-2 py-0.5">{annonce.type_service}</span>}
+            {annonce.disponibilite     && <span className="rounded-full bg-gray-50 px-2 py-0.5">🕐 {annonce.disponibilite}</span>}
+            <span className="rounded-full bg-gray-50 px-2 py-0.5">👁️ {nbVues} clics</span>
+            <span className="rounded-full bg-gray-50 px-2 py-0.5">
+              {totalAvis > 0 ? `⭐ ${moyenneAvis.toFixed(1).replace('.', ',')} (${totalAvis})` : '☆☆☆☆☆'}
+            </span>
+          </div>
         </div>
-      </div>
-    </a>
+      </Link>
+      <Link
+        href={hrefCarte}
+        title="Voir sur la carte"
+        className="absolute bottom-20 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-md ring-1 ring-gray-200/90 transition-transform hover:scale-105 hover:bg-emerald-50"
+      >
+        <IconePinCarte className="h-6 w-6" />
+        <span className="sr-only">Carte</span>
+      </Link>
+    </div>
   )
 }
 // ─── Page principale ──────────────────────────────────────────────────────────
@@ -702,13 +746,13 @@ function AnnoncesContenu() {
             ) : vue === 'grille' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {annonces.map((a) => (
-                  <CarteAnnonce key={a.id} annonce={a} avisStat={avisStats[a.id]} vue="grille" />
+                  <CarteAnnonce key={a.id} annonce={a} avisStat={avisStats[a.id]} vue="grille" filtresPourCarte={filtres} />
                 ))}
               </div>
             ) : (
               <div className="space-y-3">
                 {annonces.map((a) => (
-                  <CarteAnnonce key={a.id} annonce={a} avisStat={avisStats[a.id]} vue="liste" />
+                  <CarteAnnonce key={a.id} annonce={a} avisStat={avisStats[a.id]} vue="liste" filtresPourCarte={filtres} />
                 ))}
               </div>
             )}

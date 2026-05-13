@@ -245,6 +245,9 @@ function CarteGoogleMaps() {
     disponibilite: searchParams.get('disponibilite') || '',
   }), [searchParams])
 
+  /** Ouverture /carte?annonce=… depuis la liste annonces : centrer et sélectionner l’offre. */
+  const annonceFocusId = useMemo(() => (searchParams.get('annonce') || '').trim(), [searchParams])
+
   const [filtresCarte, setFiltresCarte] = useState({
     type: filtresURL.type || '',
     prixMin: filtresURL.prixMin || '',
@@ -369,6 +372,23 @@ function CarteGoogleMaps() {
       map.setZoom(Math.max(map.getZoom() || 11, 14))
     }
   }, [])
+
+  const focusAnnonceFaitRef = useRef(null)
+  useEffect(() => {
+    focusAnnonceFaitRef.current = null
+  }, [annonceFocusId])
+
+  useEffect(() => {
+    if (!annonceFocusId || chargement || !mapReady || annonces.length === 0) return
+    if (focusAnnonceFaitRef.current === annonceFocusId) return
+    const found = annonces.find((a) => a.id === annonceFocusId)
+    if (!found) return
+    focusAnnonceFaitRef.current = annonceFocusId
+    setShowListMobile(false)
+    requestAnimationFrame(() => {
+      allerAnnonce(found)
+    })
+  }, [annonceFocusId, chargement, mapReady, annonces, allerAnnonce])
 
   const allerSuivante   = () => { if (selectionIndex >= 0 && selectionIndex < annoncesAffichees.length - 1) allerAnnonce(annoncesAffichees[selectionIndex + 1]) }
   const allerPrecedente = () => { if (selectionIndex > 0) allerAnnonce(annoncesAffichees[selectionIndex - 1]) }
@@ -820,13 +840,9 @@ function CarteGoogleMaps() {
                 const cover = getListingCoverSrc(annonce)
                 const estPrestation = annonce.type === 'service' || annonce.type === 'artisan'
                 return (
-                  <button
+                  <div
                     key={annonce.id}
-                    type="button"
-                    onClick={() => allerAnnonce(annonce)}
-                    className={`w-full rounded-xl border-2 text-left shadow-sm transition-all duration-150 ${
-                      estPrestation ? 'p-2' : 'p-2.5'
-                    } ${
+                    className={`flex w-full overflow-hidden rounded-xl border-2 shadow-sm transition-all duration-150 ${
                       estSel
                         ? 'border-amber-400 bg-gradient-to-br from-amber-50 to-white shadow-md ring-2 ring-amber-300/60 scale-[1.01]'
                         : 'border-emerald-100 bg-white hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5'
@@ -837,45 +853,61 @@ function CarteGoogleMaps() {
                       borderLeftColor: col.accent || col.marker,
                     }}
                   >
-                    <div className={`flex items-center ${estPrestation ? 'gap-2' : 'gap-2.5'}`}>
-                      <div
-                        className={`flex-shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-slate-100 to-emerald-50 ring-2 ring-white shadow-md ${
-                          estPrestation ? 'h-9 w-9' : 'h-12 w-12'
-                        }`}
-                      >
-                        <img src={cover} alt="" className="h-full w-full object-cover" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <p
-                            className={`truncate font-bold leading-tight text-slate-900 ${
-                              estPrestation ? 'text-[11px]' : 'text-[13px]'
-                            }`}
-                          >
-                            {annonce.titre}
-                          </p>
-                          <span
-                            className={`flex-shrink-0 font-extrabold tabular-nums ${
-                              estPrestation ? 'text-[10px]' : 'text-[12px]'
-                            }`}
-                            style={{ color: col.price }}
-                          >
-                            {formaterPrix(annonce.prix)}
-                          </span>
+                    <button
+                      type="button"
+                      onClick={() => allerAnnonce(annonce)}
+                      className={`min-w-0 flex-1 text-left transition-colors ${
+                        estPrestation ? 'p-2' : 'p-2.5'
+                      } hover:bg-emerald-50/40`}
+                    >
+                      <div className={`flex items-center ${estPrestation ? 'gap-2' : 'gap-2.5'}`}>
+                        <div
+                          className={`flex-shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-slate-100 to-emerald-50 ring-2 ring-white shadow-md ${
+                            estPrestation ? 'h-9 w-9' : 'h-12 w-12'
+                          }`}
+                        >
+                          <img src={cover} alt="" className="h-full w-full object-cover" />
                         </div>
-                        <p className={`truncate font-medium text-emerald-800/85 ${estPrestation ? 'mt-0 text-[10px]' : 'mt-0.5 text-[11px]'}`}>
-                          {annonce.quartier}
-                          {estPrestation && annonce.type_service ? ` · ${annonce.type_service}` : ''}
-                        </p>
-                        <p className={`truncate text-slate-600 ${estPrestation ? 'mt-0 text-[10px]' : 'mt-0.5 text-[11px]'}`}>
-                          👁️ {annonce.nb_vues || 0} · {formaterNoteCourt(avisStats[annonce.id])}
-                        </p>
-                        {estTopNote(avisStats[annonce.id]) && (
-                          <p className="mt-1 inline-block rounded-full bg-fuchsia-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">🏅 Top noté</p>
-                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p
+                              className={`truncate font-bold leading-tight text-slate-900 ${
+                                estPrestation ? 'text-[11px]' : 'text-[13px]'
+                              }`}
+                            >
+                              {annonce.titre}
+                            </p>
+                            <span
+                              className={`flex-shrink-0 font-extrabold tabular-nums ${
+                                estPrestation ? 'text-[10px]' : 'text-[12px]'
+                              }`}
+                              style={{ color: col.price }}
+                            >
+                              {formaterPrix(annonce.prix)}
+                            </span>
+                          </div>
+                          <p className={`truncate font-medium text-emerald-800/85 ${estPrestation ? 'mt-0 text-[10px]' : 'mt-0.5 text-[11px]'}`}>
+                            {annonce.quartier}
+                            {estPrestation && annonce.type_service ? ` · ${annonce.type_service}` : ''}
+                          </p>
+                          <p className={`truncate text-slate-600 ${estPrestation ? 'mt-0 text-[10px]' : 'mt-0.5 text-[11px]'}`}>
+                            👁️ {annonce.nb_vues || 0} · {formaterNoteCourt(avisStats[annonce.id])}
+                          </p>
+                          {estTopNote(avisStats[annonce.id]) && (
+                            <p className="mt-1 inline-block rounded-full bg-fuchsia-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">🏅 Top noté</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                    <Link
+                      href={`/annonces/${annonce.id}`}
+                      className="flex w-[3.25rem] shrink-0 flex-col items-center justify-center gap-0.5 border-l border-emerald-200/90 bg-emerald-50/90 px-1 py-1 text-center text-[9px] font-extrabold uppercase leading-tight text-emerald-900 transition-colors hover:bg-emerald-100"
+                      title="Fiche détaillée"
+                    >
+                      <span className="text-base leading-none" aria-hidden>📄</span>
+                      <span>Détails</span>
+                    </Link>
+                  </div>
                 )
               })}
               </div>
