@@ -22,15 +22,21 @@ import {
   updateFeatureFlagAdmin,
   fetchContactMessagesAdmin,
   updateContactMessageAdmin,
-  fetchStaffDiscussionMessages,
-  insertStaffDiscussionMessage,
-  listenStaffDiscussionMessages,
 } from '@/lib/firestoreApp'
 import { useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
 import { resolveStaffRole, staffPermissions } from '@/lib/staffRoles'
 import AdminExportButtons from '@/app/components/admin/AdminExportButtons'
+import StaffChatPanel from '@/app/components/admin/StaffChatPanel'
+import { telechargerCsv } from '@/lib/adminCsv'
+import {
+  loadAdminPersistedOnglet,
+  saveAdminPersistedOnglet,
+  loadAdminTabFilters,
+  saveAdminTabFilters,
+  clearAdminTabFilters,
+} from '@/lib/adminFiltersPersist'
 
 const BADGE_LABEL = { bronze: '🔓 Bronze', argent: '🥈 Argent', or: '🥇 Or' }
 const BADGE_OPTIONS = ['bronze', 'argent', 'or']
@@ -149,10 +155,8 @@ export default function AdminPortail() {
   const [mergeTarget, setMergeTarget] = useState('')
   const [fusionEnCours, setFusionEnCours] = useState(false)
   const [bulkEnCours, setBulkEnCours] = useState(false)
-  const [staffChatMessages, setStaffChatMessages] = useState([])
-  const [staffChatDraft, setStaffChatDraft] = useState('')
-  const [staffChatSending, setStaffChatSending] = useState(false)
-  const staffChatBottomRef = useRef(null)
+  const [ongletHydrated, setOngletHydrated] = useState(false)
+  const filtresPersistReadyRef = useRef(false)
 
   const router = useRouter()
 
@@ -227,7 +231,8 @@ export default function AdminPortail() {
     setSelSignalements(new Set())
     setSelDemandes(new Set())
     setSelMessagesContact(new Set())
-  }, [])
+    if (ongletHydrated) saveAdminPersistedOnglet(id)
+  }, [ongletHydrated])
 
   const roleLabel = {
     super_admin: 'Super admin',
@@ -236,20 +241,58 @@ export default function AdminPortail() {
     annonce_manager: 'Gestionnaire annonces',
   }[roleStaff || ''] || 'Staff'
 
-  const envoyerMessageEquipe = async () => {
-    const t = staffChatDraft.trim()
-    if (!t || staffChatSending) return
-    setStaffChatSending(true)
-    try {
-      await insertStaffDiscussionMessage(t)
-      setStaffChatDraft('')
-      setStaffChatMessages(await fetchStaffDiscussionMessages())
-    } catch (e) {
-      showToast('error', e?.message || String(e))
-    } finally {
-      setStaffChatSending(false)
+  const reinitialiserFiltresOnglet = useCallback(() => {
+    clearAdminTabFilters(onglet)
+    filtresPersistReadyRef.current = false
+    if (onglet === 'annonces') {
+      setFiltreAnnonceStatut('')
+      setFiltreAnnonceType('')
+      setFiltreAnnonceBadge('')
+    } else if (onglet === 'utilisateurs') {
+      setFiltreUserType('')
+      setFiltreUserStatut('')
+      setFiltreUserBadge('')
+      setFiltreUserStaff('')
+      setFiltreUserEmail('')
+    } else if (onglet === 'signalements') {
+      setFiltreSignalementStatut('')
+    } else if (onglet === 'demandes_badge') {
+      setFiltreDemandeBadgeStatut('')
+    } else if (onglet === 'avis') {
+      setFiltreAvisVisibilite('')
+    } else if (onglet === 'messagerie_contact') {
+      setFiltreContactStatut('')
+    } else if (onglet === 'historique_moderation') {
+      setFiltreLogAction('')
     }
-  }
+    filtresPersistReadyRef.current = true
+    showToast('success', 'Filtres réinitialisés pour cet onglet.')
+  }, [onglet, showToast])
+
+  const exporterSelectionAnnonces = useCallback(() => {
+    if (selAnnonces.size === 0) return showToast('error', 'Sélectionnez des annonces.')
+    const rows = annonces.filter((a) => selAnnonces.has(a.id))
+    telechargerCsv('annonces_selection_admin', [
+      { key: 'id', label: 'id' },
+      { key: 'titre', label: 'titre' },
+      { key: 'statut', label: 'statut' },
+      { key: 'type', label: 'type' },
+      { key: 'badge', label: 'badge' },
+      { key: 'quartier', label: 'quartier' },
+      { key: 'prix', label: 'prix' },
+      { key: 'proprietaire', label: 'proprietaire' },
+    ], rows.map((a) => ({
+      id: a.id,
+      titre: a.titre,
+      statut: a.statut,
+      type: a.type,
+      badge: a.badge,
+      quartier: a.quartier,
+      prix: a.prix,
+      proprietaire: a.profiles?.nom || '',
+    })))
+    showToast('success', `${rows.length} annonce(s) exportée(s) en CSV.`)
+  }, [selAnnonces, annonces, showToast])
 
   useEffect(() => {
     const unsub = observerConnexion(async (user) => {
@@ -289,24 +332,104 @@ export default function AdminPortail() {
   }, [chargement, permissions.voirOngletMessagerieContact])
 
   useEffect(() => {
-    if (chargement || !permissions.voirOngletChatEquipe || onglet !== 'chat_equipe') return
-    let dispose = () => {}
-    ;(async () => {
-      try {
-        const msgs = await fetchStaffDiscussionMessages()
-        setStaffChatMessages(msgs)
-        dispose = listenStaffDiscussionMessages(setStaffChatMessages)
-      } catch (e) {
-        showToast('error', e?.message || 'Impossible de charger la discussion équipe.')
-      }
-    })()
-    return () => dispose()
-  }, [chargement, onglet, permissions.voirOngletChatEquipe, showToast])
+    if (!roleStaff) return
+    const saved = loadAdminPersistedOnglet()
+    if (saved) setOnglet(saved)
+    setOngletHydrated(true)
+  }, [roleStaff])
 
   useEffect(() => {
-    if (onglet !== 'chat_equipe') return
-    staffChatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [onglet, staffChatMessages])
+    if (!ongletHydrated || !onglet) return
+    saveAdminPersistedOnglet(onglet)
+  }, [onglet, ongletHydrated])
+
+  useEffect(() => {
+    if (!ongletHydrated) return
+    filtresPersistReadyRef.current = false
+    if (onglet === 'annonces') {
+      const f = loadAdminTabFilters('annonces', {
+        filtreAnnonceStatut: '',
+        filtreAnnonceType: '',
+        filtreAnnonceBadge: '',
+      })
+      setFiltreAnnonceStatut(f.filtreAnnonceStatut)
+      setFiltreAnnonceType(f.filtreAnnonceType)
+      setFiltreAnnonceBadge(f.filtreAnnonceBadge)
+    } else if (onglet === 'utilisateurs') {
+      const f = loadAdminTabFilters('utilisateurs', {
+        filtreUserType: '',
+        filtreUserStatut: '',
+        filtreUserBadge: '',
+        filtreUserStaff: '',
+        filtreUserEmail: '',
+      })
+      setFiltreUserType(f.filtreUserType)
+      setFiltreUserStatut(f.filtreUserStatut)
+      setFiltreUserBadge(f.filtreUserBadge)
+      setFiltreUserStaff(f.filtreUserStaff)
+      setFiltreUserEmail(f.filtreUserEmail)
+    } else if (onglet === 'signalements') {
+      const f = loadAdminTabFilters('signalements', { filtreSignalementStatut: '' })
+      setFiltreSignalementStatut(f.filtreSignalementStatut)
+    } else if (onglet === 'demandes_badge') {
+      const f = loadAdminTabFilters('demandes_badge', { filtreDemandeBadgeStatut: '' })
+      setFiltreDemandeBadgeStatut(f.filtreDemandeBadgeStatut)
+    } else if (onglet === 'avis') {
+      const f = loadAdminTabFilters('avis', { filtreAvisVisibilite: '' })
+      setFiltreAvisVisibilite(f.filtreAvisVisibilite)
+    } else if (onglet === 'messagerie_contact') {
+      const f = loadAdminTabFilters('messagerie_contact', { filtreContactStatut: '' })
+      setFiltreContactStatut(f.filtreContactStatut)
+    } else if (onglet === 'historique_moderation') {
+      const f = loadAdminTabFilters('historique_moderation', { filtreLogAction: '' })
+      setFiltreLogAction(f.filtreLogAction)
+    }
+    filtresPersistReadyRef.current = true
+  }, [onglet, ongletHydrated])
+
+  useEffect(() => {
+    if (!filtresPersistReadyRef.current) return
+    if (onglet === 'annonces') {
+      saveAdminTabFilters('annonces', {
+        filtreAnnonceStatut,
+        filtreAnnonceType,
+        filtreAnnonceBadge,
+      })
+    } else if (onglet === 'utilisateurs') {
+      saveAdminTabFilters('utilisateurs', {
+        filtreUserType,
+        filtreUserStatut,
+        filtreUserBadge,
+        filtreUserStaff,
+        filtreUserEmail,
+      })
+    } else if (onglet === 'signalements') {
+      saveAdminTabFilters('signalements', { filtreSignalementStatut })
+    } else if (onglet === 'demandes_badge') {
+      saveAdminTabFilters('demandes_badge', { filtreDemandeBadgeStatut })
+    } else if (onglet === 'avis') {
+      saveAdminTabFilters('avis', { filtreAvisVisibilite })
+    } else if (onglet === 'messagerie_contact') {
+      saveAdminTabFilters('messagerie_contact', { filtreContactStatut })
+    } else if (onglet === 'historique_moderation') {
+      saveAdminTabFilters('historique_moderation', { filtreLogAction })
+    }
+  }, [
+    onglet,
+    filtreAnnonceStatut,
+    filtreAnnonceType,
+    filtreAnnonceBadge,
+    filtreUserType,
+    filtreUserStatut,
+    filtreUserBadge,
+    filtreUserStaff,
+    filtreUserEmail,
+    filtreSignalementStatut,
+    filtreDemandeBadgeStatut,
+    filtreAvisVisibilite,
+    filtreContactStatut,
+    filtreLogAction,
+  ])
 
   useEffect(() => {
     if (chargement) return
@@ -1484,6 +1607,13 @@ export default function AdminPortail() {
                     </option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  onClick={reinitialiserFiltresOnglet}
+                  className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                >
+                  Réinit. filtres
+                </button>
               </div>
               {permissions.peutExporterDonnees && (
                 <AdminExportButtons
@@ -1534,6 +1664,15 @@ export default function AdminPortail() {
                   >
                     Effacer
                   </button>
+                  {permissions.peutExporterDonnees && (
+                    <button
+                      type="button"
+                      onClick={exporterSelectionAnnonces}
+                      className="text-xs font-bold px-2 py-1 rounded border border-teal-200 text-teal-800 hover:bg-teal-50"
+                    >
+                      Export sélection CSV
+                    </button>
+                  )}
                   <select
                     value={bulkAnnonceStatut}
                     onChange={(e) => setBulkAnnonceStatut(e.target.value)}
@@ -2235,98 +2374,11 @@ export default function AdminPortail() {
         )}
 
         {onglet === 'chat_equipe' && (
-          <div className="flex flex-col max-h-[min(72vh,720px)] rounded-2xl border border-slate-200 bg-slate-50 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-200 bg-slate-900 text-slate-100">
-              <p className="font-bold text-sm text-white">Discussion équipe</p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Salon réservé aux comptes staff (super admin, admin, modérateur, gestionnaire). Messages visibles
-                par tous les membres de l’équipe.
-              </p>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[280px] bg-slate-100/80">
-              {staffChatMessages.length === 0 && (
-                <p className="text-center text-slate-500 text-sm py-12">
-                  Aucun message pour l’instant. Écrivez le premier ci-dessous.
-                </p>
-              )}
-              {staffChatMessages.map((msg) => {
-                const isMoi = msg.author_id === adminUid
-                const roleCourt =
-                  ROLE_STAFF_COURT[msg.author_admin_role] ||
-                  (msg.author_is_admin ? 'Super admin' : '—')
-                return (
-                  <div
-                    key={msg.id}
-                    className={`flex gap-3 ${isMoi ? 'flex-row-reverse' : ''}`}
-                  >
-                    <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                        isMoi ? 'bg-teal-600 text-white' : 'bg-slate-600 text-white'
-                      }`}
-                    >
-                      {(msg.author_nom || '?').trim().charAt(0).toUpperCase()}
-                    </div>
-                    <div className={`min-w-0 max-w-[85%] ${isMoi ? 'items-end' : 'items-start'} flex flex-col`}>
-                      <div
-                        className={`flex flex-wrap items-baseline gap-x-2 gap-y-0 text-xs ${
-                          isMoi ? 'justify-end' : ''
-                        }`}
-                      >
-                        <span className="font-bold text-slate-800">
-                          {msg.author_nom?.trim() || 'Sans nom'}
-                        </span>
-                        <span className="text-slate-500 font-medium">{roleCourt}</span>
-                        <span className="text-slate-400">
-                          {msg.created_at
-                            ? new Date(msg.created_at).toLocaleString('fr-FR', {
-                                day: '2-digit',
-                                month: 'short',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : ''}
-                        </span>
-                      </div>
-                      <div
-                        className={`mt-1 rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words shadow-sm ${
-                          isMoi
-                            ? 'bg-teal-600 text-white rounded-tr-sm'
-                            : 'bg-white text-slate-800 border border-slate-200 rounded-tl-sm'
-                        }`}
-                      >
-                        {msg.body}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-              <div ref={staffChatBottomRef} />
-            </div>
-            <div className="p-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row gap-2">
-              <textarea
-                rows={2}
-                value={staffChatDraft}
-                onChange={(e) => setStaffChatDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    void envoyerMessageEquipe()
-                  }
-                }}
-                placeholder="Message à tout le staff… (Entrée pour envoyer, Maj+Entrée pour une ligne)"
-                className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 resize-y min-h-[44px]"
-                disabled={staffChatSending}
-              />
-              <button
-                type="button"
-                onClick={() => void envoyerMessageEquipe()}
-                disabled={staffChatSending || !staffChatDraft.trim()}
-                className="shrink-0 self-end sm:self-stretch px-4 py-2 rounded-xl bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 disabled:opacity-45 disabled:cursor-not-allowed"
-              >
-                {staffChatSending ? '…' : 'Envoyer'}
-              </button>
-            </div>
-          </div>
+          <StaffChatPanel
+            adminUid={adminUid}
+            isSuperAdmin={roleStaff === 'super_admin'}
+            showToast={showToast}
+          />
         )}
 
         {onglet === 'avis' && (

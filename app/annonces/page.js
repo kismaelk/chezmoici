@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import ListingAnnonceActions from '@/app/components/ListingAnnonceActions'
 import { fetchAnnoncesList, fetchAvisStatsForAnnonces } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
@@ -265,34 +266,6 @@ const BADGE_STYLE = {
   or:     { label: '🥇 Or',     cls: 'bg-yellow-50 text-yellow-700' },
 }
 
-/** Paramètres repris par la page /carte (hors ville, non utilisée sur la carte). */
-const PARAMS_CARTE_DEPUIS_ANNONCES = [
-  'type', 'quartier', 'prixMin', 'prixMax', 'nbPieces', 'nbChambres', 'meuble', 'badge',
-  'surfaceMin', 'recherche', 'typePropriete', 'typeService', 'disponibilite',
-]
-
-function buildHrefCarteAnnonce(annonceId, filtres) {
-  const p = new URLSearchParams()
-  p.set('annonce', annonceId)
-  for (const key of PARAMS_CARTE_DEPUIS_ANNONCES) {
-    const v = filtres?.[key]
-    if (v != null && String(v).trim() !== '') p.set(key, String(v).trim())
-  }
-  return `/carte?${p.toString()}`
-}
-
-function IconePinCarte({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <path
-        d="M12 2C8.13 2 5 5.13 5 9c0 4.52 4.86 9.53 6.24 10.8.14.13.33.2.51.2.18 0 .37-.07.51-.2C13.14 18.53 18 13.52 18 9c0-3.87-3.13-7-7-7z"
-        className="fill-[#1B5E20]"
-      />
-      <circle cx="12" cy="9" r="2.25" className="fill-white" />
-    </svg>
-  )
-}
-
 function CarteAnnonce({ annonce, vue, avisStat, filtresPourCarte = {} }) {
   const badge = BADGE_STYLE[annonce.badge] || BADGE_STYLE.bronze
   const typeColor = TYPE_COLOR[annonce.type] || 'bg-gray-500'
@@ -302,7 +275,6 @@ function CarteAnnonce({ annonce, vue, avisStat, filtresPourCarte = {} }) {
   const topNote = moyenneAvis >= 4.5 && totalAvis > 0
 
   const hrefDetail = `/annonces/${annonce.id}`
-  const hrefCarte = buildHrefCarteAnnonce(annonce.id, filtresPourCarte)
 
   if (vue === 'liste') {
     return (
@@ -367,14 +339,11 @@ function CarteAnnonce({ annonce, vue, avisStat, filtresPourCarte = {} }) {
             </div>
           </div>
         </Link>
-        <Link
-          href={hrefCarte}
-          title="Voir sur la carte"
-          className="flex flex-col items-center justify-center gap-1 border-t border-gray-100 bg-emerald-50/60 px-3 py-3 text-emerald-900 transition-colors hover:bg-emerald-100 sm:w-[5.25rem] sm:border-l sm:border-t-0 sm:px-2"
-        >
-          <IconePinCarte className="h-8 w-8 shrink-0" />
-          <span className="text-[10px] font-bold uppercase tracking-wide">Carte</span>
-        </Link>
+        <ListingAnnonceActions
+          annonceId={annonce.id}
+          filtresPourCarte={filtresPourCarte}
+          className="border-t border-gray-100 sm:w-[5.25rem] sm:border-l sm:border-t-0"
+        />
       </div>
     )
   }
@@ -440,14 +409,7 @@ function CarteAnnonce({ annonce, vue, avisStat, filtresPourCarte = {} }) {
           </div>
         </div>
       </Link>
-      <Link
-        href={hrefCarte}
-        title="Voir sur la carte"
-        className="absolute bottom-20 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-md ring-1 ring-gray-200/90 transition-transform hover:scale-105 hover:bg-emerald-50"
-      >
-        <IconePinCarte className="h-6 w-6" />
-        <span className="sr-only">Carte</span>
-      </Link>
+      <ListingAnnonceActions annonceId={annonce.id} filtresPourCarte={filtresPourCarte} layout="overlay" />
     </div>
   )
 }

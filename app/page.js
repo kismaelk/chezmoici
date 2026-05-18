@@ -3,7 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchAnnoncesList, fetchAvisStatsForAnnonces } from '@/lib/firestoreApp'
+import Link from 'next/link'
 import SiteHeader from '@/app/components/SiteHeader'
+import ListingAnnonceActions from '@/app/components/ListingAnnonceActions'
+import { buildHrefCarteAnnonce } from '@/lib/listingCarteLink'
 import SiteFooter from '@/app/components/SiteFooter'
 import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
 
@@ -53,11 +56,14 @@ function CarteAnnonce({ annonce, avisStat }) {
   const nbVues = annonce.nb_vues || 0
   const topNote = moyenneAvis >= 4.5 && totalAvis > 0
 
+  const hrefCarte = buildHrefCarteAnnonce(annonce.id, { type: annonce.type })
+
   return (
-    <a
-      href={`/annonces/${annonce.id}`}
-      className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 block"
-    >
+    <div className="group relative rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+      <Link
+        href={`/annonces/${annonce.id}`}
+        className="relative block overflow-hidden rounded-2xl"
+      >
       <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
         {annonce.photos?.[0] ? (
           <img
@@ -112,7 +118,16 @@ function CarteAnnonce({ annonce, avisStat }) {
           </span>
         </div>
       </div>
-    </a>
+      </Link>
+      <div className="flex items-center justify-between gap-2 border-t border-gray-100 px-3 py-2">
+        <Link href={hrefCarte} className="text-xs font-bold text-emerald-800 hover:underline">
+          Carte
+        </Link>
+        <Link href={`/annonces/${annonce.id}`} className="text-xs font-bold text-[#1B5E20] hover:underline">
+          Détails →
+        </Link>
+      </div>
+    </div>
   )
 }
 

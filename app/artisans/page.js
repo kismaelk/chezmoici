@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { buildHrefCarteAnnonce } from '@/lib/listingCarteLink'
 import { fetchAnnoncesList, enrichAnnoncesWithProfiles } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
@@ -147,11 +149,11 @@ export default function Artisans() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {annonces.map((a) => (
-              <a
+              <div
                 key={a.id}
-                href={`/annonces/${a.id}`}
-                className="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg hover:border-[#1B5E20]/30 transition-all block"
+                className="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg hover:border-[#1B5E20]/30 transition-all"
               >
+              <Link href={`/annonces/${a.id}`} className="block">
                 <div className="h-40 bg-gray-100 relative">
                   {a.photos?.[0] ? (
                     <img
@@ -184,7 +186,16 @@ export default function Artisans() {
                     </span>
                   </div>
                 </div>
-              </a>
+              </Link>
+              <div className="flex justify-between gap-2 border-t border-gray-100 px-4 py-2 text-xs font-bold">
+                <Link href={buildHrefCarteAnnonce(a.id, { type: 'artisan', quartier })} className="text-emerald-800">
+                  Carte
+                </Link>
+                <Link href={`/annonces/${a.id}`} className="text-[#1B5E20]">
+                  Détails →
+                </Link>
+              </div>
+              </div>
             ))}
           </div>
         )}
