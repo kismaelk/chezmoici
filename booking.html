@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Réservation — Halo Braids</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Cinzel:wght@400;500;600&family=Great+Vibes&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body data-page="booking">
+
+<nav class="nav solid" id="app-nav"></nav>
+
+<section class="banner">
+  <div class="banner-bg"></div>
+  <div class="banner-content">
+    <h1 data-i18n="booking.banner"></h1>
+    <div class="h-script" data-i18n="booking.subtitle"></div>
+  </div>
+</section>
+
+<section class="section section-light">
+
+  <!-- Steps navigation -->
+  <div class="steps-nav">
+    <div class="step active" data-step="1">
+      <div class="step-num">1</div>
+      <div class="step-label" data-i18n="booking.step1"></div>
+    </div>
+    <div class="step" data-step="2">
+      <div class="step-num">2</div>
+      <div class="step-label" data-i18n="booking.step2"></div>
+    </div>
+    <div class="step" data-step="3">
+      <div class="step-num">3</div>
+      <div class="step-label" data-i18n="booking.step3"></div>
+    </div>
+    <div class="step" data-step="4">
+      <div class="step-num">4</div>
+      <div class="step-label" data-i18n="booking.step4"></div>
+    </div>
+  </div>
+
+  <!-- STEP 1 : SERVICE -->
+  <div class="step-content active" data-content="1">
+    <div class="section-header fade-up">
+      <span class="label" data-i18n="booking.step1"></span>
+      <h2 class="h-serif" data-i18n="booking.chooseService"></h2>
+    </div>
+    <div class="grid-3" id="step1-services"></div>
+    <div class="step-actions">
+      <span></span>
+      <button class="btn" id="btn-next-1" disabled style="opacity:.4;pointer-events:none" data-i18n="booking.next"></button>
+    </div>
+  </div>
+
+  <!-- STEP 2 : STYLIST -->
+  <div class="step-content" data-content="2">
+    <div class="section-header fade-up">
+      <span class="label" data-i18n="booking.step2"></span>
+      <h2 class="h-serif" data-i18n="booking.chooseStylist"></h2>
+    </div>
+    <div class="grid-3" id="step2-stylists"></div>
+    <div class="step-actions">
+      <button class="btn btn-outline" data-prev="2" data-i18n="booking.back"></button>
+      <button class="btn" id="btn-next-2" disabled style="opacity:.4;pointer-events:none" data-i18n="booking.next"></button>
+    </div>
+  </div>
+
+  <!-- STEP 3 : DATE & TIME -->
+  <div class="step-content" data-content="3">
+    <div class="section-header fade-up">
+      <span class="label" data-i18n="booking.step3"></span>
+      <h2 class="h-serif" data-i18n="booking.chooseDateTime"></h2>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;max-width:1000px;margin:0 auto;align-items:start">
+      <div>
+        <div class="cal" id="calendar"></div>
+      </div>
+      <div>
+        <h3 class="label" id="slots-title" style="margin-bottom:1rem"></h3>
+        <div id="slots-container">
+          <p class="empty" data-i18n="booking.selectDate"></p>
+        </div>
+      </div>
+    </div>
+    <div class="step-actions">
+      <button class="btn btn-outline" data-prev="3" data-i18n="booking.back"></button>
+      <button class="btn" id="btn-next-3" disabled style="opacity:.4;pointer-events:none" data-i18n="booking.next"></button>
+    </div>
+  </div>
+
+  <!-- STEP 4 : CONFIRMATION -->
+  <div class="step-content" data-content="4">
+    <div class="section-header fade-up">
+      <span class="label" data-i18n="booking.step4"></span>
+      <h2 class="h-serif" data-i18n="booking.summary"></h2>
+    </div>
+
+    <div class="summary" id="summary"></div>
+
+    <div style="max-width:600px;margin:1.5rem auto 0">
+      <label data-i18n="booking.note" style="display:block;font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.2em;color:var(--muted);margin-bottom:.4rem"></label>
+      <textarea id="booking-note" class="form" style="width:100%;background:#fff;border:1px solid var(--border);padding:.85rem;font-family:'Cormorant Garamond',serif;font-size:1rem;outline:none" rows="3"></textarea>
+    </div>
+
+    <div id="auth-needed" class="card mt-3 hidden" style="max-width:600px;margin:1.5rem auto 0;text-align:center;background:#fff8e8;border-color:var(--gold)">
+      <p style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--text);margin-bottom:1rem" data-i18n="booking.notLogged"></p>
+      <a href="account.html?redirect=booking" class="btn" data-i18n="booking.loginBtn"></a>
+    </div>
+
+    <div class="step-actions">
+      <button class="btn btn-outline" data-prev="4" data-i18n="booking.back"></button>
+      <button class="btn btn-dark" id="btn-confirm" data-i18n="booking.confirm"></button>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="step-content" data-content="5">
+    <div class="text-center" style="max-width:600px;margin:0 auto;padding:3rem 2rem">
+      <div style="width:80px;height:80px;border-radius:50%;background:var(--gold);margin:0 auto 1.5rem;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:var(--black)">✓</div>
+      <div class="h-script" style="font-size:3rem" data-i18n="booking.success"></div>
+      <p style="font-family:'Cormorant Garamond',serif;color:var(--muted);font-size:1.1rem;line-height:1.8;margin:1.5rem 0 2.5rem" data-i18n="booking.successDesc"></p>
+      <a href="dashboard.html" class="btn btn-dark btn-lg" data-i18n="booking.successBtn"></a>
+    </div>
+  </div>
+
+</section>
+
+<footer class="footer" id="app-footer"></footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/booking.js"></script>
+</body>
+</html>

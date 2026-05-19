@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Mon Compte — Halo Braids</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Cinzel:wght@400;500;600&family=Great+Vibes&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body data-page="dashboard">
+
+<nav class="nav solid" id="app-nav"></nav>
+
+<div style="height:72px"></div>
+
+<div class="dashboard">
+
+  <div class="dash-header">
+    <div class="dash-greeting">
+      <div class="h-script" data-i18n="dash.greeting"></div>
+      <h1 id="dash-name">—</h1>
+      <p style="color:var(--muted);font-family:'Cormorant Garamond',serif;font-style:italic;margin-top:.3rem" data-i18n="dash.welcome"></p>
+    </div>
+    <div style="display:flex;gap:.8rem;flex-wrap:wrap">
+      <a href="booking.html" class="btn" data-i18n="dash.newBooking"></a>
+      <button class="btn btn-outline" id="logout-btn" data-i18n="nav.logout"></button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="dash-stats">
+    <div class="stat">
+      <div class="stat-val" id="stat-total">0</div>
+      <div class="stat-lbl" data-i18n="dash.stat.total"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="stat-upcoming">0</div>
+      <div class="stat-lbl" data-i18n="dash.stat.upcoming"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="stat-past">0</div>
+      <div class="stat-lbl" data-i18n="dash.stat.past"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="stat-spent">0 $</div>
+      <div class="stat-lbl" data-i18n="dash.stat.spent"></div>
+    </div>
+  </div>
+
+  <!-- UPCOMING -->
+  <div class="dash-section">
+    <h2 data-i18n="dash.upcoming"></h2>
+    <div id="upcoming-list"></div>
+  </div>
+
+  <!-- PAST -->
+  <div class="dash-section">
+    <h2 data-i18n="dash.past"></h2>
+    <div id="past-list"></div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="dash-section">
+    <h2 data-i18n="dash.profile"></h2>
+    <form class="form" id="profile-form" style="max-width:600px">
+      <div class="form-row">
+        <div>
+          <label data-i18n="account.firstname"></label>
+          <input type="text" id="pf-first"/>
+        </div>
+        <div>
+          <label data-i18n="account.lastname"></label>
+          <input type="text" id="pf-last"/>
+        </div>
+      </div>
+      <div>
+        <label data-i18n="account.email"></label>
+        <input type="email" id="pf-email" disabled style="background:var(--cream2);cursor:not-allowed"/>
+      </div>
+      <div>
+        <label data-i18n="account.phone"></label>
+        <input type="tel" id="pf-phone"/>
+      </div>
+      <button type="submit" class="btn btn-dark" style="align-self:flex-start" data-i18n="dash.update"></button>
+    </form>
+  </div>
+
+</div>
+
+<footer class="footer" id="app-footer"></footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  // Guard
+  if (!App.currentUser) { location.href = 'account.html'; }
+
+  function renderDashboard() {
+    const cu = App.currentUser;
+    if (!cu) return;
+
+    document.getElementById('dash-name').textContent = `${cu.firstname} ${cu.lastname}`;
+
+    const all = App.userBookings(cu.id);
+    const now = new Date();
+    const upcoming = all.filter(b => new Date(b.date + 'T' + b.time) >= now);
+    const past = all.filter(b => new Date(b.date + 'T' + b.time) < now);
+    const spent = past.reduce((sum, b) => sum + b.price, 0);
+
+    document.getElementById('stat-total').textContent = all.length;
+    document.getElementById('stat-upcoming').textContent = upcoming.length;
+    document.getElementById('stat-past').textContent = past.length;
+    document.getElementById('stat-spent').textContent = spent + ' $';
+
+    const renderList = (list, container, isPast) => {
+      if (!list.length) {
+        container.innerHTML = `<p class="empty">${App.t('dash.empty')}</p>`;
+        return;
+      }
+      container.innerHTML = list.map(b => {
+        const s = SERVICES.find(x => x.id === b.serviceId);
+        const st = STYLISTS.find(x => x.id === b.stylistId);
+        const [yy, mm, dd] = b.date.split('-').map(Number);
+        const monthShort = App.t('monthShort.' + (mm-1));
+        return `
+          <div class="booking-item">
+            <div class="booking-badge">
+              <div class="day">${dd}</div>
+              <div class="mo">${monthShort}</div>
+            </div>
+            <div class="booking-info">
+              <h4>${s ? s['name'+App.cap(App.lang)].toUpperCase() : 'SERVICE'}</h4>
+              <p>${App.t('booking.stylist')} : ${st ? st['name'+App.cap(App.lang)] : '—'} · ${b.time} · ${b.duration}h<br/>
+                 ${App.t('booking.price')} : ${b.price} $</p>
+            </div>
+            <div class="booking-status ${isPast?'past':''}">
+              ${App.t(isPast?'dash.pastStatus':'dash.upcomingStatus')}
+            </div>
+          </div>`;
+      }).join('');
+    };
+
+    renderList(upcoming, document.getElementById('upcoming-list'), false);
+    renderList(past, document.getElementById('past-list'), true);
+
+    // Profile form
+    document.getElementById('pf-first').value = cu.firstname;
+    document.getElementById('pf-last').value = cu.lastname;
+    document.getElementById('pf-email').value = cu.email;
+    document.getElementById('pf-phone').value = cu.phone || '';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderDashboard();
+
+    document.getElementById('logout-btn').onclick = () => App.logout();
+
+    document.getElementById('profile-form').addEventListener('submit', e => {
+      e.preventDefault();
+      App.updateProfile({
+        firstname: document.getElementById('pf-first').value.trim(),
+        lastname: document.getElementById('pf-last').value.trim(),
+        phone: document.getElementById('pf-phone').value.trim(),
+      });
+      App.toast(App.t('dash.profileUpdated'),'success');
+      App.renderHeader();
+      renderDashboard();
+    });
+  });
+
+  function onLangChange() { renderDashboard(); }
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Contact — Halo Braids</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Cinzel:wght@400;500;600&family=Great+Vibes&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body data-page="contact">
+
+<nav class="nav solid" id="app-nav"></nav>
+
+<section class="banner">
+  <div class="banner-bg"></div>
+  <div class="banner-content">
+    <h1 data-i18n="contact.banner"></h1>
+    <div class="h-script" data-i18n="contact.subtitle"></div>
+  </div>
+</section>
+
+<section class="section section-light">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:5rem;max-width:1100px;margin:0 auto;align-items:start" class="contact-inner">
+
+    <div class="fade-up">
+      <span class="label" data-i18n="contact.label"></span>
+      <div class="h-script" style="font-size:clamp(2.5rem,4vw,4rem)" data-i18n="contact.title"></div>
+
+      <div style="margin-top:2rem">
+        <div style="display:flex;gap:1.2rem;margin-bottom:1.4rem;align-items:flex-start">
+          <span style="font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.2em;color:var(--gold-dark);min-width:80px;padding-top:.2rem" data-i18n="contact.location"></span>
+          <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--muted)" data-i18n="contact.locationValue"></span>
+        </div>
+        <div style="display:flex;gap:1.2rem;margin-bottom:1.4rem;align-items:flex-start">
+          <span style="font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.2em;color:var(--gold-dark);min-width:80px;padding-top:.2rem" data-i18n="contact.insta"></span>
+          <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--muted)">@halobraids.ca</span>
+        </div>
+        <div style="display:flex;gap:1.2rem;margin-bottom:1.4rem;align-items:flex-start">
+          <span style="font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.2em;color:var(--gold-dark);min-width:80px;padding-top:.2rem" data-i18n="contact.email"></span>
+          <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--muted)">hello@halobraids.ca</span>
+        </div>
+        <div style="display:flex;gap:1.2rem;margin-bottom:1.4rem;align-items:flex-start">
+          <span style="font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.2em;color:var(--gold-dark);min-width:80px;padding-top:.2rem" data-i18n="contact.hours"></span>
+          <span style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--muted)" data-i18n="contact.hoursValue" data-i18n-html></span>
+        </div>
+      </div>
+    </div>
+
+    <form class="form fade-up" id="contact-form" style="max-width:none">
+      <div>
+        <label data-i18n="contact.form.name"></label>
+        <input type="text" id="c-name" required/>
+      </div>
+      <div>
+        <label data-i18n="contact.form.email"></label>
+        <input type="email" id="c-email" required/>
+      </div>
+      <div>
+        <label data-i18n="contact.form.subject"></label>
+        <input type="text" id="c-subject"/>
+      </div>
+      <div>
+        <label data-i18n="contact.form.message"></label>
+        <textarea id="c-msg" rows="5"></textarea>
+      </div>
+      <button type="submit" class="btn btn-dark" data-i18n="contact.form.send"></button>
+    </form>
+
+  </div>
+</section>
+
+<footer class="footer" id="app-footer"></footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  document.getElementById('contact-form').addEventListener('submit', e => {
+    e.preventDefault();
+    App.toast(App.t('contact.form.sent'),'success');
+    e.target.reset();
+  });
+</script>
+</body>
+</html>

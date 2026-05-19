@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Mon Compte — Halo Braids</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Cinzel:wght@400;500;600&family=Great+Vibes&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body data-page="account">
+
+<nav class="nav solid" id="app-nav"></nav>
+
+<section class="banner">
+  <div class="banner-bg"></div>
+  <div class="banner-content">
+    <h1 data-i18n="account.banner"></h1>
+    <div class="h-script" data-i18n="account.subtitle"></div>
+  </div>
+</section>
+
+<section class="section section-light">
+  <div class="auth-wrap">
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login" data-i18n="account.login"></button>
+      <button class="auth-tab" data-tab="register" data-i18n="account.register"></button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="auth-panel active" data-panel="login">
+      <form class="form" id="login-form">
+        <div>
+          <label data-i18n="account.email"></label>
+          <input type="email" id="li-email" required/>
+        </div>
+        <div>
+          <label data-i18n="account.password"></label>
+          <input type="password" id="li-pwd" required/>
+        </div>
+        <div class="form-error" id="li-error"></div>
+        <button type="submit" class="btn btn-dark" data-i18n="account.signin"></button>
+        <p style="text-align:center;font-size:.85rem;color:var(--muted);font-family:'Cormorant Garamond',serif" data-i18n="account.forgotPwd"></p>
+      </form>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="auth-panel" data-panel="register">
+      <form class="form" id="reg-form">
+        <div class="form-row">
+          <div>
+            <label data-i18n="account.firstname"></label>
+            <input type="text" id="rg-first" required/>
+          </div>
+          <div>
+            <label data-i18n="account.lastname"></label>
+            <input type="text" id="rg-last" required/>
+          </div>
+        </div>
+        <div>
+          <label data-i18n="account.email"></label>
+          <input type="email" id="rg-email" required/>
+        </div>
+        <div>
+          <label data-i18n="account.phone"></label>
+          <input type="tel" id="rg-phone"/>
+        </div>
+        <div>
+          <label data-i18n="account.password"></label>
+          <input type="password" id="rg-pwd" minlength="6" required/>
+        </div>
+        <div>
+          <label data-i18n="account.confirmPwd"></label>
+          <input type="password" id="rg-pwd2" minlength="6" required/>
+        </div>
+        <div class="form-error" id="rg-error"></div>
+        <button type="submit" class="btn btn-dark" data-i18n="account.signup"></button>
+        <p style="text-align:center;font-size:.75rem;color:var(--muted);font-family:'Cormorant Garamond',serif;font-style:italic" data-i18n="account.terms"></p>
+      </form>
+    </div>
+
+  </div>
+</section>
+
+<footer class="footer" id="app-footer"></footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  // If already logged in, redirect
+  if (App.currentUser) {
+    const params = new URLSearchParams(location.search);
+    const r = params.get('redirect');
+    location.href = r === 'booking' ? 'booking.html' : 'dashboard.html';
+  }
+
+  // Tabs
+  document.querySelectorAll('.auth-tab').forEach(t => {
+    t.onclick = () => {
+      document.querySelectorAll('.auth-tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.auth-panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelector(`[data-panel="${t.dataset.tab}"]`).classList.add('active');
+    };
+  });
+
+  // Login
+  document.getElementById('login-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const err = document.getElementById('li-error');
+    err.textContent = '';
+    const email = document.getElementById('li-email').value.trim();
+    const pwd = document.getElementById('li-pwd').value;
+    const r = App.login(email, pwd);
+    if (!r.ok) { err.textContent = App.t('account.err' + App.cap(r.error)); return; }
+    App.toast(App.t('account.welcomeBack') + ', ' + r.user.firstname,'success');
+    const params = new URLSearchParams(location.search);
+    setTimeout(() => location.href = params.get('redirect') === 'booking' ? 'booking.html' : 'dashboard.html', 800);
+  });
+
+  // Register
+  document.getElementById('reg-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const err = document.getElementById('rg-error');
+    err.textContent = '';
+    const firstname = document.getElementById('rg-first').value.trim();
+    const lastname = document.getElementById('rg-last').value.trim();
+    const email = document.getElementById('rg-email').value.trim();
+    const phone = document.getElementById('rg-phone').value.trim();
+    const pwd = document.getElementById('rg-pwd').value;
+    const pwd2 = document.getElementById('rg-pwd2').value;
+    if (!firstname || !lastname || !email || !pwd) {
+      err.textContent = App.t('account.errFields'); return;
+    }
+    if (pwd !== pwd2) { err.textContent = App.t('account.errPwdMatch'); return; }
+    const r = App.register({ firstname, lastname, email, phone, password: pwd });
+    if (!r.ok) { err.textContent = App.t('account.err' + App.cap(r.error)); return; }
+    App.toast(App.t('account.welcome') + ', ' + firstname + ' ✦','success');
+    const params = new URLSearchParams(location.search);
+    setTimeout(() => location.href = params.get('redirect') === 'booking' ? 'booking.html' : 'dashboard.html', 800);
+  });
+</script>
+</body>
+</html>

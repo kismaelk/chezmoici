@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Services & Pricing — Halo Braids</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Cinzel:wght@400;500;600&family=Great+Vibes&family=Jost:wght@200;300;400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body data-page="services">
+
+<nav class="nav solid" id="app-nav"></nav>
+
+<section class="banner">
+  <div class="banner-bg"></div>
+  <div class="banner-content">
+    <h1 data-i18n="services.banner"></h1>
+    <div class="h-script" data-i18n="services.subtitle"></div>
+  </div>
+</section>
+
+<section class="section section-light">
+  <div class="grid-3" id="services-grid"></div>
+
+  <div class="card mt-3" style="max-width:760px;margin:3rem auto 0;background:var(--cream2);border-top:2px solid var(--gold)">
+    <h3 class="label" data-i18n="services.policy.title"></h3>
+    <div style="margin-top:1rem">
+      <p style="margin:.5rem 0;font-family:'Cormorant Garamond',serif" data-i18n="services.policy.1">·</p>
+      <p style="margin:.5rem 0;font-family:'Cormorant Garamond',serif" data-i18n="services.policy.2">·</p>
+      <p style="margin:.5rem 0;font-family:'Cormorant Garamond',serif" data-i18n="services.policy.3">·</p>
+      <p style="margin:.5rem 0;font-family:'Cormorant Garamond',serif" data-i18n="services.policy.4">·</p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer" id="app-footer"></footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  function renderServices() {
+    const grid = document.getElementById('services-grid');
+    grid.innerHTML = SERVICES.map(s => `
+      <div class="svc-card fade-up">
+        <div class="svc-card-img"><span class="h-script">${s['name'+App.cap(App.lang)]}</span></div>
+        <div class="svc-card-body">
+          <h3>${s['name'+App.cap(App.lang)].toUpperCase()}</h3>
+          <div class="price">${App.t('common.from')} ${s.price} $</div>
+          <p class="desc">${s['desc'+App.cap(App.lang)]}</p>
+          <div class="duration">${App.t('services.duration')} · ${s.duration}h</div>
+          <a href="booking.html?service=${s.id}" class="btn btn-dark btn-sm" style="margin-top:1rem;align-self:flex-start" data-i18n="services.book">${App.t('services.book')}</a>
+        </div>
+      </div>
+    `).join('');
+  }
+  function onLangChange() { renderServices(); }
+  document.addEventListener('DOMContentLoaded', renderServices);
+</script>
+</body>
+</html>
