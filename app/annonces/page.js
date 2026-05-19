@@ -5,6 +5,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import ListingAnnonceActions from '@/app/components/ListingAnnonceActions'
+import { ListingCardSkeletonGrid, ListingCardSkeletonRow } from '@/app/components/ListingCardSkeleton'
+import {
+  mergeListingFiltersFromUrl,
+  loadListingPrefs,
+  saveListingState,
+} from '@/lib/listingFiltersPersist'
 import { fetchAnnoncesList, fetchAvisStatsForAnnonces } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
@@ -421,6 +427,7 @@ function AnnoncesContenu() {
   const [chargement, setChargement] = useState(true)
   const [vue, setVue] = useState('grille')
   const [tri, setTri] = useState('recent')
+  const [filtresHydrates, setFiltresHydrates] = useState(false)
   const [filtresMobile, setFiltresMobile] = useState(false)
   const [avisStats, setAvisStats] = useState({})
 
@@ -442,15 +449,35 @@ function AnnoncesContenu() {
     disponibilite: searchParams.get('disponibilite') || '',
   }))
 
+  useEffect(() => {
+    if (searchParams.toString()) {
+      setFiltresHydrates(true)
+      return
+    }
+    const merged = mergeListingFiltersFromUrl(searchParams, FILTRES_VIDES)
+    const prefs = loadListingPrefs()
+    setFiltres(merged)
+    setVue(prefs.vue)
+    setTri(prefs.tri)
+    setFiltresHydrates(true)
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!filtresHydrates) return
+    saveListingState(filtres, { vue, tri })
+  }, [filtres, vue, tri, filtresHydrates])
+
   // Sync filtres → URL
   useEffect(() => {
+    if (!filtresHydrates) return
     const params = new URLSearchParams()
     Object.entries(filtres).forEach(([k, v]) => { if (v) params.set(k, v) })
     const url = '/annonces' + (params.toString() ? '?' + params.toString() : '')
     window.history.replaceState({}, '', url)
-  }, [filtres])
+  }, [filtres, filtresHydrates])
 
   useEffect(() => {
+    if (!filtresHydrates) return
     async function charger() {
       setChargement(true)
       try {
@@ -476,7 +503,7 @@ function AnnoncesContenu() {
       setChargement(false)
     }
     charger()
-  }, [filtres, tri])
+  }, [filtres, tri, filtresHydrates])
 
   // Changer de catégorie : réinitialise TOUS les autres filtres
   const changerCategorie = (nouvelleCategorie) => {
@@ -689,12 +716,12 @@ function AnnoncesContenu() {
 
           {/* GRILLE / LISTE */}
           <div className="flex-1 min-w-0">
-            {chargement ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="h-72 bg-white rounded-xl border border-gray-100 animate-pulse" />
-                ))}
-              </div>
+            {chargement || !filtresHydrates ? (
+              vue === 'liste' ? (
+                <ListingCardSkeletonRow count={6} />
+              ) : (
+                <ListingCardSkeletonGrid count={6} />
+              )
             ) : annonces.length === 0 ? (
               <div className="bg-white rounded-xl p-12 text-center border border-gray-100">
                 <div className="text-5xl mb-4">🔍</div>
@@ -730,8 +757,8 @@ function AnnoncesContenu() {
 export default function AnnoncesPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center text-gray-400">
-        Chargement des annonces…
+      <div className="min-h-screen bg-[#F5F5F5] px-4 py-8 max-w-7xl mx-auto">
+        <ListingCardSkeletonGrid count={6} />
       </div>
     }>
       <AnnoncesContenu />

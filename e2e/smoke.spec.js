@@ -15,8 +15,16 @@ test.describe('Smoke Chez Moi CI', () => {
   test('liste annonces et carte', async ({ page }) => {
     await page.goto(`${base}/annonces`)
     await expect(page.locator('body')).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await page.goto(`${base}/carte`)
     await expect(page.locator('body')).toBeVisible()
+  })
+
+  test('services et artisans', async ({ page }) => {
+    await page.goto(`${base}/services`)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await page.goto(`${base}/artisans`)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   })
 
   test('connexion admin (page)', async ({ page }) => {

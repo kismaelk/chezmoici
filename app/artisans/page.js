@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ListingAnnonceActions from '@/app/components/ListingAnnonceActions'
+import { ListingCardSkeletonGrid } from '@/app/components/ListingCardSkeleton'
 import { fetchAnnoncesList, enrichAnnoncesWithProfiles } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
@@ -121,14 +122,7 @@ export default function Artisans() {
         </div>
 
         {chargement ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-56 bg-white rounded-xl border border-gray-100 animate-pulse"
-              />
-            ))}
-          </div>
+          <ListingCardSkeletonGrid count={6} className="gap-5" />
         ) : annonces.length === 0 ? (
           <div className="bg-white rounded-xl p-10 text-center border border-gray-100">
             <div className="text-5xl mb-3">🔧</div>

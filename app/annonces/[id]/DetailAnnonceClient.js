@@ -21,6 +21,9 @@ import {
 import { useParams, useRouter } from 'next/navigation'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
+import AnnoncePhotoGallery from '@/app/components/AnnoncePhotoGallery'
+import DetailStickyCta from '@/app/components/DetailStickyCta'
+import { DetailAnnonceSkeleton } from '@/app/components/ListingCardSkeleton'
 
 const COORDS_QUARTIER = {
   Cocody:        [-3.98,  5.36],
@@ -163,7 +166,7 @@ export default function DetailAnnonceClient() {
   const [utilisateur, setUtilisateur] = useState(null)
   const [estFavori, setEstFavori] = useState(false)
   const [favoriId, setFavoriId] = useState(null)
-  const [photoActive, setPhotoActive] = useState(0)
+  const contactRef = useRef(null)
   const [message, setMessage] = useState('')
   const [envoye, setEnvoye] = useState(false)
   const [avis, setAvis] = useState([])
@@ -422,11 +425,7 @@ export default function DetailAnnonceClient() {
   }
 
   if (chargement) {
-    return (
-      <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center">
-        <div className="text-[#1B5E20] font-bold">Chargement...</div>
-      </div>
-    )
+    return <DetailAnnonceSkeleton />
   }
 
   if (erreur || !annonce) {
@@ -465,7 +464,7 @@ export default function DetailAnnonceClient() {
   })()
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
+    <div className="min-h-screen bg-[#F5F5F5] pb-24 md:pb-0">
       <SiteHeader />
 
       <div className="bg-white border-b border-gray-100">
@@ -499,39 +498,7 @@ export default function DetailAnnonceClient() {
           {/* COLONNE GAUCHE — Photos + Infos */}
           <div className="md:col-span-2 space-y-6">
 
-            {/* GALERIE PHOTOS */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm">
-              {annonce.photos && annonce.photos.length > 0 ? (
-                <>
-                  <img
-                    src={annonce.photos[photoActive]}
-                    alt={annonce.titre}
-                    className="max-h-[min(70vh,24rem)] w-full object-contain bg-black/5 sm:max-h-[28rem] md:h-96 md:max-h-none md:object-cover"
-                  />
-                  {annonce.photos.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto p-3">
-                      {annonce.photos.map((photo, index) => (
-                        <img
-                          key={index}
-                          src={photo}
-                          alt={`Photo ${index + 1}`}
-                          onClick={() => setPhotoActive(index)}
-                          className={`h-20 w-24 flex-shrink-0 cursor-pointer rounded-lg object-cover sm:h-24 sm:w-28 ${
-                            photoActive === index
-                              ? 'ring-2 ring-[#1B5E20]'
-                              : 'opacity-75 hover:opacity-100'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex h-64 w-full items-center justify-center bg-gray-200 text-gray-400 text-5xl sm:h-80">
-                  📷
-                </div>
-              )}
-            </div>
+                        <AnnoncePhotoGallery photos={annonce.photos} titre={annonce.titre} />
 
             {/* TITRE ET PRIX */}
             <div className="bg-white rounded-xl p-6 shadow-sm">

@@ -6,6 +6,7 @@ import { fetchAnnoncesList, fetchAvisStatsForAnnonces } from '@/lib/firestoreApp
 import Link from 'next/link'
 import SiteHeader from '@/app/components/SiteHeader'
 import ListingAnnonceActions from '@/app/components/ListingAnnonceActions'
+import { ListingCardSkeletonGrid } from '@/app/components/ListingCardSkeleton'
 import SiteFooter from '@/app/components/SiteFooter'
 import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
 
@@ -158,16 +159,7 @@ function GrilleAnnonces({ type, titre, sousTitre, href, limit = 6 }) {
   }, [type, limit])
 
   if (etat === 'loading') {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-5">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-72 bg-white rounded-xl border border-gray-100 animate-pulse"
-          />
-        ))}
-      </div>
-    )
+    return <ListingCardSkeletonGrid count={3} className="gap-5" />
   }
 
   if (annonces.length === 0) return null

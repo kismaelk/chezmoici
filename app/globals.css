@@ -81,3 +81,7 @@ textarea,
 button {
   color: #111827;
 }
+
+.safe-area-pb {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}

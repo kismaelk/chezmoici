@@ -14,10 +14,14 @@ export async function generateMetadata({ params }) {
   const description = `${descSnippet} | ${data.quartier || ''}, Abidjan | ${prixStr} FCFA`
   const photos = Array.isArray(data.photos) ? data.photos : []
 
+  const canonical = `https://www.chezmoici.com/annonces/${id}`
+
   return {
     title: `${titre} — Chez Moi CI`,
     description,
+    alternates: { canonical },
     openGraph: {
+      url: canonical,
       title: titre,
       description: descSnippet || undefined,
       images: photos[0] ? [{ url: photos[0] }] : [],

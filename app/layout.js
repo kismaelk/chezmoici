@@ -1,4 +1,5 @@
 import './globals.css'
+import BetaLaunchBanner from '@/app/components/BetaLaunchBanner'
 import BackToTopButton from '@/app/components/BackToTopButton'
 import AuthStaleSessionCleaner from '@/app/components/AuthStaleSessionCleaner'
 import AccountSuspensionListener from '@/app/components/AccountSuspensionListener'
@@ -66,6 +67,7 @@ export default function RootLayout({ children }) {
         <AuthStaleSessionCleaner />
         <AccountSuspensionListener />
         <HeaderAuthSubscriber />
+        <BetaLaunchBanner />
         {children}
         <BackToTopButton />
       </body>
