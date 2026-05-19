@@ -33,3 +33,8 @@ yarn-error.log*
 
 # Claude / outils locaux (ne pas versionner les worktrees)
 .claude/worktrees/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
