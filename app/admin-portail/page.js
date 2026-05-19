@@ -30,6 +30,7 @@ import { resolveStaffRole, staffPermissions } from '@/lib/staffRoles'
 import AdminExportButtons from '@/app/components/admin/AdminExportButtons'
 import StaffChatPanel from '@/app/components/admin/StaffChatPanel'
 import { telechargerCsv } from '@/lib/adminCsv'
+import { telechargerExportXlsxMultiAdmin } from '@/lib/adminExportClient'
 import {
   loadAdminPersistedOnglet,
   saveAdminPersistedOnglet,
@@ -153,6 +154,8 @@ export default function AdminPortail() {
 
   const [mergeSource, setMergeSource] = useState('')
   const [mergeTarget, setMergeTarget] = useState('')
+  const [mergePreview, setMergePreview] = useState(null)
+  const [mergeLogs, setMergeLogs] = useState([])
   const [fusionEnCours, setFusionEnCours] = useState(false)
   const [bulkEnCours, setBulkEnCours] = useState(false)
   const [ongletHydrated, setOngletHydrated] = useState(false)
@@ -183,14 +186,18 @@ export default function AdminPortail() {
         },
         body: JSON.stringify({ event, ...payload }),
       })
+      const j = await r.json().catch(() => ({}))
       if (!r.ok) {
-        const j = await r.json().catch(() => ({}))
         console.warn('[admin] notify-admin-action', r.status, j)
+        showToast('error', j.error || 'Notification équipe échouée')
+        return
       }
+      if (j.warnings) showToast('error', j.warnings)
     } catch (e) {
       console.warn('[admin] notify-admin-action', e)
+      showToast('error', 'Notification équipe indisponible')
     }
-  }, [])
+  }, [showToast])
 
   const permissions = useMemo(() => staffPermissions(roleStaff), [roleStaff])
 
@@ -1062,11 +1069,58 @@ export default function AdminPortail() {
     permissions.utilisateursAssignAdmin ||
     permissions.utilisateursAssignLowerRoles
 
+  const chargerMergeLogs = useCallback(async () => {
+    if (!permissions.fusionProfils) return
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      const r = await fetch('/api/admin/merge-profiles', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok) setMergeLogs(j.logs || [])
+    } catch {
+      /* ignore */
+    }
+  }, [permissions.fusionProfils])
+
+  useEffect(() => {
+    if (onglet === 'utilisateurs' && permissions.fusionProfils) void chargerMergeLogs()
+  }, [onglet, permissions.fusionProfils, chargerMergeLogs])
+
+  const apercuFusionProfils = async () => {
+    if (!mergeSource || !mergeTarget || mergeSource === mergeTarget) {
+      return showToast('error', 'Choisissez deux comptes distincts.')
+    }
+    setFusionEnCours(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return showToast('error', 'Session expirée.')
+      const r = await fetch('/api/admin/merge-profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ sourceUserId: mergeSource, targetUserId: mergeTarget, dryRun: true }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) return showToast('error', j.error || 'Aperçu impossible')
+      setMergePreview(j.summary || null)
+      showToast('success', j.message || 'Aperçu calculé.')
+    } catch (e) {
+      showToast('error', e?.message || String(e))
+    } finally {
+      setFusionEnCours(false)
+    }
+  }
+
   const fusionnerProfils = async () => {
     if (!permissions.fusionProfils) return
     if (!mergeSource || !mergeTarget || mergeSource === mergeTarget) {
       return showToast('error', 'Choisissez deux comptes distincts (source → cible).')
     }
+    if (!confirm('Confirmer la fusion définitive ? Le profil source sera banni.')) return
     setFusionEnCours(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -1080,7 +1134,7 @@ export default function AdminPortail() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ sourceUserId: mergeSource, targetUserId: mergeTarget }),
+        body: JSON.stringify({ sourceUserId: mergeSource, targetUserId: mergeTarget, dryRun: false }),
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok) {
@@ -1090,6 +1144,8 @@ export default function AdminPortail() {
       showToast('success', j.message || 'Fusion effectuée.')
       setMergeSource('')
       setMergeTarget('')
+      setMergePreview(null)
+      void chargerMergeLogs()
       const [list, ann] = await Promise.all([fetchAllProfiles(), fetchAllAnnoncesAdmin()])
       list.sort((a, b) => {
         const ta = a.created_at ? new Date(a.created_at).getTime() : 0
@@ -1361,6 +1417,69 @@ export default function AdminPortail() {
         </p>
 
         {/* STATS */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          {permissions.peutExporterDonnees && (
+            <button
+              type="button"
+              onClick={() =>
+                void telechargerExportXlsxMultiAdmin({
+                  filename: 'pilotage_chezmoici',
+                  showToast,
+                  sheets: [
+                    {
+                      sheetName: 'Annonces',
+                      columns: [
+                        { key: 'id', label: 'id' },
+                        { key: 'titre', label: 'titre' },
+                        { key: 'statut', label: 'statut' },
+                        { key: 'type', label: 'type' },
+                      ],
+                      rows: annonces.slice(0, 500).map((a) => ({
+                        id: a.id,
+                        titre: a.titre,
+                        statut: a.statut,
+                        type: a.type,
+                      })),
+                    },
+                    {
+                      sheetName: 'Utilisateurs',
+                      columns: [
+                        { key: 'id', label: 'id' },
+                        { key: 'nom', label: 'nom' },
+                        { key: 'email', label: 'email' },
+                        { key: 'statut', label: 'statut' },
+                      ],
+                      rows: utilisateurs.slice(0, 500).map((u) => ({
+                        id: u.id,
+                        nom: u.nom,
+                        email: u.email,
+                        statut: u.account_status,
+                      })),
+                    },
+                    ...(permissions.voirOngletSignalements
+                      ? [{
+                          sheetName: 'Signalements',
+                          columns: [
+                            { key: 'id', label: 'id' },
+                            { key: 'statut', label: 'statut' },
+                            { key: 'motif', label: 'motif' },
+                          ],
+                          rows: signalements.slice(0, 500).map((s) => ({
+                            id: s.id,
+                            statut: s.statut,
+                            motif: s.motif,
+                          })),
+                        }]
+                      : []),
+                  ],
+                })
+              }
+              className="text-xs font-bold px-3 py-1.5 rounded-lg border border-teal-600 text-teal-800 hover:bg-teal-50"
+            >
+              Export Excel multi-feuilles
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-8">
           {stats.map(s => (
             <div key={s.label} className="bg-white/95 rounded-xl p-3 sm:p-4 shadow-sm border border-indigo-100/80 text-center min-w-0">
@@ -2577,12 +2696,43 @@ export default function AdminPortail() {
                   <button
                     type="button"
                     disabled={fusionEnCours}
+                    onClick={() => void apercuFusionProfils()}
+                    className="text-xs font-bold px-4 py-2 rounded-lg border border-amber-700 text-amber-900 hover:bg-amber-100 disabled:opacity-50 shrink-0"
+                  >
+                    Aperçu (dry-run)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={fusionEnCours}
                     onClick={fusionnerProfils}
                     className="text-xs font-bold px-4 py-2 rounded-lg bg-amber-800 text-white hover:bg-amber-900 disabled:opacity-50 shrink-0"
                   >
                     {fusionEnCours ? '…' : 'Fusionner'}
                   </button>
                 </div>
+                {mergePreview && (
+                  <p className="mt-3 text-xs text-amber-950 bg-amber-100/80 rounded-lg p-2">
+                    Aperçu : {mergePreview.counts?.annonces ?? 0} annonce(s),{' '}
+                    {mergePreview.counts?.demandes_badge ?? 0} demande(s) badge,{' '}
+                    {mergePreview.counts?.favoris ?? 0} favori(s).
+                  </p>
+                )}
+                {mergeLogs.length > 0 && (
+                  <div className="mt-3 border-t border-amber-200 pt-2">
+                    <p className="text-[10px] font-bold uppercase text-amber-900 mb-1">Journal des fusions</p>
+                    <ul className="text-xs text-amber-950 space-y-1 max-h-28 overflow-y-auto">
+                      {mergeLogs.map((log) => (
+                        <li key={log.id}>
+                          {log.created_at
+                            ? new Date(log.created_at).toLocaleString('fr-FR')
+                            : ''}{' '}
+                          — {String(log.source_user_id).slice(0, 8)}… →{' '}
+                          {String(log.target_user_id).slice(0, 8)}…
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
             <div className="flex flex-col gap-3 bg-white/95 border border-indigo-100 rounded-xl p-4 shadow-sm">
@@ -2639,6 +2789,13 @@ export default function AdminPortail() {
                   placeholder="Filtre e-mail contient…"
                   className="text-xs border rounded-lg px-2 py-1.5 border-slate-200 min-w-[10rem] flex-1 max-w-xs bg-white"
                 />
+                <button
+                  type="button"
+                  onClick={reinitialiserFiltresOnglet}
+                  className="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                >
+                  Réinit. filtres
+                </button>
               </div>
               {permissions.peutExporterDonnees && (
                 <AdminExportButtons

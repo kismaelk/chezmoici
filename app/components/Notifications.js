@@ -6,6 +6,13 @@ import { fetchNotifications, listenNotifications, markAllNotificationsRead } fro
 export default function Notifications({ utilisateurId }) {
   const [notifications, setNotifications] = useState([])
   const [ouvert, setOuvert] = useState(false)
+  const [nowMs, setNowMs] = useState(0)
+
+  useEffect(() => {
+    setNowMs(Date.now())
+    const id = setInterval(() => setNowMs(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     if (!utilisateurId) return
@@ -34,8 +41,7 @@ export default function Notifications({ utilisateurId }) {
   const formaterDate = (date) => {
     const d = new Date(date)
     if (Number.isNaN(d.getTime())) return ''
-    // eslint-disable-next-line react-hooks/purity
-    const diff = Date.now() - d.getTime()
+    const diff = nowMs - d.getTime()
     if (diff < 60000) return "À l'instant"
     if (diff < 3600000) return `Il y a ${Math.floor(diff / 60000)} min`
     if (diff < 86400000) return `Il y a ${Math.floor(diff / 3600000)}h`

@@ -86,7 +86,7 @@ export async function POST(request) {
       `*Admin:* ${adminUrl}`,
     ].join('\n')
 
-    const { sent, results } = await sendTeamModerationNotify({
+    const notify = await sendTeamModerationNotify({
       text,
       emailSubject: `[Chez Moi CI] Compte vérifié : ${cible.nom || cible.email || cible.id}`,
       webhookBody: {
@@ -97,7 +97,12 @@ export async function POST(request) {
       },
     })
 
-    return NextResponse.json({ ok: true, sent, results })
+    return NextResponse.json({
+      ok: true,
+      sent: notify.sent,
+      results: notify.results,
+      warnings: notify.errors?.length ? `Canaux en échec : ${notify.errors.join(', ')}` : null,
+    })
   }
 
   const annonceId = body?.annonceId
@@ -125,7 +130,7 @@ export async function POST(request) {
     `*Admin:* ${adminUrl}`,
   ].join('\n')
 
-  const { sent, results } = await sendTeamModerationNotify({
+  const notify = await sendTeamModerationNotify({
     text,
     emailSubject: `[Chez Moi CI] Annonce validée : ${annonce.titre}`,
     webhookBody: {
@@ -143,5 +148,10 @@ export async function POST(request) {
     },
   })
 
-  return NextResponse.json({ ok: true, sent, results })
+  return NextResponse.json({
+    ok: true,
+    sent: notify.sent,
+    results: notify.results,
+    warnings: notify.errors?.length ? `Canaux en échec : ${notify.errors.join(', ')}` : null,
+  })
 }

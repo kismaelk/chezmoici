@@ -409,7 +409,7 @@ function CarteAnnonce({ annonce, vue, avisStat, filtresPourCarte = {} }) {
           </div>
         </div>
       </Link>
-      <ListingAnnonceActions annonceId={annonce.id} filtresPourCarte={filtresPourCarte} layout="overlay" />
+      <ListingAnnonceActions annonceId={annonce.id} filtresPourCarte={filtresPourCarte} layout="footer" />
     </div>
   )
 }

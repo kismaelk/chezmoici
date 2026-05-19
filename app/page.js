@@ -6,7 +6,6 @@ import { fetchAnnoncesList, fetchAvisStatsForAnnonces } from '@/lib/firestoreApp
 import Link from 'next/link'
 import SiteHeader from '@/app/components/SiteHeader'
 import ListingAnnonceActions from '@/app/components/ListingAnnonceActions'
-import { buildHrefCarteAnnonce } from '@/lib/listingCarteLink'
 import SiteFooter from '@/app/components/SiteFooter'
 import { VILLES_OPTIONS, getCommunesParVille } from '@/lib/civGeo'
 
@@ -55,8 +54,6 @@ function CarteAnnonce({ annonce, avisStat }) {
   const totalAvis = avisStat?.total || 0
   const nbVues = annonce.nb_vues || 0
   const topNote = moyenneAvis >= 4.5 && totalAvis > 0
-
-  const hrefCarte = buildHrefCarteAnnonce(annonce.id, { type: annonce.type })
 
   return (
     <div className="group relative rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
@@ -119,14 +116,11 @@ function CarteAnnonce({ annonce, avisStat }) {
         </div>
       </div>
       </Link>
-      <div className="flex items-center justify-between gap-2 border-t border-gray-100 px-3 py-2">
-        <Link href={hrefCarte} className="text-xs font-bold text-emerald-800 hover:underline">
-          Carte
-        </Link>
-        <Link href={`/annonces/${annonce.id}`} className="text-xs font-bold text-[#1B5E20] hover:underline">
-          Détails →
-        </Link>
-      </div>
+      <ListingAnnonceActions
+        annonceId={annonce.id}
+        filtresPourCarte={{ type: annonce.type }}
+        layout="footer"
+      />
     </div>
   )
 }

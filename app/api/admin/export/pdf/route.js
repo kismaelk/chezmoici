@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit'
 import { NextResponse } from 'next/server'
 import { getStaffFromRequest } from '@/lib/adminApiAuth'
 import { parseExportTablePayload, safeExportBasename } from '@/lib/adminExportServerShared'
+import { adminRateLimitKey, checkAdminRateLimit } from '@/lib/rateLimitAdmin'
 
 export const runtime = 'nodejs'
 
@@ -18,6 +19,14 @@ export async function POST(request) {
   }
   if (!staff.permissions.peutExporterDonnees) {
     return NextResponse.json({ error: 'Export non autorisé' }, { status: 403 })
+  }
+
+  const rl = checkAdminRateLimit(adminRateLimitKey(staff.user.id, 'export-pdf'))
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `Trop de requêtes. Réessayez dans ${rl.retryAfterSec}s.` },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+    )
   }
 
   let body

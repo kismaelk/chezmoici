@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { buildHrefCarteAnnonce } from '@/lib/listingCarteLink'
+import ListingAnnonceActions from '@/app/components/ListingAnnonceActions'
 import { fetchAnnoncesList, enrichAnnoncesWithProfiles } from '@/lib/firestoreApp'
 import SiteHeader from '@/app/components/SiteHeader'
 import SiteFooter from '@/app/components/SiteFooter'
@@ -187,14 +187,11 @@ export default function Artisans() {
                   </div>
                 </div>
               </Link>
-              <div className="flex justify-between gap-2 border-t border-gray-100 px-4 py-2 text-xs font-bold">
-                <Link href={buildHrefCarteAnnonce(a.id, { type: 'artisan', quartier })} className="text-emerald-800">
-                  Carte
-                </Link>
-                <Link href={`/annonces/${a.id}`} className="text-[#1B5E20]">
-                  Détails →
-                </Link>
-              </div>
+              <ListingAnnonceActions
+                annonceId={a.id}
+                filtresPourCarte={{ type: 'artisan', quartier }}
+                layout="footer"
+              />
               </div>
             ))}
           </div>

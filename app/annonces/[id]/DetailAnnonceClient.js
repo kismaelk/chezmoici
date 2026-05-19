@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { buildHrefCarteAnnonce } from '@/lib/listingCarteLink'
 import { observerConnexion } from '@/lib/auth'
 import {
   getAnnonceById,
@@ -119,7 +120,10 @@ function MiniCarte({ annonce }) {
 
   if (erreur) return null
 
-  const lienCarte = `/carte?quartier=${encodeURIComponent(annonce.quartier || '')}&type=${encodeURIComponent(annonce.type || '')}`
+  const lienCarte = buildHrefCarteAnnonce(annonce.id, {
+    type: annonce.type,
+    quartier: annonce.quartier,
+  })
 
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-sm">
@@ -129,7 +133,7 @@ function MiniCarte({ annonce }) {
           href={lienCarte}
           className="text-xs text-[#1B5E20] font-bold hover:underline flex items-center gap-1"
         >
-          Voir sur la carte complète →
+          Voir sur la carte →
         </a>
       </div>
       <div ref={containerRef} className="w-full h-52" />
