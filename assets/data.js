@@ -245,6 +245,13 @@ const I18N = {
     'monthShort.4':'MAI', 'monthShort.5':'JUN', 'monthShort.6':'JUL', 'monthShort.7':'AOÛ',
     'monthShort.8':'SEP', 'monthShort.9':'OCT', 'monthShort.10':'NOV', 'monthShort.11':'DÉC',
 
+    // Stats band
+    'stats.label':'EN CHIFFRES',
+    'stats.clients':'CLIENTES SATISFAITES',
+    'stats.rating':'NOTE GOOGLE',
+    'stats.styles':'STYLES EXCLUSIFS',
+    'stats.stylists':'STYLISTES EXPERTES',
+
     // Reviews
     'rev1.text':'Les meilleures knotless braids que j\'ai jamais eues. Je me suis sentie comme une reine du début à la fin.',
     'rev1.name':'AMARA K.', 'rev1.loc':'Ottawa, ON',
@@ -428,6 +435,13 @@ const I18N = {
     'monthShort.0':'JAN', 'monthShort.1':'FEB', 'monthShort.2':'MAR', 'monthShort.3':'APR',
     'monthShort.4':'MAY', 'monthShort.5':'JUN', 'monthShort.6':'JUL', 'monthShort.7':'AUG',
     'monthShort.8':'SEP', 'monthShort.9':'OCT', 'monthShort.10':'NOV', 'monthShort.11':'DEC',
+
+    // Stats band
+    'stats.label':'BY THE NUMBERS',
+    'stats.clients':'HAPPY CLIENTS',
+    'stats.rating':'GOOGLE RATING',
+    'stats.styles':'EXCLUSIVE STYLES',
+    'stats.stylists':'EXPERT STYLISTS',
 
     'rev1.text':'The best knotless braids I\'ve ever had. I felt like a queen from start to finish.',
     'rev1.name':'AMARA K.', 'rev1.loc':'Ottawa, ON',
