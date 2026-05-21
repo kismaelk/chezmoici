@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -430,6 +430,7 @@ function AnnoncesContenu() {
   const [filtresHydrates, setFiltresHydrates] = useState(false)
   const [filtresMobile, setFiltresMobile] = useState(false)
   const [avisStats, setAvisStats] = useState({})
+  const requeteAnnoncesRef = useRef(0)
 
   const [filtres, setFiltres] = useState(() => ({
     ...FILTRES_VIDES,
@@ -450,15 +451,13 @@ function AnnoncesContenu() {
   }))
 
   useEffect(() => {
-    if (searchParams.toString()) {
-      setFiltresHydrates(true)
-      return
-    }
     const merged = mergeListingFiltersFromUrl(searchParams, FILTRES_VIDES)
-    const prefs = loadListingPrefs()
     setFiltres(merged)
-    setVue(prefs.vue)
-    setTri(prefs.tri)
+    if (!searchParams.toString()) {
+      const prefs = loadListingPrefs()
+      setVue(prefs.vue)
+      setTri(prefs.tri)
+    }
     setFiltresHydrates(true)
   }, [searchParams])
 
@@ -478,12 +477,14 @@ function AnnoncesContenu() {
 
   useEffect(() => {
     if (!filtresHydrates) return
+    const requestId = ++requeteAnnoncesRef.current
     async function charger() {
       setChargement(true)
       try {
         const data = await fetchAnnoncesList(filtres, tri === 'mieuxNotes' ? 'recent' : tri)
         const ids = (data || []).map((a) => a.id).filter(Boolean)
         const stats = await fetchAvisStatsForAnnonces(ids)
+        if (requestId !== requeteAnnoncesRef.current) return
         const sorted = tri === 'mieuxNotes'
           ? [...(data || [])].sort((a, b) => {
               const sa = stats[a.id] || { moyenne: 0, total: 0 }
@@ -496,11 +497,14 @@ function AnnoncesContenu() {
         setAnnonces(sorted)
         setAvisStats(stats)
       } catch (e) {
+        if (requestId !== requeteAnnoncesRef.current) return
         console.error(e)
         setAnnonces([])
         setAvisStats({})
       }
-      setChargement(false)
+      if (requestId === requeteAnnoncesRef.current) {
+        setChargement(false)
+      }
     }
     charger()
   }, [filtres, tri, filtresHydrates])
