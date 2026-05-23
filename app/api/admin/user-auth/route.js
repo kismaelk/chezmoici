@@ -5,7 +5,7 @@ import { createSupabaseAdmin } from '@/lib/supabaseAdmin'
 /**
  * Actions Auth côté serveur (service role).
  * confirm_email : super_admin uniquement (force email_confirm sur auth.users).
- * send_password_reset : super_admin + admin (lien de réinitialisation).
+ * send_password_reset : super_admin + admin (envoi e-mail Supabase, sans exposer le lien).
  */
 export async function POST(request) {
   let body
@@ -59,21 +59,18 @@ export async function POST(request) {
       ''
     const redirectTo = site ? `${site}/nouveau-mot-de-passe` : undefined
 
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type: 'recovery',
-      email: userData.user.email,
-      options: redirectTo ? { redirectTo } : undefined,
-    })
-    if (linkErr) {
-      return NextResponse.json({ error: linkErr.message }, { status: 400 })
+    const { error: resetErr } = await admin.auth.resetPasswordForEmail(
+      userData.user.email,
+      redirectTo ? { redirectTo } : undefined
+    )
+    if (resetErr) {
+      return NextResponse.json({ error: resetErr.message }, { status: 400 })
     }
 
-    const actionLink = linkData?.properties?.action_link
     return NextResponse.json({
       ok: true,
       message:
-        'Lien de réinitialisation généré. Transmettez-le à l’utilisateur ou vérifiez que les e-mails Supabase sont activés.',
-      action_link: actionLink || null,
+        'E-mail de réinitialisation envoyé si la messagerie Supabase est configurée.',
     })
   } catch (e) {
     const msg = e?.message || String(e)
