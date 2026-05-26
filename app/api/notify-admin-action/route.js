@@ -5,7 +5,7 @@ import { sendTeamModerationNotify } from '@/lib/sendTeamModerationNotify'
 
 /**
  * Notifications équipe quand un admin valide un compte ou publie une annonce.
- * Auth : JWT staff uniquement (is_admin ou e-mail fallback super admin).
+ * Auth : JWT staff uniquement.
  * Utilise les mêmes variables que /api/notify-moderation.
  */
 export async function POST(request) {
@@ -32,7 +32,7 @@ export async function POST(request) {
 
   const { data: profilStaff, error: profilErr } = await supabaseUser
     .from('profiles')
-    .select('is_admin, admin_role')
+    .select('is_admin, admin_role, account_status, account_suspended_until')
     .eq('id', user.id)
     .single()
 
