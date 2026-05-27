@@ -41,7 +41,9 @@ export default function Connexion() {
     } catch (err) {
       if (err instanceof ErreurCompteSuspendu) {
         setErreur(
-          `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+          err.suspendedUntil
+            ? `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+            : 'Ce compte est suspendu ou banni. Contactez le support si besoin.'
         )
       } else {
         setErreur('Courriel ou mot de passe incorrect')
