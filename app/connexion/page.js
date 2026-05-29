@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SiteHeader from '@/app/components/SiteHeader'
@@ -18,17 +18,13 @@ export default function Connexion() {
   const [email, setEmail] = useState('')
   const [motDePasse, setMotDePasse] = useState('')
   const [chargement, setChargement] = useState(false)
-  const [erreur, setErreur] = useState('')
+  const [erreur, setErreur] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    return new URLSearchParams(window.location.search).get('suspendu') === '1'
+      ? 'Votre compte est temporairement suspendu. Réessayez après la date indiquée par l’équipe ou contactez le support.'
+      : ''
+  })
   const router = useRouter()
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (new URLSearchParams(window.location.search).get('suspendu') === '1') {
-      setErreur(
-        'Votre compte est temporairement suspendu. Réessayez après la date indiquée par l’équipe ou contactez le support.'
-      )
-    }
-  }, [])
 
   const connecter = async () => {
     if (!email || !motDePasse) return setErreur('Remplissez tous les champs')
