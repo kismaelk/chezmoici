@@ -1434,7 +1434,7 @@ export default function AdminPortail() {
                         { key: 'statut', label: 'statut' },
                         { key: 'type', label: 'type' },
                       ],
-                      rows: annonces.slice(0, 500).map((a) => ({
+                      rows: annonces.map((a) => ({
                         id: a.id,
                         titre: a.titre,
                         statut: a.statut,
@@ -1449,7 +1449,7 @@ export default function AdminPortail() {
                         { key: 'email', label: 'email' },
                         { key: 'statut', label: 'statut' },
                       ],
-                      rows: utilisateurs.slice(0, 500).map((u) => ({
+                      rows: utilisateurs.map((u) => ({
                         id: u.id,
                         nom: u.nom,
                         email: u.email,
@@ -1464,7 +1464,7 @@ export default function AdminPortail() {
                             { key: 'statut', label: 'statut' },
                             { key: 'motif', label: 'motif' },
                           ],
-                          rows: signalements.slice(0, 500).map((s) => ({
+                          rows: signalements.map((s) => ({
                             id: s.id,
                             statut: s.statut,
                             motif: s.motif,
