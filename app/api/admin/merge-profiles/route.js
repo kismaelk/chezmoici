@@ -76,37 +76,13 @@ export async function POST(request) {
       })
     }
 
-    const { error: e1 } = await admin
-      .from('annonces')
-      .update({ utilisateur_id: targetUserId })
-      .eq('utilisateur_id', sourceUserId)
-    if (e1) throw e1
-
-    const { error: e2 } = await admin
-      .from('demandes_badge')
-      .update({ utilisateur_id: targetUserId })
-      .eq('utilisateur_id', sourceUserId)
-    if (e2) throw e2
-
-    await admin.from('favoris').delete().eq('utilisateur_id', sourceUserId)
-
-    const { error: e3 } = await admin
-      .from('profiles')
-      .update({
-        account_status: 'banned',
-        admin_role: null,
-        is_admin: false,
-      })
-      .eq('id', sourceUserId)
-    if (e3) throw e3
-
-    await admin.from('admin_profile_merge_logs').insert({
-      actor_id: staff.user.id,
-      source_user_id: sourceUserId,
-      target_user_id: targetUserId,
-      dry_run: false,
-      summary,
+    const { error: mergeErr } = await admin.rpc('admin_merge_profiles', {
+      p_actor_id: staff.user.id,
+      p_source_user_id: sourceUserId,
+      p_target_user_id: targetUserId,
+      p_summary: summary,
     })
+    if (mergeErr) throw mergeErr
 
     return NextResponse.json({
       ok: true,
