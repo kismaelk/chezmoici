@@ -21,10 +21,13 @@ export default function AuthCallback() {
       }
       const { data: profil } = await supabase
         .from('profiles')
-        .select('account_suspended_until')
+        .select('account_status, account_suspended_until')
         .eq('id', session.user.id)
         .maybeSingle()
-      if (estCompteSuspenduJusqua(profil?.account_suspended_until)) {
+      if (
+        ['banned', 'suspended'].includes(profil?.account_status) ||
+        estCompteSuspenduJusqua(profil?.account_suspended_until)
+      ) {
         await supabase.auth.signOut()
         router.replace('/connexion?suspendu=1')
         return
