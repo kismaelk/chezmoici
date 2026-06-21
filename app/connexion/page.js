@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import SiteHeader from '@/app/components/SiteHeader'
 import { libelleFinSuspension } from '@/lib/accountSuspension'
@@ -20,15 +20,11 @@ export default function Connexion() {
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState('')
   const router = useRouter()
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (new URLSearchParams(window.location.search).get('suspendu') === '1') {
-      setErreur(
-        'Votre compte est temporairement suspendu. Réessayez après la date indiquée par l’équipe ou contactez le support.'
-      )
-    }
-  }, [])
+  const searchParams = useSearchParams()
+  const erreurUrl = searchParams.get('suspendu') === '1'
+    ? 'Votre compte est suspendu ou banni. Contactez le support si besoin.'
+    : ''
+  const erreurAffichee = erreur || erreurUrl
 
   const connecter = async () => {
     if (!email || !motDePasse) return setErreur('Remplissez tous les champs')
@@ -40,8 +36,9 @@ export default function Connexion() {
       router.refresh()
     } catch (err) {
       if (err instanceof ErreurCompteSuspendu) {
-        setErreur(
-          `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+        setErreur(err.suspendedUntil
+          ? `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+          : 'Ce compte est suspendu ou banni. Contactez le support si besoin.'
         )
       } else {
         setErreur('Courriel ou mot de passe incorrect')
@@ -87,9 +84,9 @@ export default function Connexion() {
             </div>
           </div>
 
-          {erreur && (
+          {erreurAffichee && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mt-4 text-sm">
-              {erreur}
+              {erreurAffichee}
             </div>
           )}
 
