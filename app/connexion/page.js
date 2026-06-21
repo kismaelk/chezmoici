@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SiteHeader from '@/app/components/SiteHeader'
@@ -22,12 +22,12 @@ export default function Connexion() {
   const router = useRouter()
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (new URLSearchParams(window.location.search).get('suspendu') === '1') {
-      setErreur(
-        'Votre compte est temporairement suspendu. Réessayez après la date indiquée par l’équipe ou contactez le support.'
-      )
-    }
+    if (typeof window === 'undefined') return undefined
+    if (new URLSearchParams(window.location.search).get('suspendu') !== '1') return undefined
+    const timer = window.setTimeout(() => {
+      setErreur('Votre compte est suspendu ou banni. Contactez le support si besoin.')
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [])
 
   const connecter = async () => {
@@ -40,8 +40,9 @@ export default function Connexion() {
       router.refresh()
     } catch (err) {
       if (err instanceof ErreurCompteSuspendu) {
-        setErreur(
-          `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+        setErreur(err.suspendedUntil
+          ? `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+          : 'Ce compte est suspendu ou banni. Contactez le support si besoin.'
         )
       } else {
         setErreur('Courriel ou mot de passe incorrect')

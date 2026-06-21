@@ -1,11 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { estProfilCompteBloque } from '@/lib/accountSuspension'
 import { resolveStaffRole } from '@/lib/staffRoles'
 import { sendTeamModerationNotify } from '@/lib/sendTeamModerationNotify'
 
 /**
  * Notifications équipe quand un admin valide un compte ou publie une annonce.
- * Auth : JWT staff uniquement (is_admin ou e-mail fallback super admin).
+ * Auth : JWT staff uniquement.
  * Utilise les mêmes variables que /api/notify-moderation.
  */
 export async function POST(request) {
@@ -32,12 +33,15 @@ export async function POST(request) {
 
   const { data: profilStaff, error: profilErr } = await supabaseUser
     .from('profiles')
-    .select('is_admin, admin_role')
+    .select('is_admin, admin_role, account_status, account_suspended_until')
     .eq('id', user.id)
     .single()
 
   if (profilErr || !profilStaff) {
     return NextResponse.json({ error: 'Profil introuvable' }, { status: 403 })
+  }
+  if (estProfilCompteBloque(profilStaff)) {
+    return NextResponse.json({ error: 'Compte suspendu' }, { status: 403 })
   }
 
   const role = resolveStaffRole(profilStaff, user.email)
