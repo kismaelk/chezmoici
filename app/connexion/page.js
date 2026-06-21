@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SiteHeader from '@/app/components/SiteHeader'
 import { libelleFinSuspension } from '@/lib/accountSuspension'
@@ -20,11 +20,15 @@ export default function Connexion() {
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState('')
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const erreurUrl = searchParams.get('suspendu') === '1'
-    ? 'Votre compte est suspendu ou banni. Contactez le support si besoin.'
-    : ''
-  const erreurAffichee = erreur || erreurUrl
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    if (new URLSearchParams(window.location.search).get('suspendu') !== '1') return undefined
+    const timer = window.setTimeout(() => {
+      setErreur('Votre compte est suspendu ou banni. Contactez le support si besoin.')
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const connecter = async () => {
     if (!email || !motDePasse) return setErreur('Remplissez tous les champs')
@@ -84,9 +88,9 @@ export default function Connexion() {
             </div>
           </div>
 
-          {erreurAffichee && (
+          {erreur && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mt-4 text-sm">
-              {erreurAffichee}
+              {erreur}
             </div>
           )}
 
