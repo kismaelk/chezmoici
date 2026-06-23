@@ -1,7 +1,7 @@
 # Supabase — migrations appliquées en production
 
-**Dernière mise à jour :** 18 mai 2026  
-**Statut :** migrations staff chat et audit fusion **appliquées** sur le projet Supabase de prod.
+**Dernière mise à jour :** 23 juin 2026  
+**Statut :** migrations staff chat, audit fusion et verrouillage des pièces jointes à appliquer sur le projet Supabase de prod.
 
 ## Migrations récentes (chat équipe + admin)
 
@@ -9,6 +9,7 @@
 |---------|---------|
 | `20260513000000_staff_chat_advanced.sql` | Édition (30 min), suppression douce (super admin), réactions, RLS + grants + realtime |
 | `20260518100000_staff_chat_attachments_merge_audit.sql` | Pièces jointes (`attachment_*`), bucket `staff-chat`, table `admin_profile_merge_logs`, RLS fusion |
+| `20260623000000_private_staff_chat_attachments.sql` | Bucket `staff-chat` privé, URLs publiques converties en chemins objet, accès storage réservé au staff |
 
 ## Prérequis déjà en place (ne pas oublier)
 
@@ -34,8 +35,8 @@ where table_name = 'staff_discussion_messages'
 -- Journal fusions
 select count(*) from admin_profile_merge_logs;
 
--- Bucket storage
-select id from storage.buckets where id = 'staff-chat';
+-- Bucket storage prive
+select id, public from storage.buckets where id = 'staff-chat';
 ```
 
 ## PWA / déploiement
