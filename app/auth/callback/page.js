@@ -2,7 +2,7 @@
 import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { estCompteSuspenduJusqua } from '@/lib/accountSuspension'
+import { estProfilCompteBloque } from '@/lib/accountSuspension'
 import { estErreurRefreshTokenInvalide } from '@/lib/auth'
 
 export default function AuthCallback() {
@@ -21,10 +21,10 @@ export default function AuthCallback() {
       }
       const { data: profil } = await supabase
         .from('profiles')
-        .select('account_suspended_until')
+        .select('account_status, account_suspended_until')
         .eq('id', session.user.id)
         .maybeSingle()
-      if (estCompteSuspenduJusqua(profil?.account_suspended_until)) {
+      if (estProfilCompteBloque(profil)) {
         await supabase.auth.signOut()
         router.replace('/connexion?suspendu=1')
         return
