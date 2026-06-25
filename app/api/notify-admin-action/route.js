@@ -1,49 +1,29 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { resolveStaffRole } from '@/lib/staffRoles'
+import { createClient } from '@supabase/supabase-js'
+import { getStaffFromRequest } from '@/lib/adminApiAuth'
 import { sendTeamModerationNotify } from '@/lib/sendTeamModerationNotify'
 
 /**
  * Notifications équipe quand un admin valide un compte ou publie une annonce.
- * Auth : JWT staff uniquement (is_admin ou e-mail fallback super admin).
+ * Auth : JWT staff uniquement.
  * Utilise les mêmes variables que /api/notify-moderation.
  */
 export async function POST(request) {
-  const authHeader = request.headers.get('authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  const staff = await getStaffFromRequest(request)
+  if (staff.error) {
+    return NextResponse.json({ error: staff.error }, { status: staff.status })
   }
-  const token = authHeader.slice(7).trim()
+  const token = staff.token
+  const user = staff.user
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!url || !anonKey) {
     return NextResponse.json({ error: 'Configuration serveur' }, { status: 500 })
   }
 
-  const supabaseAuth = createClient(url, anonKey)
-  const { data: { user }, error: authErr } = await supabaseAuth.auth.getUser(token)
-  if (authErr || !user) {
-    return NextResponse.json({ error: 'Session invalide' }, { status: 401 })
-  }
-
   const supabaseUser = createClient(url, anonKey, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   })
-
-  const { data: profilStaff, error: profilErr } = await supabaseUser
-    .from('profiles')
-    .select('is_admin, admin_role')
-    .eq('id', user.id)
-    .single()
-
-  if (profilErr || !profilStaff) {
-    return NextResponse.json({ error: 'Profil introuvable' }, { status: 403 })
-  }
-
-  const role = resolveStaffRole(profilStaff, user.email)
-  if (!role) {
-    return NextResponse.json({ error: 'Accès réservé à l’équipe' }, { status: 403 })
-  }
 
   let body
   try {
