@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { resolveStaffRole } from '@/lib/staffRoles'
+import { estCompteBloque } from '@/lib/accountSuspension'
 import { sendTeamModerationNotify } from '@/lib/sendTeamModerationNotify'
 
 /**
@@ -32,12 +33,15 @@ export async function POST(request) {
 
   const { data: profilStaff, error: profilErr } = await supabaseUser
     .from('profiles')
-    .select('is_admin, admin_role')
+    .select('is_admin, admin_role, account_status, account_suspended_until')
     .eq('id', user.id)
     .single()
 
   if (profilErr || !profilStaff) {
     return NextResponse.json({ error: 'Profil introuvable' }, { status: 403 })
+  }
+  if (estCompteBloque(profilStaff)) {
+    return NextResponse.json({ error: 'Compte suspendu ou banni' }, { status: 403 })
   }
 
   const role = resolveStaffRole(profilStaff, user.email)

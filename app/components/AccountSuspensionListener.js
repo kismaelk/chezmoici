@@ -5,8 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { verifierEtDeconnecterSiSuspendu } from '@/lib/auth'
 
 /**
- * Déconnecte l’utilisateur si `profiles.account_suspended_until` est dans le futur
- * (ex. suspension ajoutée alors qu’il était déjà connecté).
+ * Déconnecte l’utilisateur si son profil devient banni/suspendu
+ * pendant qu’une session locale est encore active.
  */
 export default function AccountSuspensionListener() {
   useEffect(() => {
