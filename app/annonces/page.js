@@ -450,10 +450,6 @@ function AnnoncesContenu() {
   }))
 
   useEffect(() => {
-    if (searchParams.toString()) {
-      setFiltresHydrates(true)
-      return
-    }
     const merged = mergeListingFiltersFromUrl(searchParams, FILTRES_VIDES)
     const prefs = loadListingPrefs()
     setFiltres(merged)
