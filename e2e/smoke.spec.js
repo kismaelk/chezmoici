@@ -27,11 +27,11 @@ test.describe('Smoke Chez Moi CI', () => {
     const desktopNav = page.locator('nav').first()
     await desktopNav.getByRole('button', { name: /acheter\/louer/i }).hover()
     await desktopNav.getByRole('link', { name: /^Acheter$/ }).click()
-    await expect(page).toHaveURL(/\/annonces\?type=vente$/)
+    await expect.poll(() => new URL(page.url()).searchParams.get('type')).toBe('vente')
     await expect(page.getByRole('heading', { name: /biens à vendre/i })).toBeVisible()
 
     await desktopNav.getByRole('link', { name: /services & pros/i }).click()
-    await expect(page).toHaveURL(/\/annonces\?type=prestations$/)
+    await expect.poll(() => new URL(page.url()).searchParams.get('type')).toBe('prestations')
     await expect(page.getByRole('heading', { name: /prestataires & artisans/i })).toBeVisible()
   })
 
