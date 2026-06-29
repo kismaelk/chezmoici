@@ -423,6 +423,7 @@ function CarteAnnonce({ annonce, vue, avisStat, filtresPourCarte = {} }) {
 
 function AnnoncesContenu() {
   const searchParams = useSearchParams()
+  const searchParamsString = searchParams.toString()
   const [annonces, setAnnonces] = useState([])
   const [chargement, setChargement] = useState(true)
   const [vue, setVue] = useState('grille')
@@ -450,17 +451,13 @@ function AnnoncesContenu() {
   }))
 
   useEffect(() => {
-    if (searchParams.toString()) {
-      setFiltresHydrates(true)
-      return
-    }
-    const merged = mergeListingFiltersFromUrl(searchParams, FILTRES_VIDES)
+    const merged = mergeListingFiltersFromUrl(new URLSearchParams(searchParamsString), FILTRES_VIDES)
     const prefs = loadListingPrefs()
     setFiltres(merged)
     setVue(prefs.vue)
     setTri(prefs.tri)
     setFiltresHydrates(true)
-  }, [searchParams])
+  }, [searchParamsString])
 
   useEffect(() => {
     if (!filtresHydrates) return

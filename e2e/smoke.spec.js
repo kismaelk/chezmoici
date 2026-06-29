@@ -20,6 +20,21 @@ test.describe('Smoke Chez Moi CI', () => {
     await expect(page.locator('body')).toBeVisible()
   })
 
+  test('navigation catégories annonces depuis les liens du header', async ({ page }) => {
+    await page.goto(`${base}/annonces?type=location`)
+    await expect(page.getByRole('heading', { name: /logements à louer/i })).toBeVisible()
+
+    const desktopNav = page.locator('nav').first()
+    await desktopNav.getByRole('button', { name: /acheter\/louer/i }).hover()
+    await desktopNav.getByRole('link', { name: /^Acheter$/ }).click()
+    await expect(page).toHaveURL(/\/annonces\?type=vente$/)
+    await expect(page.getByRole('heading', { name: /biens à vendre/i })).toBeVisible()
+
+    await desktopNav.getByRole('link', { name: /services & pros/i }).click()
+    await expect(page).toHaveURL(/\/annonces\?type=prestations$/)
+    await expect(page.getByRole('heading', { name: /prestataires & artisans/i })).toBeVisible()
+  })
+
   test('services et artisans', async ({ page }) => {
     await page.goto(`${base}/services`)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
