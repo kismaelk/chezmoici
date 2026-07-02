@@ -40,8 +40,9 @@ export default function Connexion() {
       router.refresh()
     } catch (err) {
       if (err instanceof ErreurCompteSuspendu) {
-        setErreur(
-          `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+        setErreur(err.suspendedUntil
+          ? `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+          : 'Ce compte est bloqué. Contactez le support si besoin.'
         )
       } else {
         setErreur('Courriel ou mot de passe incorrect')
