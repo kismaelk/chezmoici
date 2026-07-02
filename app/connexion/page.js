@@ -24,9 +24,17 @@ export default function Connexion() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (new URLSearchParams(window.location.search).get('suspendu') === '1') {
-      setErreur(
-        'Votre compte est temporairement suspendu. Réessayez après la date indiquée par l’équipe ou contactez le support.'
-      )
+      let cancelled = false
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setErreur(
+            'Votre compte est temporairement suspendu. Réessayez après la date indiquée par l’équipe ou contactez le support.'
+          )
+        }
+      })
+      return () => {
+        cancelled = true
+      }
     }
   }, [])
 
@@ -40,9 +48,10 @@ export default function Connexion() {
       router.refresh()
     } catch (err) {
       if (err instanceof ErreurCompteSuspendu) {
-        setErreur(err.suspendedUntil
-          ? `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
-          : 'Ce compte est bloqué. Contactez le support si besoin.'
+        setErreur(
+          err.suspendedUntil
+            ? `Ce compte est suspendu jusqu’au ${libelleFinSuspension(err.suspendedUntil)}. Contactez le support si besoin.`
+            : 'Ce compte est bloqué. Contactez le support si besoin.'
         )
       } else {
         setErreur('Courriel ou mot de passe incorrect')
