@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -423,6 +423,8 @@ function CarteAnnonce({ annonce, vue, avisStat, filtresPourCarte = {} }) {
 
 function AnnoncesContenu() {
   const searchParams = useSearchParams()
+  const searchParamsString = searchParams.toString()
+  const skipNextUrlSyncRef = useRef(false)
   const [annonces, setAnnonces] = useState([])
   const [chargement, setChargement] = useState(true)
   const [vue, setVue] = useState('grille')
@@ -450,17 +452,18 @@ function AnnoncesContenu() {
   }))
 
   useEffect(() => {
-    if (searchParams.toString()) {
-      setFiltresHydrates(true)
-      return
+    const merged = mergeListingFiltersFromUrl(new URLSearchParams(searchParamsString), FILTRES_VIDES)
+    if (searchParamsString) {
+      skipNextUrlSyncRef.current = true
     }
-    const merged = mergeListingFiltersFromUrl(searchParams, FILTRES_VIDES)
-    const prefs = loadListingPrefs()
     setFiltres(merged)
-    setVue(prefs.vue)
-    setTri(prefs.tri)
+    if (!searchParamsString) {
+      const prefs = loadListingPrefs()
+      setVue(prefs.vue)
+      setTri(prefs.tri)
+    }
     setFiltresHydrates(true)
-  }, [searchParams])
+  }, [searchParamsString])
 
   useEffect(() => {
     if (!filtresHydrates) return
@@ -473,6 +476,10 @@ function AnnoncesContenu() {
     const params = new URLSearchParams()
     Object.entries(filtres).forEach(([k, v]) => { if (v) params.set(k, v) })
     const url = '/annonces' + (params.toString() ? '?' + params.toString() : '')
+    if (skipNextUrlSyncRef.current) {
+      skipNextUrlSyncRef.current = false
+      return
+    }
     window.history.replaceState({}, '', url)
   }, [filtres, filtresHydrates])
 
