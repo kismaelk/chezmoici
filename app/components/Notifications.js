@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { fetchNotifications, listenNotifications, markAllNotificationsRead } from '@/lib/firestoreApp'
+import { safeNotificationHref } from '@/lib/notificationLinks'
 
 export default function Notifications({ utilisateurId }) {
   const [notifications, setNotifications] = useState([])
@@ -91,7 +92,7 @@ export default function Notifications({ utilisateurId }) {
               notifications.map((notif) => (
                 <a
                   key={notif.id}
-                  href={notif.lien || '/messages'}
+                  href={safeNotificationHref(notif.lien)}
                   className={`block p-4 border-b border-gray-50 hover:bg-gray-50 ${!notif.lu ? 'bg-[#E8F5E9]' : ''}`}
                 >
                   <div className="flex items-start gap-3">
