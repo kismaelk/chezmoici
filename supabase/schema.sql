@@ -214,11 +214,42 @@ create policy "favoris: suppression par son propriétaire"
   on favoris for delete using (auth.uid() = utilisateur_id);
 
 -- Messages
+create or replace function public.messages_force_created_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.created_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists messages_force_created_at on public.messages;
+create trigger messages_force_created_at
+  before insert on public.messages
+  for each row
+  execute function public.messages_force_created_at();
+
 create policy "messages: visibles par les participants"
   on messages for select
   using (auth.uid() = sender_id or auth.uid() = receiver_id);
 create policy "messages: envoi par utilisateur connecté"
-  on messages for insert with check (auth.uid() = sender_id);
+  on messages for insert with check (
+    auth.uid() = sender_id
+    and sender_id is distinct from receiver_id
+    and (
+      annonce_id is null
+      or exists (
+        select 1
+        from annonces a
+        where a.id = messages.annonce_id
+          and (
+            a.utilisateur_id = messages.sender_id
+            or a.utilisateur_id = messages.receiver_id
+          )
+      )
+    )
+  );
 
 -- Notifications
 create policy "notifications: visibles par leur destinataire"
@@ -246,9 +277,16 @@ create policy "avis: création après contact qualifié"
     auth.uid() = auteur_id
     and exists (
       select 1
+      from annonces a
+      where a.id = avis.annonce_id
+        and a.utilisateur_id is distinct from avis.auteur_id
+    )
+    and exists (
+      select 1
       from messages m
       join annonces a on a.id = avis.annonce_id
       where m.annonce_id = avis.annonce_id
+        and m.sender_id is distinct from m.receiver_id
         and (
           (m.sender_id = avis.auteur_id and m.receiver_id = a.utilisateur_id)
           or
