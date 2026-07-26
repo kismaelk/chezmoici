@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { resolveStaffRole } from '@/lib/staffRoles'
 import { sendTeamModerationNotify } from '@/lib/sendTeamModerationNotify'
+import { resolvePublicSiteUrl } from '@/lib/siteUrl'
 
 /**
  * Notifications équipe quand un admin valide un compte ou publie une annonce.
@@ -57,10 +58,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'event invalide' }, { status: 400 })
   }
 
-  const siteBase =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
-    request.headers.get('origin') ||
-    'https://www.chezmoici.com'
+  const siteBase = resolvePublicSiteUrl()
   const adminUrl = `${siteBase}/admin-portail`
 
   if (event === 'compte_verifie') {
