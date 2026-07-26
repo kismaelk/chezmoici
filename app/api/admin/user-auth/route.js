@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getStaffFromRequest } from '@/lib/adminApiAuth'
 import { createSupabaseAdmin } from '@/lib/supabaseAdmin'
+import { resolvePublicSiteUrl } from '@/lib/siteUrl'
 
 /**
  * Actions Auth côté serveur (service role).
@@ -53,11 +54,7 @@ export async function POST(request) {
       return NextResponse.json({ ok: true, message: 'E-mail marqué comme confirmé.' })
     }
 
-    const site =
-      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
-      request.headers.get('origin') ||
-      ''
-    const redirectTo = site ? `${site}/nouveau-mot-de-passe` : undefined
+    const redirectTo = `${resolvePublicSiteUrl()}/nouveau-mot-de-passe`
 
     const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
       type: 'recovery',

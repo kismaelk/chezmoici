@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { sendTeamModerationNotify } from '@/lib/sendTeamModerationNotify'
+import { resolvePublicSiteUrl } from '@/lib/siteUrl'
 
 /**
  * Notifie l’équipe modération qu’une annonce est en `en_verification`.
@@ -59,10 +60,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Pas en vérification' }, { status: 400 })
   }
 
-  const siteBase =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
-    (typeof request.headers.get === 'function' && request.headers.get('origin')) ||
-    'https://www.chezmoici.com'
+  const siteBase = resolvePublicSiteUrl()
   const adminUrl = `${siteBase}/admin-portail`
 
   const text = [
