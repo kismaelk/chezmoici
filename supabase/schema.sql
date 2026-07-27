@@ -258,10 +258,46 @@ create policy "avis: création après contact qualifié"
     )
   );
 create policy "avis: modification par auteur"
-  on avis for update using (auth.uid() = auteur_id);
+  on avis for update
+  using (auth.uid() = auteur_id)
+  with check (auth.uid() = auteur_id);
 create policy "avis: moderation admin"
   on avis for update
   using (exists (select 1 from profiles where id = auth.uid() and is_admin = true));
+
+-- Identity fields stay fixed after insert (see migration 20260727000000).
+create or replace function public.protect_avis_identity_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.role() = 'service_role'
+    or current_setting('request.jwt.claim.role', true) = 'service_role' then
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if new.annonce_id is distinct from old.annonce_id
+      or new.auteur_id is distinct from old.auteur_id
+      or new.created_at is distinct from old.created_at then
+      raise exception 'Review identity fields are immutable'
+        using errcode = '42501';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_avis_identity_fields on public.avis;
+create trigger protect_avis_identity_fields
+  before update on public.avis
+  for each row
+  execute function public.protect_avis_identity_fields();
+
+revoke all on function public.protect_avis_identity_fields() from public;
 create policy "avis logs: lecture admin"
   on avis_moderation_logs for select
   using (exists (select 1 from profiles where id = auth.uid() and is_admin = true));
