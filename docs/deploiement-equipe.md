@@ -34,6 +34,8 @@ Les fichiers sont dans le dépôt : `supabase/migrations/`.
 | 10 | `20260509000001_annonce_manager_rls_restrict.sql` | RLS : le rôle gestionnaire d’annonces ne modifie pas profils / avis / signalements |
 | 11 | `20260509000002_suspended_users_rls_no_write.sql` | Fonction `jwt_user_not_suspended()` : **aucune écriture** (tables + storage) tant que `account_suspended_until` est dans le futur |
 | 12 | `20260509000003_messages_contact_staff.sql` | Colonnes suivi sur `messages_contact` + RLS **lecture / mise à jour** staff (onglet **Messages contact** du portail) |
+| … | `20260510*` → `20260518*` | Chat équipe, grants, PJ staff (voir fichiers dans `supabase/migrations/`) |
+| 19 | `20260727000000_lock_avis_identity_on_update.sql` | Empêche de retargeter un avis existant vers une autre annonce (`annonce_id` / `auteur_id` / `created_at` immuables) |
 
 Si une migration a déjà été appliquée (message du type « already exists »), ignorer ou adapter ; l’important est que le schéma final corresponde à `supabase/schema.sql`.
 
